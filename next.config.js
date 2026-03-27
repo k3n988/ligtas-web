@@ -4,7 +4,7 @@ const nextConfig = {
     return [
       { source: '/triage',  destination: '/queue',  permanent: true },
       { source: '/dispatch', destination: '/assets', permanent: true },
-      { source: '/map',     destination: '/',        permanent: true },
+      { source: '/map',     destination: '/register', permanent: true },
     ]
   },
 }
