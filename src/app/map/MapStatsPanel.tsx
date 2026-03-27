@@ -1,0 +1,160 @@
+'use client'
+// src/app/map/MapStatsPanel.tsx
+
+import { useHouseholdStore } from '@/store/householdStore'
+import { useAssetStore } from '@/store/assetStore'
+import { TRIAGE_ORDER } from '@/lib/triage'
+
+export default function MapStatsPanel() {
+  const households = useHouseholdStore((s) => s.households)
+  const assets = useAssetStore((s) => s.assets)
+
+  const pending = households.filter((h) => h.status === 'Pending')
+  const rescued = households.filter((h) => h.status === 'Rescued')
+
+  const counts = {
+    CRITICAL: pending.filter((h) => h.triage.level === 'CRITICAL').length,
+    HIGH: pending.filter((h) => h.triage.level === 'HIGH').length,
+    ELEVATED: pending.filter((h) => h.triage.level === 'ELEVATED').length,
+    STABLE: pending.filter((h) => h.triage.level === 'STABLE').length,
+  }
+
+  const topPriority = [...pending].sort(
+    (a, b) => TRIAGE_ORDER[a.triage.level] - TRIAGE_ORDER[b.triage.level],
+  )
+
+  const statCard = (label: string, value: number | string, color: string) => (
+    <div
+      style={{
+        background: '#21262d',
+        border: `1px solid ${color}`,
+        borderRadius: 6,
+        padding: '12px 15px',
+        textAlign: 'center',
+      }}
+    >
+      <div style={{ fontSize: '1.6rem', fontWeight: 800, color }}>{value}</div>
+      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
+    </div>
+  )
+
+  return (
+    <div>
+      <h2
+        style={{
+          margin: '0 0 16px',
+          fontSize: '0.8rem',
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+        }}
+      >
+        Operational Overview
+      </h2>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+        {statCard('CRITICAL', counts.CRITICAL, '#ff4d4d')}
+        {statCard('HIGH', counts.HIGH, '#f39c12')}
+        {statCard('ELEVATED', counts.ELEVATED, '#f1c40f')}
+        {statCard('RESCUED', rescued.length, '#238636')}
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: 20,
+          padding: '10px 14px',
+          background: '#21262d',
+          borderRadius: 6,
+          border: '1px solid var(--border-color)',
+        }}
+      >
+        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          Total Registered
+        </span>
+        <span style={{ fontWeight: 700, color: '#fff' }}>{households.length}</span>
+      </div>
+
+      {/* Active Assets */}
+      <h2
+        style={{
+          margin: '0 0 10px',
+          fontSize: '0.8rem',
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+        }}
+      >
+        Active Assets
+      </h2>
+      <div style={{ marginBottom: 20 }}>
+        {assets.map((a) => (
+          <div
+            key={a.id}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '8px 0',
+              borderBottom: '1px solid var(--border-color)',
+              fontSize: '0.82rem',
+            }}
+          >
+            <span>
+              {a.icon} {a.name}
+            </span>
+            <span
+              style={{
+                color:
+                  a.status === 'Active'
+                    ? 'var(--resolved-green)'
+                    : a.status === 'Dispatching'
+                    ? 'var(--high-orange)'
+                    : 'var(--text-muted)',
+                fontWeight: 600,
+                fontSize: '0.72rem',
+              }}
+            >
+              {a.status}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Top Priority */}
+      {topPriority.length > 0 && (
+        <>
+          <h2
+            style={{
+              margin: '0 0 10px',
+              fontSize: '0.8rem',
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+            }}
+          >
+            Highest Priority
+          </h2>
+          {topPriority.slice(0, 3).map((hh) => (
+            <div
+              key={hh.id}
+              style={{
+                padding: '10px 14px',
+                marginBottom: 8,
+                background: '#21262d',
+                borderRadius: 6,
+                borderLeft: `3px solid ${hh.triage.hex}`,
+                fontSize: '0.82rem',
+              }}
+            >
+              <div style={{ fontWeight: 600, color: '#fff', marginBottom: 2 }}>{hh.head}</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                {hh.street}, {hh.barangay}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  )
+}
