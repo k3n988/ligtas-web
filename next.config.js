@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
-};
+  async redirects() {
+    return [
+      { source: '/triage',  destination: '/queue',  permanent: true },
+      { source: '/dispatch', destination: '/assets', permanent: true },
+      { source: '/map',     destination: '/',        permanent: true },
+    ]
+  },
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig

@@ -1,11 +1,11 @@
-// src/app/triage/page.tsx
+// src/app/queue/page.tsx
 
 import DashboardShell from '@/components/layout/DashboardShell'
 import TriageQueue from './TriageQueue'
 
-export const metadata = { title: 'L.I.G.T.A.S. | Triage Queue' }
+export const metadata = { title: 'L.I.G.T.A.S. | Queue' }
 
-export default function TriagePage() {
+export default function QueuePage() {
   return (
     <DashboardShell>
       <TriageQueue />

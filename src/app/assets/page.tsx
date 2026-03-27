@@ -1,11 +1,11 @@
-// src/app/dispatch/page.tsx
+// src/app/assets/page.tsx
 
 import DashboardShell from '@/components/layout/DashboardShell'
 import DispatchPanel from './DispatchPanel'
 
-export const metadata = { title: 'L.I.G.T.A.S. | Dispatch' }
+export const metadata = { title: 'L.I.G.T.A.S. | Assets' }
 
-export default function DispatchPage() {
+export default function AssetsPage() {
   return (
     <DashboardShell>
       <DispatchPanel />

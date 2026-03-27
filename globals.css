@@ -32,33 +32,18 @@ body, html {
 ::-webkit-scrollbar-track  { background: var(--bg-dark); }
 ::-webkit-scrollbar-thumb  { background: var(--border-color); border-radius: 3px; }
 
-/* ── Leaflet popup dark theme overrides ── */
-.leaflet-popup-content-wrapper {
-  background: var(--panel-bg) !important;
-  color: var(--text-main) !important;
-  border: 1px solid var(--border-color) !important;
+/* ── Google Maps InfoWindow dark theme override ── */
+.gm-style .gm-style-iw-c {
+  background: #161b22 !important;
+  border: 1px solid #30363d !important;
   border-radius: 8px !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,.5) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.6) !important;
+  padding: 0 !important;
 }
-.leaflet-popup-tip         { background: var(--panel-bg) !important; }
-.leaflet-popup-content     { margin: 15px !important; font-family: Inter, sans-serif; }
-.leaflet-popup-close-button { color: var(--text-muted) !important; }
-
-/* ── Map legend ── */
-.ligtas-legend {
-  background: var(--panel-bg);
-  padding: 12px 14px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-family: Inter, sans-serif;
-  font-size: 0.75rem;
-  color: var(--text-main);
-  box-shadow: 0 4px 6px rgba(0,0,0,.3);
-  line-height: 1.2;
-}
-.ligtas-legend .lr  { display: flex; align-items: center; margin-bottom: 6px; }
-.ligtas-legend .dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,.4); margin-right: 8px; flex-shrink: 0; }
-.ligtas-legend .sym { font-size: 14px; margin-right: 8px; width: 14px; text-align: center; }
+.gm-style .gm-style-iw-d { overflow: hidden !important; }
+.gm-style .gm-style-iw-t::after { background: #161b22 !important; }
+.gm-style-iw-tc::after { background: #161b22 !important; }
+.gm-ui-hover-effect > span { background-color: #8b949e !important; }
 
 /* ── Form input focus ring ── */
 input:focus, select:focus, textarea:focus {

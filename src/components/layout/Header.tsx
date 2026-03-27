@@ -6,9 +6,8 @@ import { usePathname } from 'next/navigation'
 
 const NAV_TABS = [
   { href: '/register', label: '📝 REGISTER' },
-  { href: '/triage',   label: '🚨 TRIAGE'   },
-  { href: '/dispatch', label: '🚤 DISPATCH'  },
-  { href: '/map',      label: '🗺 MAP'       },
+  { href: '/queue',  label: '🚨 QUEUE'  },
+  { href: '/assets', label: '🚤 ASSETS' },
 ]
 
 export default function Header() {
@@ -39,7 +38,7 @@ export default function Header() {
         }}
       >
         {NAV_TABS.map(({ href, label }) => {
-          const active = pathname === href || (href === '/map' && pathname === '/')
+          const active = pathname === href
           return (
             <Link
               key={href}
