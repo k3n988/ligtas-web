@@ -53,3 +53,20 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent-blue) !important;
 }
+
+/* ── Print: show only the summary report modal ── */
+@media print {
+  body > * { display: none !important; }
+  .summary-report-modal {
+    display: block !important;
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+}

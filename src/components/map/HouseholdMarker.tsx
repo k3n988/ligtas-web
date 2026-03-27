@@ -22,6 +22,7 @@ function circleIcon(fill: string) {
 
 export default function HouseholdMarker({ household: hh }: Props) {
   const markRescued = useHouseholdStore((s) => s.markRescued)
+  const restorePending = useHouseholdStore((s) => s.restorePending)
   const setSelectedId = useHouseholdStore((s) => s.setSelectedId)
   const assets = useAssetStore((s) => s.assets)
   const [open, setOpen] = useState(false)
@@ -126,18 +127,39 @@ export default function HouseholdMarker({ household: hh }: Props) {
               ))}
             </div>
             {hh.status === 'Rescued' ? (
-              <div
-                style={{
-                  textAlign: 'center',
-                  padding: '6px',
-                  background: '#238636',
-                  color: '#fff',
-                  borderRadius: 4,
-                  fontWeight: 'bold',
-                  fontSize: '0.8rem',
-                }}
-              >
-                STATUS: RESCUED
+              <div style={{ display: 'flex', gap: 6 }}>
+                <div
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    padding: '6px',
+                    background: '#238636',
+                    color: '#fff',
+                    borderRadius: 4,
+                    fontWeight: 'bold',
+                    fontSize: '0.8rem',
+                  }}
+                >
+                  STATUS: RESCUED
+                </div>
+                <button
+                  onClick={() => {
+                    restorePending(hh.id)
+                  }}
+                  title="Undo — restore to Pending"
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #30363d',
+                    color: '#8b949e',
+                    borderRadius: 4,
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    fontFamily: 'Inter, sans-serif',
+                  }}
+                >
+                  ↩
+                </button>
               </div>
             ) : (
               <button

@@ -34,6 +34,8 @@ export interface Household {
   notes: string
   status: 'Pending' | 'Rescued'
   triage: TriageResult
+  assignedAssetId?: string
+  dispatchedAt?: string
 }
 
 export interface Asset {
