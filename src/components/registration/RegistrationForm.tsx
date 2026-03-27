@@ -1,7 +1,7 @@
 'use client'
 // src/components/registration/RegistrationForm.tsx
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useHouseholdStore } from '@/store/householdStore'
 import { assessTriage } from '@/lib/triage'
 import type { Vulnerability } from '@/types'
@@ -58,10 +58,21 @@ const sectionDivider: React.CSSProperties = {
 
 export default function RegistrationForm() {
   const addHousehold = useHouseholdStore((s) => s.addHousehold)
+  const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
+  const pendingCoords = useHouseholdStore((s) => s.pendingCoords)
+  const setPendingCoords = useHouseholdStore((s) => s.setPendingCoords)
 
   const [coords, setCoords] = useState('')
   const [locating, setLocating] = useState(false)
+  const [pinSource, setPinSource] = useState<'gps' | 'map' | null>(null)
   const [vulnArr, setVulnArr] = useState<Vulnerability[]>([])
+
+  // Sync coords whenever admin clicks a location on the map
+  useEffect(() => {
+    if (!pendingCoords) return
+    setCoords(`${pendingCoords.lat.toFixed(6)}, ${pendingCoords.lng.toFixed(6)}`)
+    setPinSource('map')
+  }, [pendingCoords])
 
   const triage = assessTriage(vulnArr)
 
@@ -91,7 +102,7 @@ export default function RegistrationForm() {
     )
   }
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!coords || coords === 'Locating...') {
       alert('Please acquire GPS location first.')
@@ -123,6 +134,8 @@ export default function RegistrationForm() {
     form.reset()
     setVulnArr([])
     setCoords('')
+    setPinSource(null)
+    setPendingCoords(null)
     alert('Household registered and mapped.')
   }
 
@@ -130,14 +143,21 @@ export default function RegistrationForm() {
     <form onSubmit={handleSubmit}>
       {/* Location */}
       <div style={{ marginBottom: 15 }}>
-        <label style={labelStyle}>Location (GPS Auto-Capture)</label>
-        <div style={{ display: 'flex', gap: 5 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>Location</label>
+          {pinSource && (
+            <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? '#58a6ff' : '#238636', fontWeight: 600 }}>
+              {pinSource === 'map' ? '🗺 Pinned on map' : '📡 GPS captured'}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
           <input
             style={inputStyle}
             type="text"
             value={coords}
-            onChange={(e) => setCoords(e.target.value)}
-            placeholder="Lat, Lng"
+            onChange={(e) => { setCoords(e.target.value); setPinSource(null) }}
+            placeholder="Lat, Lng — or use buttons →"
             required
             readOnly={locating}
           />
@@ -145,21 +165,42 @@ export default function RegistrationForm() {
             type="button"
             onClick={getLocation}
             disabled={locating}
-            title="Get Current Location"
+            title="Auto-detect GPS location"
             style={{
-              width: 44,
               flexShrink: 0,
+              padding: '0 10px',
               background: '#30363d',
               color: '#fff',
               border: 'none',
               borderRadius: 4,
               cursor: 'pointer',
-              fontSize: '1rem',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              fontFamily: 'Inter, sans-serif',
+              whiteSpace: 'nowrap',
             }}
           >
-            📍
+            📡 GPS
           </button>
         </div>
+        <button
+          type="button"
+          onClick={() => setPickingLocation(true)}
+          style={{
+            width: '100%',
+            padding: '8px',
+            background: '#161b22',
+            border: '1px solid #58a6ff',
+            color: '#58a6ff',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          🗺 Pin Location on Map
+        </button>
       </div>
 
       {/* City */}

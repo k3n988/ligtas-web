@@ -2,14 +2,21 @@
 // src/components/map/MapView.tsx
 // Imported via next/dynamic with ssr:false — must stay a pure client module.
 
-import { useEffect, useState } from 'react'
-import { APIProvider, Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  APIProvider,
+  Map,
+  useMap,
+  useMapsLibrary,
+  type MapMouseEvent,
+} from '@vis.gl/react-google-maps'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { haversineKm } from '@/lib/geo'
 import HouseholdMarker from './HouseholdMarker'
 import AssetMarker from './AssetMarker'
 import MapLegend from './MapLegend'
+import { Marker } from '@vis.gl/react-google-maps'
 
 const DEFAULT_CENTER = { lat: 10.6765, lng: 122.9509 }
 
@@ -27,6 +34,15 @@ const CLEAN_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'transit',              stylers: [{ visibility: 'off' }] },
 ]
 
+/** SVG crosshair pin used as the "pending / not yet saved" location marker. */
+function pendingPinIcon() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+    <circle cx="16" cy="16" r="12" fill="#0d1117" stroke="#58a6ff" stroke-width="3" stroke-dasharray="5 3"/>
+    <circle cx="16" cy="16" r="5" fill="#58a6ff"/>
+  </svg>`
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+}
+
 /** Pans the map whenever panToId changes in the Zustand store. */
 function PanController() {
   const map = useMap()
@@ -43,6 +59,19 @@ function PanController() {
     }
     setPanTo(null)
   }, [panToId, households, map, setPanTo])
+
+  return null
+}
+
+/** Changes the map cursor to a crosshair while location-picking is active. */
+function PickCursorController() {
+  const map = useMap()
+  const pickingLocation = useHouseholdStore((s) => s.pickingLocation)
+
+  useEffect(() => {
+    if (!map) return
+    map.setOptions({ draggableCursor: pickingLocation ? 'crosshair' : '' })
+  }, [map, pickingLocation])
 
   return null
 }
@@ -120,27 +149,108 @@ function RouteOverlay() {
 function MapInner() {
   const households = useHouseholdStore((s) => s.households)
   const assets = useAssetStore((s) => s.assets)
+  const pickingLocation = useHouseholdStore((s) => s.pickingLocation)
+  const pendingCoords = useHouseholdStore((s) => s.pendingCoords)
+  const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
+  const setPendingCoords = useHouseholdStore((s) => s.setPendingCoords)
+
+  const handleMapClick = useCallback(
+    (e: MapMouseEvent) => {
+      if (!pickingLocation) return
+      const lat = e.detail.latLng?.lat
+      const lng = e.detail.latLng?.lng
+      if (lat == null || lng == null) return
+      setPendingCoords({ lat, lng })
+      setPickingLocation(false)
+    },
+    [pickingLocation, setPendingCoords, setPickingLocation],
+  )
 
   return (
-    <Map
-      defaultCenter={DEFAULT_CENTER}
-      defaultZoom={14}
-      styles={CLEAN_STYLES}
-      disableDefaultUI={false}
-      gestureHandling="greedy"
-      style={{ width: '100%', height: '100%' }}
-      mapTypeControlOptions={{ mapTypeIds: ['roadmap', 'satellite', 'hybrid'] }}
-    >
-      <PanController />
-      <RouteOverlay />
-      {households.map((hh) => (
-        <HouseholdMarker key={hh.id} household={hh} />
-      ))}
-      {assets.map((asset) => (
-        <AssetMarker key={asset.id} asset={asset} />
-      ))}
-      <MapLegend />
-    </Map>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {/* Banner shown while admin is picking a location */}
+      {pickingLocation && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 12,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 20,
+            background: '#58a6ff',
+            color: '#0d1117',
+            padding: '8px 18px',
+            borderRadius: 20,
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            boxShadow: '0 4px 12px rgba(0,0,0,.5)',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          📍 Click on the map to pin the household location
+        </div>
+      )}
+
+      {/* Cancel button shown while picking */}
+      {pickingLocation && (
+        <button
+          onClick={() => setPickingLocation(false)}
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            zIndex: 20,
+            background: '#161b22',
+            border: '1px solid #30363d',
+            color: '#c9d1d9',
+            padding: '7px 14px',
+            borderRadius: 6,
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          ✕ Cancel
+        </button>
+      )}
+
+      <Map
+        defaultCenter={DEFAULT_CENTER}
+        defaultZoom={14}
+        styles={CLEAN_STYLES}
+        disableDefaultUI={false}
+        gestureHandling="greedy"
+        style={{ width: '100%', height: '100%' }}
+        mapTypeControlOptions={{ mapTypeIds: ['roadmap', 'satellite', 'hybrid'] }}
+        onClick={handleMapClick}
+      >
+        <PanController />
+        <PickCursorController />
+        <RouteOverlay />
+
+        {households.map((hh) => (
+          <HouseholdMarker key={hh.id} household={hh} />
+        ))}
+        {assets.map((asset) => (
+          <AssetMarker key={asset.id} asset={asset} />
+        ))}
+
+        {/* Preview pin for pending registration */}
+        {pendingCoords && (
+          <Marker
+            position={pendingCoords}
+            icon={pendingPinIcon()}
+            title="Pinned location (not yet saved)"
+            zIndex={999}
+          />
+        )}
+
+        <MapLegend />
+      </Map>
+    </div>
   )
 }
 
