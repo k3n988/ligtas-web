@@ -2,39 +2,63 @@
 // src/components/map/HouseholdMarker.tsx
 
 import { useState } from 'react'
-import { AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps'
+import { Marker, InfoWindow } from '@vis.gl/react-google-maps'
 import type { Household } from '@/types'
 import { useHouseholdStore } from '@/store/householdStore'
+import { useAssetStore } from '@/store/assetStore'
+import { haversineKm } from '@/lib/geo'
 
 interface Props {
   household: Household
 }
 
+/** Renders a filled circle as an SVG data-URI icon — no mapId required. */
+function circleIcon(fill: string) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+    <circle cx="12" cy="12" r="10" fill="${fill}" stroke="white" stroke-width="2.5"/>
+  </svg>`
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+}
+
 export default function HouseholdMarker({ household: hh }: Props) {
   const markRescued = useHouseholdStore((s) => s.markRescued)
+  const setSelectedId = useHouseholdStore((s) => s.setSelectedId)
+  const assets = useAssetStore((s) => s.assets)
   const [open, setOpen] = useState(false)
 
   const color = hh.status === 'Rescued' ? '#238636' : hh.triage.hex
   const pos = { lat: hh.lat, lng: hh.lng }
 
+  const handleOpen = () => {
+    setOpen(true)
+    setSelectedId(hh.id)   // triggers RouteOverlay in MapView
+  }
+
+  const handleClose = () => {
+    setOpen(false)
+    setSelectedId(null)    // clears the route
+  }
+
+  // Find nearest asset name for the info panel
+  const nearest = assets.length
+    ? assets.reduce((prev, curr) =>
+        haversineKm(hh.lat, hh.lng, curr.lat, curr.lng) <
+        haversineKm(hh.lat, hh.lng, prev.lat, prev.lng)
+          ? curr : prev,
+      )
+    : null
+
   return (
     <>
-      <AdvancedMarker position={pos} onClick={() => setOpen(true)} title={hh.head}>
-        <div
-          style={{
-            width: 20,
-            height: 20,
-            borderRadius: '50%',
-            background: color,
-            border: '2.5px solid #fff',
-            boxShadow: `0 0 0 2px ${color}55, 0 2px 6px rgba(0,0,0,.7)`,
-            cursor: 'pointer',
-          }}
-        />
-      </AdvancedMarker>
+      <Marker
+        position={pos}
+        icon={circleIcon(color)}
+        title={hh.head}
+        onClick={handleOpen}
+      />
 
       {open && (
-        <InfoWindow position={pos} onCloseClick={() => setOpen(false)}>
+        <InfoWindow position={pos} onCloseClick={handleClose}>
           <div
             style={{
               minWidth: 210,
@@ -66,6 +90,22 @@ export default function HouseholdMarker({ household: hh }: Props) {
               <b>Notes:</b>{' '}
               <em style={{ color: '#8b949e' }}>{hh.notes || 'None'}</em>
             </div>
+            {nearest && hh.status !== 'Rescued' && (
+              <div
+                style={{
+                  marginBottom: 10,
+                  padding: '6px 10px',
+                  background: '#0d1117',
+                  borderRadius: 4,
+                  border: '1px solid #30363d',
+                  fontSize: '0.75rem',
+                  color: '#58a6ff',
+                }}
+              >
+                🧭 Routing from: <b>{nearest.icon} {nearest.name}</b>
+                &nbsp;({(haversineKm(hh.lat, hh.lng, nearest.lat, nearest.lng) * 1000).toFixed(0)} m away)
+              </div>
+            )}
             <div style={{ marginBottom: 10 }}>
               {hh.vulnArr.map((v) => (
                 <span
@@ -103,6 +143,7 @@ export default function HouseholdMarker({ household: hh }: Props) {
               <button
                 onClick={() => {
                   markRescued(hh.id)
+                  setSelectedId(null)
                   setOpen(false)
                 }}
                 style={{

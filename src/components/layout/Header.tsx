@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV_TABS = [
-  { href: '/register', label: '📝 REGISTER' },
-  { href: '/queue',  label: '🚨 QUEUE'  },
-  { href: '/assets', label: '🚤 ASSETS' },
+  { href: '/register',  label: '📝 REGISTER'  },
+  { href: '/queue',     label: '🚨 QUEUE'     },
+  { href: '/assets',    label: '🚤 ASSETS'    },
+  { href: '/map',       label: '🗺️ DASHBOARD' },
 ]
 
 export default function Header() {
@@ -30,12 +31,18 @@ export default function Header() {
         </small>
       </div>
 
+      {/* Scrollable tab bar */}
       <div
         style={{
           display: 'flex',
+          overflowX: 'auto',
+          overflowY: 'hidden',
           borderBottom: '1px solid var(--border-color)',
           background: 'var(--bg-dark)',
+          scrollbarWidth: 'none',       /* Firefox */
+          msOverflowStyle: 'none',      /* IE/Edge */
         }}
+        className="hide-scrollbar"
       >
         {NAV_TABS.map(({ href, label }) => {
           const active = pathname === href
@@ -44,9 +51,10 @@ export default function Header() {
               key={href}
               href={href}
               style={{
-                flex: 1,
-                padding: '14px 6px',
+                flexShrink: 0,
+                padding: '14px 16px',
                 textAlign: 'center',
+                whiteSpace: 'nowrap',
                 fontSize: '0.72rem',
                 fontWeight: 600,
                 textDecoration: 'none',
@@ -55,7 +63,7 @@ export default function Header() {
                   : '2px solid transparent',
                 color: active ? 'var(--accent-blue)' : 'var(--text-muted)',
                 background: active ? 'var(--panel-bg)' : 'transparent',
-                transition: 'all 0.15s',
+                transition: 'color 0.15s, background 0.15s',
               }}
             >
               {label}

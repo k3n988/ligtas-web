@@ -56,7 +56,7 @@ export default function HouseholdCard({ household: hh }: Props) {
           color: 'var(--text-muted)',
         }}
       >
-        {hh.street}, Brgy. {hh.barangay} &mdash; {hh.occupants} occupants
+        {hh.street}, Brgy. {hh.barangay}, {hh.city} &mdash; {hh.occupants} occupants
       </p>
 
       <div style={{ marginBottom: 10 }}>

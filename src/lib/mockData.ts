@@ -7,6 +7,7 @@ export const mockHouseholds: Household[] = [
   {
     id: 'HH-MOCK1',
     lat: 10.6725, lng: 122.9589,
+    city: 'Bacolod City',
     barangay: 'Singcang-Airport', purok: 'Purok 1',
     street: '12 Magsaysay Ave', structure: 'Single-story',
     head: 'Maria Santos', contact: '0917-123-4567', occupants: 4,
@@ -18,6 +19,7 @@ export const mockHouseholds: Household[] = [
   {
     id: 'HH-MOCK2',
     lat: 10.6780, lng: 122.9490,
+    city: 'Bacolod City',
     barangay: 'Mansilingan', purok: 'Riverside',
     street: 'Blk 4 Lot 12', structure: 'Light materials',
     head: 'Juan Dela Cruz', contact: '0919-987-6543', occupants: 6,
@@ -29,6 +31,7 @@ export const mockHouseholds: Household[] = [
   {
     id: 'HH-MOCK3',
     lat: 10.6690, lng: 122.9610,
+    city: 'Bacolod City',
     barangay: 'Taculing', purok: 'Rosario',
     street: '99 Gonzaga St', structure: 'Multi-story',
     head: 'Elena Gomez', contact: '0922-333-4444', occupants: 2,
@@ -40,6 +43,7 @@ export const mockHouseholds: Household[] = [
   {
     id: 'HH-MOCK4',
     lat: 10.6850, lng: 122.9750,
+    city: 'Talisay City',
     barangay: 'Estefania', purok: 'San Dionisio',
     street: '15 Burgos Ext', structure: 'Single-story',
     head: 'Ricardo Dalisay', contact: '0933-555-7777', occupants: 3,
@@ -51,6 +55,7 @@ export const mockHouseholds: Household[] = [
   {
     id: 'HH-MOCK5',
     lat: 10.6710, lng: 122.9650,
+    city: 'Bacolod City',
     barangay: 'Villamonte', purok: 'Malipayon',
     street: '42 Lopez Jaena', structure: 'Multi-story',
     head: 'Teresa Pineda', contact: '0945-888-1111', occupants: 5,
@@ -62,6 +67,7 @@ export const mockHouseholds: Household[] = [
   {
     id: 'HH-MOCK6',
     lat: 10.7000, lng: 122.9550,
+    city: 'Bacolod City',
     barangay: 'Bata', purok: 'Magsungay',
     street: '88 Lacson St', structure: 'Light materials',
     head: 'Arturo Macapagal', contact: '0915-222-3333', occupants: 4,
@@ -73,6 +79,7 @@ export const mockHouseholds: Household[] = [
   {
     id: 'HH-MOCK7',
     lat: 10.6600, lng: 122.9450,
+    city: 'Silay City',
     barangay: 'Singcang-Airport', purok: 'Airport Subd',
     street: '2A Terminal Way', structure: 'Single-story',
     head: 'Lina Alcantara', contact: '0999-111-9999', occupants: 7,
@@ -84,6 +91,7 @@ export const mockHouseholds: Household[] = [
   {
     id: 'HH-MOCK8',
     lat: 10.6550, lng: 122.9700,
+    city: 'Talisay City',
     barangay: 'Mansilingan', purok: 'Pag-asa',
     street: 'Blk 9 L 24', structure: 'Light materials',
     head: 'Fernando Reyes', contact: '0917-888-2222', occupants: 3,

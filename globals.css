@@ -28,9 +28,12 @@ body, html {
 }
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar        { width: 6px; }
+::-webkit-scrollbar        { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track  { background: var(--bg-dark); }
 ::-webkit-scrollbar-thumb  { background: var(--border-color); border-radius: 3px; }
+
+/* ── Hide scrollbar on tab strip ── */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
 
 /* ── Google Maps InfoWindow dark theme override ── */
 .gm-style .gm-style-iw-c {

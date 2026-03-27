@@ -2,7 +2,7 @@
 // src/components/map/AssetMarker.tsx
 
 import { useState } from 'react'
-import { AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps'
+import { Marker, InfoWindow } from '@vis.gl/react-google-maps'
 import type { Asset } from '@/types'
 
 interface Props {
@@ -15,24 +15,28 @@ const STATUS_COLOR: Record<Asset['status'], string> = {
   Standby: '#8b949e',
 }
 
+/** Renders an emoji inside an SVG data-URI icon — no mapId required. */
+function emojiIcon(emoji: string) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+    <text x="2" y="30" font-size="28"
+      font-family="Apple Color Emoji,Segoe UI Emoji,NotoColorEmoji,sans-serif">${emoji}</text>
+  </svg>`
+  // btoa via encodeURIComponent handles multi-byte emoji safely
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
+}
+
 export default function AssetMarker({ asset }: Props) {
   const [open, setOpen] = useState(false)
   const pos = { lat: asset.lat, lng: asset.lng }
 
   return (
     <>
-      <AdvancedMarker position={pos} onClick={() => setOpen(true)} title={asset.name}>
-        <div
-          style={{
-            fontSize: 26,
-            lineHeight: 1,
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.8))',
-            cursor: 'pointer',
-          }}
-        >
-          {asset.icon}
-        </div>
-      </AdvancedMarker>
+      <Marker
+        position={pos}
+        icon={emojiIcon(asset.icon)}
+        title={asset.name}
+        onClick={() => setOpen(true)}
+      />
 
       {open && (
         <InfoWindow position={pos} onCloseClick={() => setOpen(false)}>

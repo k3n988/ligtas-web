@@ -7,14 +7,17 @@ import { mockHouseholds } from '@/lib/mockData'
 interface HouseholdStore {
   households: Household[]
   panToId: string | null
+  selectedId: string | null          // drives the route overlay
   addHousehold: (h: Household) => void
   markRescued: (id: string) => void
   setPanTo: (id: string | null) => void
+  setSelectedId: (id: string | null) => void
 }
 
 export const useHouseholdStore = create<HouseholdStore>((set) => ({
   households: mockHouseholds,
   panToId: null,
+  selectedId: null,
   addHousehold: (h) =>
     set((state) => ({ households: [...state.households, h] })),
   markRescued: (id) =>
@@ -24,4 +27,5 @@ export const useHouseholdStore = create<HouseholdStore>((set) => ({
       ),
     })),
   setPanTo: (id) => set({ panToId: id }),
+  setSelectedId: (id) => set({ selectedId: id }),
 }))

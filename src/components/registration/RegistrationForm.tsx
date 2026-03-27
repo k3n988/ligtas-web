@@ -7,6 +7,12 @@ import { assessTriage } from '@/lib/triage'
 import type { Vulnerability } from '@/types'
 import TriagePreview from './TriagePreview'
 
+const CITIES = [
+  'Bacolod City', 'Bago City', 'Cadiz City', 'Escalante City',
+  'Himamaylan City', 'Kabankalan City', 'La Carlota City',
+  'Sagay City', 'San Carlos City', 'Silay City', 'Talisay City', 'Victorias City',
+]
+
 const BARANGAYS = [
   'Mansilingan', 'Taculing', 'Estefania',
   'Villamonte', 'Singcang-Airport', 'Bata',
@@ -100,6 +106,7 @@ export default function RegistrationForm() {
       id: 'HH-' + Date.now().toString().slice(-6),
       lat,
       lng,
+      city: fd.get('city') as string,
       barangay: fd.get('barangay') as string,
       purok: (fd.get('purok') as string) || 'N/A',
       street: fd.get('street') as string,
@@ -153,6 +160,17 @@ export default function RegistrationForm() {
             📍
           </button>
         </div>
+      </div>
+
+      {/* City */}
+      <div style={{ marginBottom: 15 }}>
+        <label style={labelStyle}>City / Municipality</label>
+        <select name="city" required style={inputStyle}>
+          <option value="" disabled>Select City / Municipality</option>
+          {CITIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
 
       {/* Barangay + Purok */}

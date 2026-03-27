@@ -22,6 +22,7 @@ export interface Household {
   id: string
   lat: number
   lng: number
+  city: string
   barangay: string
   purok: string
   street: string
