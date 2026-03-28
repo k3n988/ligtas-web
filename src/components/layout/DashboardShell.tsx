@@ -2,8 +2,11 @@
 // src/components/layout/DashboardShell.tsx
 // Must be a Client Component so it can use dynamic() with ssr:false.
 
+import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Sidebar from './Sidebar'
+import { useHouseholdStore } from '@/store/householdStore'
+import { useAssetStore } from '@/store/assetStore'
 
 const MapView = dynamic(() => import('@/components/map/MapView'), {
   ssr: false,
@@ -30,6 +33,10 @@ interface Props {
 }
 
 export default function DashboardShell({ children }: Props) {
+  const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
+  const loadAssets     = useAssetStore((s) => s.loadAssets)
+  useEffect(() => { void loadHouseholds(); void loadAssets() }, [loadHouseholds, loadAssets])
+
   return (
     <div
       style={{

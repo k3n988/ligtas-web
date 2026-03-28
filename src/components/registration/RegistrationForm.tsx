@@ -76,7 +76,9 @@ export default function RegistrationForm() {
   const [locating,  setLocating]  = useState(false)
   const [pinSource, setPinSource] = useState<'gps' | 'map' | null>(null)
   const [vulnArr,   setVulnArr]   = useState<Vulnerability[]>([])
-  const [saved,     setSaved]     = useState(false)  // replaces alert()
+  const [saved,     setSaved]     = useState(false)
+  const [saving,    setSaving]    = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // Sync coords when admin clicks the map
   useEffect(() => {
@@ -117,7 +119,7 @@ export default function RegistrationForm() {
     )
   }
 
-  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!coords || coords === 'Locating…') return
 
@@ -125,31 +127,37 @@ export default function RegistrationForm() {
     const fd   = new FormData(form)
     const [lat, lng] = coords.split(',').map((n) => parseFloat(n.trim()))
 
-    addHousehold({
-      id:        'HH-' + Date.now().toString().slice(-6),
-      lat, lng,
-      city:      fd.get('city')       as string,
-      barangay:  fd.get('barangay')   as string,
-      purok:    (fd.get('purok')      as string) || 'N/A',
-      street:    fd.get('street')     as string,
-      structure: fd.get('structure')  as string,
-      head:      fd.get('head')       as string,
-      contact:   fd.get('contact')    as string,
-      occupants: parseInt(fd.get('occupants') as string, 10),
-      vulnArr,
-      notes:    (fd.get('notes')      as string) || '',
-      source:    fd.get('source')     as RegistrySource,
-      status:    'Pending',
-      triage,
-    })
-
-    // Reset form
-    formRef.current?.reset()
-    setVulnArr([])
-    setCoords('')
-    setPinSource(null)
-    setPendingCoords(null)
-    setSaved(true)
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await addHousehold({
+        id:        'HH-' + Date.now().toString().slice(-6),
+        lat, lng,
+        city:      fd.get('city')       as string,
+        barangay:  fd.get('barangay')   as string,
+        purok:    (fd.get('purok')      as string) || 'N/A',
+        street:    fd.get('street')     as string,
+        structure: fd.get('structure')  as string,
+        head:      fd.get('head')       as string,
+        contact:   fd.get('contact')    as string,
+        occupants: parseInt(fd.get('occupants') as string, 10),
+        vulnArr,
+        notes:    (fd.get('notes')      as string) || '',
+        source:    fd.get('source')     as RegistrySource,
+        status:    'Pending',
+        triage,
+      })
+      formRef.current?.reset()
+      setVulnArr([])
+      setCoords('')
+      setPinSource(null)
+      setPendingCoords(null)
+      setSaved(true)
+    } catch {
+      setSaveError('Failed to save. Check your connection and try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -193,6 +201,24 @@ export default function RegistrationForm() {
           }}
         >
           ✓ Household registered and pinned to map.
+        </div>
+      )}
+
+      {/* ── Error banner ─────────────────────────────────────────── */}
+      {saveError && (
+        <div
+          style={{
+            background: '#3d1a1a',
+            border: '1px solid #ff4d4d',
+            color: '#ff4d4d',
+            borderRadius: 4,
+            padding: '10px 14px',
+            marginBottom: 16,
+            fontWeight: 600,
+            fontSize: '0.82rem',
+          }}
+        >
+          ✕ {saveError}
         </div>
       )}
 
@@ -383,21 +409,23 @@ export default function RegistrationForm() {
 
       <button
         type="submit"
+        disabled={saving}
         style={{
           width: '100%',
           padding: 15,
-          background: 'var(--accent-blue)',
-          color: '#fff',
+          background: saving ? '#1a3a5c' : 'var(--accent-blue)',
+          color: saving ? '#8b949e' : '#fff',
           border: 'none',
           borderRadius: 6,
           fontWeight: 'bold',
-          cursor: 'pointer',
+          cursor: saving ? 'not-allowed' : 'pointer',
           marginTop: 10,
           fontSize: '0.9rem',
           fontFamily: 'Inter, sans-serif',
+          transition: 'background 0.2s',
         }}
       >
-        REGISTER &amp; PIN TO VULNERABILITY MAP
+        {saving ? '⏳ Saving…' : 'REGISTER & PIN TO VULNERABILITY MAP'}
       </button>
     </form>
   )
