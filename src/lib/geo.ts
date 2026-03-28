@@ -38,12 +38,3 @@ export function pointInPolygon(
   return inside
 }
 
-/** Arithmetic centroid of a polygon — used for center-marker placement. */
-export function polygonCenter(
-  polygon: Array<{ lat: number; lng: number }>,
-): { lat: number; lng: number } {
-  return {
-    lat: polygon.reduce((s, p) => s + p.lat, 0) / polygon.length,
-    lng: polygon.reduce((s, p) => s + p.lng, 0) / polygon.length,
-  }
-}

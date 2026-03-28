@@ -2,6 +2,18 @@
 
 export type TriageLevel = 'CRITICAL' | 'HIGH' | 'ELEVATED' | 'STABLE'
 
+/**
+ * Source of the household registration — aligns with the LGU-led
+ * "Digitizing Existing Registries" approach in the LIGTAS solution.
+ */
+export type RegistrySource =
+  | 'Senior Citizen Registry'
+  | 'PWD Registry'
+  | 'Maternal Health Record'
+  | 'CSWDO Database'
+  | 'BHW Field Survey'
+  | 'Self-Reported'
+
 export type Vulnerability =
   | 'Bedridden'
   | 'Senior'
@@ -34,6 +46,8 @@ export interface Household {
   notes: string
   status: 'Pending' | 'Rescued'
   triage: TriageResult
+  /** Which LGU registry or method this record originated from. */
+  source?: RegistrySource
   assignedAssetId?: string
   dispatchedAt?: string
 }
@@ -49,20 +63,3 @@ export interface Asset {
   icon: string
 }
 
-// ─── Hazard Overlay types ─────────────────────────────────────────────────────
-
-export type DisasterType = 'Flood' | 'Fire' | 'Landslide' | 'Storm' | 'Earthquake'
-
-/** NOAH-aligned hazard scale: High > Medium > Low */
-export type HazardLevel = 'High' | 'Medium' | 'Low'
-
-export interface HazardArea {
-  id: string
-  /** Human-readable zone name shown in the InfoWindow header. */
-  label: string
-  disasterType: DisasterType
-  /** Scale of the disaster, set by the command center. */
-  level: HazardLevel
-  /** Ordered list of lat/lng vertices defining the polygon boundary. */
-  polygon: Array<{ lat: number; lng: number }>
-}

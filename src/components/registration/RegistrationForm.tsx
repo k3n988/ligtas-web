@@ -1,10 +1,10 @@
 'use client'
 // src/components/registration/RegistrationForm.tsx
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useHouseholdStore } from '@/store/householdStore'
 import { assessTriage } from '@/lib/triage'
-import type { Vulnerability } from '@/types'
+import type { RegistrySource, Vulnerability } from '@/types'
 import TriagePreview from './TriagePreview'
 
 const CITIES = [
@@ -18,15 +18,24 @@ const BARANGAYS = [
   'Villamonte', 'Singcang-Airport', 'Bata',
 ]
 
+const SOURCE_OPTIONS: { value: RegistrySource; label: string }[] = [
+  { value: 'Senior Citizen Registry',  label: 'Senior Citizen Registry (OSCA)'      },
+  { value: 'PWD Registry',             label: 'PWD Registry (CPDAO)'                },
+  { value: 'Maternal Health Record',   label: 'Maternal Health Record (RHU/BHW)'    },
+  { value: 'CSWDO Database',           label: 'CSWDO Database'                       },
+  { value: 'BHW Field Survey',         label: 'BHW Field Survey / Community Round'  },
+  { value: 'Self-Reported',            label: 'Self-Reported (Citizen Submission)'   },
+]
+
 const VULN_OPTIONS: { value: Vulnerability; label: string }[] = [
-  { value: 'Bedridden', label: 'Bedridden' },
-  { value: 'Senior', label: 'Senior Citizen' },
-  { value: 'Wheelchair', label: 'Wheelchair User' },
-  { value: 'Infant', label: 'Infant/Toddler' },
-  { value: 'Pregnant', label: 'Pregnant' },
-  { value: 'PWD', label: 'PWD' },
-  { value: 'Oxygen', label: 'Oxygen Dep.' },
-  { value: 'Dialysis', label: 'Dialysis Patient' },
+  { value: 'Bedridden',  label: 'Bedridden'         },
+  { value: 'Senior',     label: 'Senior Citizen'     },
+  { value: 'Wheelchair', label: 'Wheelchair User'    },
+  { value: 'Infant',     label: 'Infant / Toddler'   },
+  { value: 'Pregnant',   label: 'Pregnant'            },
+  { value: 'PWD',        label: 'PWD'                 },
+  { value: 'Oxygen',     label: 'Oxygen Dependent'   },
+  { value: 'Dialysis',   label: 'Dialysis Patient'   },
 ]
 
 const inputStyle: React.CSSProperties = {
@@ -57,94 +66,151 @@ const sectionDivider: React.CSSProperties = {
 }
 
 export default function RegistrationForm() {
-  const addHousehold = useHouseholdStore((s) => s.addHousehold)
+  const addHousehold    = useHouseholdStore((s) => s.addHousehold)
   const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
-  const pendingCoords = useHouseholdStore((s) => s.pendingCoords)
+  const pendingCoords   = useHouseholdStore((s) => s.pendingCoords)
   const setPendingCoords = useHouseholdStore((s) => s.setPendingCoords)
 
-  const [coords, setCoords] = useState('')
-  const [locating, setLocating] = useState(false)
+  const formRef  = useRef<HTMLFormElement>(null)
+  const [coords,    setCoords]    = useState('')
+  const [locating,  setLocating]  = useState(false)
   const [pinSource, setPinSource] = useState<'gps' | 'map' | null>(null)
-  const [vulnArr, setVulnArr] = useState<Vulnerability[]>([])
+  const [vulnArr,   setVulnArr]   = useState<Vulnerability[]>([])
+  const [saved,     setSaved]     = useState(false)  // replaces alert()
 
-  // Sync coords whenever admin clicks a location on the map
+  // Sync coords when admin clicks the map
   useEffect(() => {
     if (!pendingCoords) return
     setCoords(`${pendingCoords.lat.toFixed(6)}, ${pendingCoords.lng.toFixed(6)}`)
     setPinSource('map')
   }, [pendingCoords])
 
+  // Auto-dismiss the success banner after 3 s
+  useEffect(() => {
+    if (!saved) return
+    const t = setTimeout(() => setSaved(false), 3000)
+    return () => clearTimeout(t)
+  }, [saved])
+
   const triage = assessTriage(vulnArr)
 
-  const toggleVuln = (v: Vulnerability) => {
+  const toggleVuln = (v: Vulnerability) =>
     setVulnArr((prev) =>
       prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v],
     )
-  }
 
   const getLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by this browser.')
-      return
-    }
+    if (!navigator.geolocation) return
     setLocating(true)
-    setCoords('Locating...')
+    setCoords('Locating…')
     navigator.geolocation.getCurrentPosition(
       ({ coords: c }) => {
         setCoords(`${c.latitude.toFixed(6)}, ${c.longitude.toFixed(6)}`)
+        setPinSource('gps')
         setLocating(false)
       },
       (err) => {
-        alert('GPS Error: ' + err.message + '. Enter coordinates manually.')
         setCoords('')
         setLocating(false)
+        console.error('GPS Error:', err.message)
       },
     )
   }
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!coords || coords === 'Locating...') {
-      alert('Please acquire GPS location first.')
-      return
-    }
+    if (!coords || coords === 'Locating…') return
 
     const form = e.currentTarget
-    const fd = new FormData(form)
+    const fd   = new FormData(form)
     const [lat, lng] = coords.split(',').map((n) => parseFloat(n.trim()))
 
     addHousehold({
-      id: 'HH-' + Date.now().toString().slice(-6),
-      lat,
-      lng,
-      city: fd.get('city') as string,
-      barangay: fd.get('barangay') as string,
-      purok: (fd.get('purok') as string) || 'N/A',
-      street: fd.get('street') as string,
-      structure: fd.get('structure') as string,
-      head: fd.get('head') as string,
-      contact: fd.get('contact') as string,
+      id:        'HH-' + Date.now().toString().slice(-6),
+      lat, lng,
+      city:      fd.get('city')       as string,
+      barangay:  fd.get('barangay')   as string,
+      purok:    (fd.get('purok')      as string) || 'N/A',
+      street:    fd.get('street')     as string,
+      structure: fd.get('structure')  as string,
+      head:      fd.get('head')       as string,
+      contact:   fd.get('contact')    as string,
       occupants: parseInt(fd.get('occupants') as string, 10),
       vulnArr,
-      notes: (fd.get('notes') as string) || '',
-      status: 'Pending',
+      notes:    (fd.get('notes')      as string) || '',
+      source:    fd.get('source')     as RegistrySource,
+      status:    'Pending',
       triage,
     })
 
-    form.reset()
+    // Reset form
+    formRef.current?.reset()
     setVulnArr([])
     setCoords('')
     setPinSource(null)
     setPendingCoords(null)
-    alert('Household registered and mapped.')
+    setSaved(true)
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      {/* Location */}
+    <form ref={formRef} onSubmit={handleSubmit}>
+
+      {/* ── LGU context header ──────────────────────────────────────── */}
+      <div
+        style={{
+          background: '#0d1117',
+          border: '1px solid #30363d',
+          borderLeft: '3px solid var(--accent-blue)',
+          borderRadius: 4,
+          padding: '10px 14px',
+          marginBottom: 20,
+          fontSize: '0.75rem',
+          color: 'var(--text-muted)',
+          lineHeight: 1.6,
+        }}
+      >
+        <strong style={{ color: '#fff', display: 'block', marginBottom: 2 }}>
+          📋 LGU Vulnerability Registry — Authorized Personnel Only
+        </strong>
+        For use by Barangay Health Workers (BHWs), CSWDO, and LGU field staff
+        to digitize existing registries pre-disaster.
+      </div>
+
+      {/* ── Success banner (replaces alert) ───────────────────────── */}
+      {saved && (
+        <div
+          style={{
+            background: '#238636',
+            color: '#fff',
+            borderRadius: 4,
+            padding: '10px 14px',
+            marginBottom: 16,
+            fontWeight: 600,
+            fontSize: '0.82rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          ✓ Household registered and pinned to map.
+        </div>
+      )}
+
+      {/* ── Source Registry ──────────────────────────────────────── */}
+      <div style={{ marginBottom: 15 }}>
+        <label style={labelStyle}>Source Registry / Data Origin</label>
+        <select name="source" required style={inputStyle}>
+          <option value="" disabled>Select data source</option>
+          {SOURCE_OPTIONS.map(({ value, label }) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* ── Location ─────────────────────────────────────────────── */}
       <div style={{ marginBottom: 15 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-          <label style={{ ...labelStyle, marginBottom: 0 }}>Location</label>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>GPS Location</label>
           {pinSource && (
             <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? '#58a6ff' : '#238636', fontWeight: 600 }}>
               {pinSource === 'map' ? '🗺 Pinned on map' : '📡 GPS captured'}
@@ -203,7 +269,7 @@ export default function RegistrationForm() {
         </button>
       </div>
 
-      {/* City */}
+      {/* ── City ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 15 }}>
         <label style={labelStyle}>City / Municipality</label>
         <select name="city" required style={inputStyle}>
@@ -214,7 +280,7 @@ export default function RegistrationForm() {
         </select>
       </div>
 
-      {/* Barangay + Purok */}
+      {/* ── Barangay + Purok ─────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 15 }}>
         <div>
           <label style={labelStyle}>Barangay</label>
@@ -231,19 +297,19 @@ export default function RegistrationForm() {
         </div>
       </div>
 
-      {/* Street */}
+      {/* ── Street ───────────────────────────────────────────────── */}
       <div style={{ marginBottom: 15 }}>
         <label style={labelStyle}>Street Address / Landmark</label>
         <input
           name="street"
           type="text"
-          placeholder="House number, street, or nearest landmark"
+          placeholder="House no., street, or nearest landmark"
           required
           style={inputStyle}
         />
       </div>
 
-      {/* Structure */}
+      {/* ── Structure ────────────────────────────────────────────── */}
       <div style={{ marginBottom: 15 }}>
         <label style={labelStyle}>Structural Risk</label>
         <select name="structure" style={inputStyle}>
@@ -253,13 +319,13 @@ export default function RegistrationForm() {
         </select>
       </div>
 
-      {/* Household Head */}
+      {/* ── Household Head ───────────────────────────────────────── */}
       <div style={sectionDivider}>
-        <label style={labelStyle}>Household Head Name</label>
+        <label style={labelStyle}>Household Head / Patient Name</label>
         <input name="head" type="text" placeholder="Full Name" required style={inputStyle} />
       </div>
 
-      {/* Contact + Occupants */}
+      {/* ── Contact + Occupants ──────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, margin: '15px 0' }}>
         <div>
           <label style={labelStyle}>Primary Contact</label>
@@ -271,9 +337,9 @@ export default function RegistrationForm() {
         </div>
       </div>
 
-      {/* Vulnerabilities */}
+      {/* ── Vulnerabilities ──────────────────────────────────────── */}
       <div style={sectionDivider}>
-        <label style={labelStyle}>Vulnerability (Select all that apply)</label>
+        <label style={labelStyle}>Vulnerability Profile (select all that apply)</label>
         <div
           style={{
             display: 'grid',
@@ -302,13 +368,13 @@ export default function RegistrationForm() {
         </div>
       </div>
 
-      {/* Notes */}
+      {/* ── Notes ────────────────────────────────────────────────── */}
       <div style={{ margin: '15px 0' }}>
         <label style={labelStyle}>Responder / Evacuation Notes</label>
         <textarea
           name="notes"
           rows={2}
-          placeholder="Critical instructions (e.g. Needs stretcher, 4 men to lift)"
+          placeholder="Critical instructions (e.g. Needs stretcher, 4 men required)"
           style={{ ...inputStyle, resize: 'vertical' }}
         />
       </div>
@@ -331,7 +397,7 @@ export default function RegistrationForm() {
           fontFamily: 'Inter, sans-serif',
         }}
       >
-        REGISTER &amp; MAP HOUSEHOLD
+        REGISTER &amp; PIN TO VULNERABILITY MAP
       </button>
     </form>
   )

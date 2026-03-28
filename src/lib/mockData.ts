@@ -1,7 +1,7 @@
 // src/lib/mockData.ts
 
 import { assessTriage } from './triage'
-import type { Asset, Household, HazardArea } from '@/types'
+import type { Asset, Household } from '@/types'
 
 export const mockHouseholds: Household[] = [
   {
@@ -14,6 +14,7 @@ export const mockHouseholds: Household[] = [
     vulnArr: ['Bedridden', 'Senior'],
     notes: 'Stroke patient, 2nd floor flooded.',
     status: 'Pending',
+    source: 'Senior Citizen Registry',
     triage: assessTriage(['Bedridden', 'Senior']),
   },
   {
@@ -26,6 +27,7 @@ export const mockHouseholds: Household[] = [
     vulnArr: ['Infant', 'Pregnant'],
     notes: 'Wife is 8 months pregnant.',
     status: 'Pending',
+    source: 'Maternal Health Record',
     triage: assessTriage(['Infant', 'Pregnant']),
   },
   {
@@ -38,6 +40,7 @@ export const mockHouseholds: Household[] = [
     vulnArr: ['Wheelchair'],
     notes: 'Trapped on 1st floor.',
     status: 'Pending',
+    source: 'PWD Registry',
     triage: assessTriage(['Wheelchair']),
   },
   {
@@ -50,6 +53,7 @@ export const mockHouseholds: Household[] = [
     vulnArr: ['Oxygen', 'PWD'],
     notes: 'Requires constant power for oxygen concentrator.',
     status: 'Pending',
+    source: 'PWD Registry',
     triage: assessTriage(['Oxygen', 'PWD']),
   },
   {
@@ -62,6 +66,7 @@ export const mockHouseholds: Household[] = [
     vulnArr: ['Senior'],
     notes: 'Safely evacuated.',
     status: 'Rescued',
+    source: 'Senior Citizen Registry',
     triage: assessTriage(['Senior']),
   },
   {
@@ -74,6 +79,7 @@ export const mockHouseholds: Household[] = [
     vulnArr: ['Bedridden', 'Dialysis'],
     notes: 'Needs immediate medical transport.',
     status: 'Pending',
+    source: 'CSWDO Database',
     triage: assessTriage(['Bedridden', 'Dialysis']),
   },
   {
@@ -86,6 +92,7 @@ export const mockHouseholds: Household[] = [
     vulnArr: ['Infant', 'Senior'],
     notes: 'Trapped with 2-month old twins and grandmother.',
     status: 'Pending',
+    source: 'BHW Field Survey',
     triage: assessTriage(['Infant', 'Senior']),
   },
   {
@@ -98,41 +105,11 @@ export const mockHouseholds: Household[] = [
     vulnArr: ['Dialysis', 'Wheelchair'],
     notes: 'Missed dialysis session, water rising rapidly.',
     status: 'Pending',
+    source: 'BHW Field Survey',
     triage: assessTriage(['Dialysis', 'Wheelchair']),
   },
 ]
 
-// ─── Hazard zones ─────────────────────────────────────────────────────────────
-// HAZ-001 polygon contains HH-MOCK1 (Singcang, Bedridden+Senior)
-//                       and HH-MOCK3 (Taculing, Wheelchair)
-// HAZ-002 polygon contains HH-MOCK2 (Mansilingan, Infant+Pregnant)
-
-export const mockHazards: HazardArea[] = [
-  {
-    id: 'HAZ-001',
-    label: 'Singcang–Taculing Flood Zone',
-    disasterType: 'Flood',
-    level: 'High',
-    polygon: [
-      { lat: 10.6675, lng: 122.9570 },
-      { lat: 10.6745, lng: 122.9570 },
-      { lat: 10.6745, lng: 122.9635 },
-      { lat: 10.6675, lng: 122.9635 },
-    ],
-  },
-  {
-    id: 'HAZ-002',
-    label: 'Mansilingan Fire Zone',
-    disasterType: 'Fire',
-    level: 'Medium',
-    polygon: [
-      { lat: 10.6760, lng: 122.9470 },
-      { lat: 10.6800, lng: 122.9470 },
-      { lat: 10.6800, lng: 122.9515 },
-      { lat: 10.6760, lng: 122.9515 },
-    ],
-  },
-]
 
 export const mockAssets: Asset[] = [
   {

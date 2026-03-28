@@ -44,28 +44,6 @@ export default function MapLegend() {
       ))}
       <div style={{ borderTop: '1px solid #30363d', margin: '8px 0' }} />
       <div style={{ fontWeight: 700, fontSize: '0.72rem', letterSpacing: 1, textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>
-        Hazard Level (NOAH)
-      </div>
-      {[
-        { color: '#e74c3c', label: 'High' },
-        { color: '#e67e22', label: 'Medium' },
-        { color: '#f4d03f', label: 'Low' },
-        { color: '#238636', label: 'All Rescued (zone active)' },
-      ].map(({ color, label }) => (
-        <div key={label} style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}>
-          <div
-            style={{
-              width: 12, height: 12, borderRadius: 2,
-              background: color, opacity: 0.85,
-              border: '1px solid rgba(255,255,255,.25)',
-              marginRight: 8, flexShrink: 0,
-            }}
-          />
-          {label}
-        </div>
-      ))}
-      <div style={{ borderTop: '1px solid #30363d', margin: '8px 0' }} />
-      <div style={{ fontWeight: 700, fontSize: '0.72rem', letterSpacing: 1, textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>
         Assets
       </div>
       {[

@@ -49,7 +49,8 @@ export default function SummaryReportModal({ households, assets, onClose }: Prop
   const handleCopy = () => {
     const lines = [
       'L.I.G.T.A.S. INCIDENT SUMMARY REPORT',
-      'Bacolod City DRRMO',
+      'Location Intelligence & Geospatial Triage for Accelerated Support',
+      'Bacolod City DRRMO Command Center',
       `Generated: ${fmt(now)}`,
       '',
       '=== TRIAGE SUMMARY ===',
@@ -70,7 +71,7 @@ export default function SummaryReportModal({ households, assets, onClose }: Prop
       '',
       '=== PENDING — UNASSIGNED ===',
       ...unassigned.map((hh) =>
-        `• ${hh.head} | ${hh.triage.level} | Brgy. ${hh.barangay}, ${hh.city}`,
+        `• ${hh.head} | ${hh.triage.level} | Brgy. ${hh.barangay}, ${hh.city}${hh.source ? ' | Source: ' + hh.source : ''}`,
       ),
       unassigned.length === 0 ? '  (none)' : '',
       '',
@@ -128,10 +129,13 @@ export default function SummaryReportModal({ households, assets, onClose }: Prop
         >
           <div>
             <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff' }}>
-              Incident Summary Report
+              L.I.G.T.A.S. — Incident Summary Report
             </div>
             <div style={{ fontSize: '0.72rem', color: '#8b949e', marginTop: 2 }}>
-              Generated: {fmt(now)} &mdash; Bacolod City DRRMO
+              Location Intelligence &amp; Geospatial Triage for Accelerated Support
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#58a6ff', marginTop: 1 }}>
+              Generated: {fmt(now)} &mdash; Bacolod City DRRMO Command Center
             </div>
           </div>
           <button

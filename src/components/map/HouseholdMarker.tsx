@@ -88,6 +88,13 @@ export default function HouseholdMarker({ household: hh }: Props) {
               <br />
               <b>Occupants:</b> {hh.occupants} &nbsp;|&nbsp; <b>Structure:</b> {hh.structure}
               <br />
+              {hh.source && (
+                <>
+                  <b>Source:</b>{' '}
+                  <span style={{ color: '#58a6ff' }}>{hh.source}</span>
+                  <br />
+                </>
+              )}
               <b>Notes:</b>{' '}
               <em style={{ color: '#8b949e' }}>{hh.notes || 'None'}</em>
             </div>

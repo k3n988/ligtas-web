@@ -86,9 +86,14 @@ export default function HouseholdCard({ household: hh }: Props) {
         <TriageBadge triage={hh.triage} rescued={isRescued} />
       </div>
 
-      <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+      <p style={{ margin: '0 0 6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         {hh.street}, Brgy. {hh.barangay}, {hh.city} &mdash; {hh.occupants} occupants
       </p>
+      {hh.source && (
+        <p style={{ margin: '0 0 8px', fontSize: '0.68rem', color: '#58a6ff' }}>
+          📂 {hh.source}
+        </p>
+      )}
 
       {/* Vulnerability badges */}
       <div style={{ marginBottom: 10 }}>
