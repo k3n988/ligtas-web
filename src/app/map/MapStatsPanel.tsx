@@ -1,16 +1,44 @@
 'use client'
 // src/app/map/MapStatsPanel.tsx
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
+import { useHazardStore } from '@/store/hazardStore'
 import { TRIAGE_ORDER } from '@/lib/triage'
+import { pointInPolygon } from '@/lib/geo'
 import SummaryReportModal from '@/components/dashboard/SummaryReportModal'
+
+const SEVERITY_COLOR: Record<string, string> = {
+  Critical: '#ff4d4d',
+  High:     '#f39c12',
+  Elevated: '#f1c40f',
+}
+
+const DISASTER_EMOJI: Record<string, string> = {
+  Flood: '🌊', Fire: '🔥', Landslide: '⛰️', Storm: '🌀', Earthquake: '📳',
+}
 
 export default function MapStatsPanel() {
   const households = useHouseholdStore((s) => s.households)
-  const assets = useAssetStore((s) => s.assets)
+  const assets     = useAssetStore((s) => s.assets)
+  const hazards    = useHazardStore((s) => s.hazards)
+  const clearHazard = useHazardStore((s) => s.clearHazard)
   const [showReport, setShowReport] = useState(false)
+
+  // Derive per-hazard rescue status (mirrors the logic in HazardOverlay)
+  const hazardStatus = useMemo(
+    () =>
+      hazards.map((h) => {
+        const inside       = households.filter((hh) =>
+          pointInPolygon({ lat: hh.lat, lng: hh.lng }, h.polygon),
+        )
+        const rescuedCount = inside.filter((hh) => hh.status === 'Rescued').length
+        const allRescued   = inside.length > 0 && rescuedCount === inside.length
+        return { hazard: h, inside, rescuedCount, allRescued }
+      }),
+    [hazards, households],
+  )
 
   const pending = households.filter((h) => h.status === 'Pending')
   const rescued = households.filter((h) => h.status === 'Rescued')
@@ -158,6 +186,120 @@ export default function MapStatsPanel() {
               </div>
             ))}
           </>
+        )}
+
+        {/* Hazard Command */}
+        <h2
+          style={{
+            margin: '0 0 10px',
+            fontSize: '0.8rem',
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+          }}
+        >
+          Hazard Zones
+        </h2>
+        {hazardStatus.length === 0 ? (
+          <div
+            style={{
+              padding: '10px 14px',
+              marginBottom: 20,
+              background: '#21262d',
+              borderRadius: 6,
+              fontSize: '0.8rem',
+              color: 'var(--text-muted)',
+            }}
+          >
+            No active hazard zones.
+          </div>
+        ) : (
+          <div style={{ marginBottom: 20 }}>
+            {hazardStatus.map(({ hazard, inside, rescuedCount, allRescued }) => (
+              <div
+                key={hazard.id}
+                style={{
+                  padding: '10px 12px',
+                  marginBottom: 8,
+                  background: '#21262d',
+                  borderRadius: 6,
+                  borderLeft: `3px solid ${allRescued ? '#238636' : SEVERITY_COLOR[hazard.severity]}`,
+                }}
+              >
+                {/* Zone header */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 4,
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.82rem' }}>
+                    {DISASTER_EMOJI[hazard.disasterType]} {hazard.label}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      color: allRescued ? '#238636' : SEVERITY_COLOR[hazard.severity],
+                    }}
+                  >
+                    {hazard.severity.toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div style={{ marginBottom: 6, fontSize: '0.73rem', color: 'var(--text-muted)' }}>
+                  {rescuedCount} / {inside.length} rescued
+                </div>
+                <div
+                  style={{
+                    height: 5,
+                    background: '#30363d',
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    marginBottom: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${inside.length ? (rescuedCount / inside.length) * 100 : 0}%`,
+                      background: allRescued ? '#238636' : '#58a6ff',
+                      borderRadius: 3,
+                      transition: 'width 0.4s ease',
+                    }}
+                  />
+                </div>
+
+                {/* Resolution State 2 — clearHazardArea() */}
+                <button
+                  onClick={() => clearHazard(hazard.id)}
+                  disabled={!allRescued}
+                  title={
+                    allRescued
+                      ? 'Hazard physically cleared — remove zone from map'
+                      : 'All citizens must be rescued before clearing'
+                  }
+                  style={{
+                    width: '100%',
+                    padding: '5px',
+                    background: 'transparent',
+                    border: `1px solid ${allRescued ? '#238636' : '#30363d'}`,
+                    color: allRescued ? '#238636' : '#6e7681',
+                    borderRadius: 4,
+                    fontWeight: 700,
+                    fontSize: '0.72rem',
+                    cursor: allRescued ? 'pointer' : 'not-allowed',
+                    fontFamily: 'Inter, sans-serif',
+                  }}
+                >
+                  {allRescued ? '✓ Clear Hazard Area' : '🔒 Clear Hazard Area'}
+                </button>
+              </div>
+            ))}
+          </div>
         )}
 
         {/* Finalize Report button */}

@@ -1,7 +1,7 @@
 // src/lib/mockData.ts
 
 import { assessTriage } from './triage'
-import type { Asset, Household } from '@/types'
+import type { Asset, Household, HazardArea } from '@/types'
 
 export const mockHouseholds: Household[] = [
   {
@@ -99,6 +99,38 @@ export const mockHouseholds: Household[] = [
     notes: 'Missed dialysis session, water rising rapidly.',
     status: 'Pending',
     triage: assessTriage(['Dialysis', 'Wheelchair']),
+  },
+]
+
+// ─── Hazard zones ─────────────────────────────────────────────────────────────
+// HAZ-001 polygon contains HH-MOCK1 (Singcang, Bedridden+Senior)
+//                       and HH-MOCK3 (Taculing, Wheelchair)
+// HAZ-002 polygon contains HH-MOCK2 (Mansilingan, Infant+Pregnant)
+
+export const mockHazards: HazardArea[] = [
+  {
+    id: 'HAZ-001',
+    label: 'Singcang–Taculing Flood Zone',
+    disasterType: 'Flood',
+    severity: 'Critical',
+    polygon: [
+      { lat: 10.6675, lng: 122.9570 },
+      { lat: 10.6745, lng: 122.9570 },
+      { lat: 10.6745, lng: 122.9635 },
+      { lat: 10.6675, lng: 122.9635 },
+    ],
+  },
+  {
+    id: 'HAZ-002',
+    label: 'Mansilingan Fire Zone',
+    disasterType: 'Fire',
+    severity: 'High',
+    polygon: [
+      { lat: 10.6760, lng: 122.9470 },
+      { lat: 10.6800, lng: 122.9470 },
+      { lat: 10.6800, lng: 122.9515 },
+      { lat: 10.6760, lng: 122.9515 },
+    ],
   },
 ]
 

@@ -48,3 +48,18 @@ export interface Asset {
   lng: number
   icon: string
 }
+
+// ─── Hazard Overlay types ─────────────────────────────────────────────────────
+
+export type DisasterType = 'Flood' | 'Fire' | 'Landslide' | 'Storm' | 'Earthquake'
+export type HazardSeverity = 'Critical' | 'High' | 'Elevated'
+
+export interface HazardArea {
+  id: string
+  /** Human-readable zone name shown in the InfoWindow header. */
+  label: string
+  disasterType: DisasterType
+  severity: HazardSeverity
+  /** Ordered list of lat/lng vertices defining the polygon boundary. */
+  polygon: Array<{ lat: number; lng: number }>
+}

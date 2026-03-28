@@ -16,6 +16,7 @@ import { haversineKm } from '@/lib/geo'
 import HouseholdMarker from './HouseholdMarker'
 import AssetMarker from './AssetMarker'
 import MapLegend from './MapLegend'
+import HazardOverlay from './HazardOverlay'
 import { Marker } from '@vis.gl/react-google-maps'
 
 const DEFAULT_CENTER = { lat: 10.6765, lng: 122.9509 }
@@ -230,6 +231,7 @@ function MapInner() {
         <PanController />
         <PickCursorController />
         <RouteOverlay />
+        <HazardOverlay />
 
         {households.map((hh) => (
           <HouseholdMarker key={hh.id} household={hh} />

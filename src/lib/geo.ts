@@ -17,3 +17,33 @@ export function haversineKm(
 function toRad(deg: number) {
   return (deg * Math.PI) / 180
 }
+
+/**
+ * Ray-casting point-in-polygon check.
+ * Accurate for local-scale polygons where earth curvature is negligible.
+ * Replaces the need for maps_toolkit in the web context.
+ */
+export function pointInPolygon(
+  point: { lat: number; lng: number },
+  polygon: Array<{ lat: number; lng: number }>,
+): boolean {
+  let inside = false
+  const { lat: y, lng: x } = point
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const { lat: yi, lng: xi } = polygon[i]
+    const { lat: yj, lng: xj } = polygon[j]
+    const intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi
+    if (intersect) inside = !inside
+  }
+  return inside
+}
+
+/** Arithmetic centroid of a polygon — used for center-marker placement. */
+export function polygonCenter(
+  polygon: Array<{ lat: number; lng: number }>,
+): { lat: number; lng: number } {
+  return {
+    lat: polygon.reduce((s, p) => s + p.lat, 0) / polygon.length,
+    lng: polygon.reduce((s, p) => s + p.lng, 0) / polygon.length,
+  }
+}
