@@ -2,6 +2,8 @@
 
 export type TriageLevel = 'CRITICAL' | 'HIGH' | 'ELEVATED' | 'STABLE'
 
+export type ApprovalStatus = 'approved' | 'pending_review' | 'rejected'
+
 /**
  * Source of the household registration — aligns with the LGU-led
  * "Digitizing Existing Registries" approach in the LIGTAS solution.
@@ -48,6 +50,10 @@ export interface Household {
   triage: TriageResult
   /** Which LGU registry or method this record originated from. */
   source?: RegistrySource
+  /** LGU-entered records are auto-approved. Self-Reported require admin review. */
+  approvalStatus: ApprovalStatus
+  /** URL of uploaded verification document (Senior/PWD ID, medical cert) */
+  documentUrl?: string
   assignedAssetId?: string
   dispatchedAt?: string
 }
@@ -61,5 +67,6 @@ export interface Asset {
   lat: number
   lng: number
   icon: string
+  address?: string
 }
 

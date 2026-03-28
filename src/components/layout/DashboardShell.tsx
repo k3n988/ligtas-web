@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import Sidebar from './Sidebar'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
+import { supabase } from '@/lib/supabase'
 
 const MapView = dynamic(() => import('@/components/map/MapView'), {
   ssr: false,
@@ -35,7 +36,22 @@ interface Props {
 export default function DashboardShell({ children }: Props) {
   const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
   const loadAssets     = useAssetStore((s) => s.loadAssets)
-  useEffect(() => { void loadHouseholds(); void loadAssets() }, [loadHouseholds, loadAssets])
+  useEffect(() => {
+    void loadHouseholds()
+    void loadAssets()
+
+    const channel = supabase
+      .channel('ligtas-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'households' },
+        () => { void loadHouseholds() },
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assets' },
+        () => { void loadAssets() },
+      )
+      .subscribe()
+
+    return () => { void supabase.removeChannel(channel) }
+  }, [loadHouseholds, loadAssets])
 
   return (
     <div

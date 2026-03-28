@@ -31,9 +31,11 @@ export function rowToHousehold(row: any): Household {
       hex:        row.triage_hex,
       colorName:  row.triage_color_name,
     },
-    source:          row.source        ?? undefined,
-    assignedAssetId: row.assigned_asset_id ?? undefined,
-    dispatchedAt:    row.dispatched_at ?? undefined,
+    source:          row.source             ?? undefined,
+    approvalStatus:  row.approval_status    ?? 'approved',
+    documentUrl:     row.document_url       ?? undefined,
+    assignedAssetId: row.assigned_asset_id  ?? undefined,
+    dispatchedAt:    row.dispatched_at      ?? undefined,
   }
 }
 
@@ -57,6 +59,8 @@ export function householdToRow(h: Household) {
     triage_hex:         h.triage.hex,
     triage_color_name:  h.triage.colorName,
     source:             h.source             ?? null,
+    approval_status:    h.approvalStatus,
+    document_url:       h.documentUrl        ?? null,
     assigned_asset_id:  h.assignedAssetId    ?? null,
     dispatched_at:      h.dispatchedAt       ?? null,
   }

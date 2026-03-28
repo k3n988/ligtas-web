@@ -12,6 +12,10 @@ interface HouseholdStore {
   pendingCoords: { lat: number; lng: number } | null
   loadHouseholds: () => Promise<void>
   addHousehold: (h: Household) => Promise<void>
+  updateHousehold: (id: string, patch: Partial<Household>) => Promise<void>
+  deleteHousehold: (id: string) => Promise<void>
+  approveHousehold: (id: string) => Promise<void>
+  rejectHousehold: (id: string) => Promise<void>
   markRescued: (id: string) => Promise<void>
   restorePending: (id: string) => Promise<void>
   setPanTo: (id: string | null) => void
@@ -88,6 +92,51 @@ export const useHouseholdStore = create<HouseholdStore>((set) => ({
       .update({ assigned_asset_id: assetId, dispatched_at: dispatchedAt })
       .eq('id', householdId)
     if (error) console.error('[LIGTAS] dispatchRescue:', error.message)
+  },
+
+  updateHousehold: async (id, patch) => {
+    set((s) => ({
+      households: s.households.map((hh) => hh.id === id ? { ...hh, ...patch } : hh),
+    }))
+    const { error } = await supabase
+      .from('households')
+      .update({
+        head:             patch.head,
+        contact:          patch.contact,
+        occupants:        patch.occupants,
+        notes:            patch.notes,
+        source:           patch.source ?? null,
+        status:           patch.status,
+        vuln_arr:         patch.vulnArr,
+        triage_level:     patch.triage?.level,
+        triage_hex:       patch.triage?.hex,
+        triage_color_name: patch.triage?.colorName,
+      })
+      .eq('id', id)
+    if (error) console.error('[LIGTAS] updateHousehold:', error.message)
+  },
+
+  deleteHousehold: async (id) => {
+    set((s) => ({ households: s.households.filter((hh) => hh.id !== id) }))
+    const { error } = await supabase.from('households').delete().eq('id', id)
+    if (error) console.error('[LIGTAS] deleteHousehold:', error.message)
+  },
+
+  approveHousehold: async (id) => {
+    set((s) => ({
+      households: s.households.map((hh) =>
+        hh.id === id ? { ...hh, approvalStatus: 'approved' as const } : hh,
+      ),
+    }))
+    const { error } = await supabase
+      .from('households').update({ approval_status: 'approved' }).eq('id', id)
+    if (error) console.error('[LIGTAS] approveHousehold:', error.message)
+  },
+
+  rejectHousehold: async (id) => {
+    set((s) => ({ households: s.households.filter((hh) => hh.id !== id) }))
+    const { error } = await supabase.from('households').delete().eq('id', id)
+    if (error) console.error('[LIGTAS] rejectHousehold:', error.message)
   },
 
   setPickingLocation: (v) => set({ pickingLocation: v }),

@@ -46,6 +46,7 @@ export default function TriageQueue() {
 
   const filtered = useMemo(() => {
     return [...households]
+      .filter((h) => h.approvalStatus === 'approved')
       .filter((h) => !cityFilter || h.city === cityFilter)
       .filter((h) => !brgyFilter || h.barangay === brgyFilter)
       .sort((a, b) => {

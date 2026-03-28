@@ -3,6 +3,7 @@
 
 import type { Asset } from '@/types'
 import { useHouseholdStore } from '@/store/householdStore'
+import { useAssetStore } from '@/store/assetStore'
 
 interface Props {
   asset: Asset
@@ -15,7 +16,8 @@ const STATUS_COLOR: Record<Asset['status'], string> = {
 }
 
 export default function AssetCard({ asset }: Props) {
-  const setPanTo = useHouseholdStore((s) => s.setPanTo)
+  const setPanTo       = useHouseholdStore((s) => s.setPanTo)
+  const setAssetStatus = useAssetStore((s) => s.setAssetStatus)
 
   // Pan to closest critical household as a dispatch hint
   const handleTrack = () => {
@@ -62,23 +64,44 @@ export default function AssetCard({ asset }: Props) {
         {asset.type} &mdash; {asset.unit}
       </p>
 
-      <button
-        onClick={handleTrack}
-        style={{
-          width: '100%',
-          padding: '8px',
-          fontSize: '0.75rem',
-          border: 'none',
-          borderRadius: 4,
-          cursor: 'pointer',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          background: '#30363d',
-          color: '#fff',
-        }}
-      >
-        📍 Track Live
-      </button>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          onClick={handleTrack}
+          style={{
+            flex: 1,
+            padding: '8px',
+            fontSize: '0.75rem',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            background: '#30363d',
+            color: '#fff',
+          }}
+        >
+          📍 Track Live
+        </button>
+        {asset.status !== 'Active' && (
+          <button
+            onClick={() => void setAssetStatus(asset.id, 'Active')}
+            style={{
+              flex: 1,
+              padding: '8px',
+              fontSize: '0.75rem',
+              border: '1px solid var(--resolved-green)',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              background: 'transparent',
+              color: 'var(--resolved-green)',
+            }}
+          >
+            ✓ Set Active
+          </button>
+        )}
+      </div>
     </div>
   )
 }

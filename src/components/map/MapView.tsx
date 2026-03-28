@@ -231,7 +231,7 @@ function MapInner() {
         <PickCursorController />
         <RouteOverlay />
 
-        {households.map((hh) => (
+        {households.filter((hh) => hh.approvalStatus === 'approved').map((hh) => (
           <HouseholdMarker key={hh.id} household={hh} />
         ))}
         {assets.map((asset) => (

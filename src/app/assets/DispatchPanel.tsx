@@ -1,16 +1,18 @@
 'use client'
 // src/app/dispatch/DispatchPanel.tsx
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAssetStore } from '@/store/assetStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import { TRIAGE_ORDER } from '@/lib/triage'
 import AssetCard from '@/components/dispatch/AssetCard'
+import AddAssetForm from '@/components/dispatch/AddAssetForm'
 
 export default function DispatchPanel() {
   const assets = useAssetStore((s) => s.assets)
   const households = useHouseholdStore((s) => s.households)
   const setPanTo = useHouseholdStore((s) => s.setPanTo)
+  const [showAddForm, setShowAddForm] = useState(false)
 
   // Listen for asset pan events dispatched by AssetCard
   useEffect(() => {
@@ -35,21 +37,42 @@ export default function DispatchPanel() {
 
   return (
     <div>
-      <h2
-        style={{
-          margin: '0 0 6px',
-          fontSize: '0.8rem',
-          color: 'var(--text-muted)',
-          textTransform: 'uppercase',
-          letterSpacing: 1,
-        }}
-      >
-        Assets
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: '0.8rem',
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+          }}
+        >
+          Assets
+        </h2>
+        <button
+          onClick={() => setShowAddForm((v) => !v)}
+          style={{
+            background: showAddForm ? '#21262d' : '#238636',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 4,
+            padding: '5px 12px',
+            cursor: 'pointer',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          {showAddForm ? '✕ Cancel' : '+ Add Asset'}
+        </button>
+      </div>
+
       <p style={{ margin: '0 0 16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         {assets.filter((a) => a.status === 'Active').length} active &mdash;{' '}
         {assets.filter((a) => a.status === 'Dispatching').length} dispatching
       </p>
+
+      {showAddForm && <AddAssetForm onClose={() => setShowAddForm(false)} />}
 
       {assets.map((asset) => (
         <AssetCard key={asset.id} asset={asset} />
