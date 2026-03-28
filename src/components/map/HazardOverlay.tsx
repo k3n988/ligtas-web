@@ -1,31 +1,37 @@
 'use client'
 // src/components/map/HazardOverlay.tsx
 //
-// Renders dynamic hazard-zone polygons on the Google Map with auto-resolution:
+// NOAH-aligned hazard polygons with auto-resolution:
+//   • Colors match Project NOAH's scale: Red=High, Orange=Medium, Yellow=Low
 //   • Resolution State 1: polygon turns semi-transparent green when every
-//     Household inside it has status === 'Rescued' (computed reactively via
-//     Zustand + useMemo — no manual sync needed).
+//     Household inside it is Rescued.
 //   • Resolution State 2: clearHazard() removes the polygon + marker entirely.
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { InfoWindow, Marker, useMap } from '@vis.gl/react-google-maps'
-import type { HazardArea } from '@/types'
+import type { HazardArea, HazardLevel } from '@/types'
 import { useHazardStore } from '@/store/hazardStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import { pointInPolygon, polygonCenter } from '@/lib/geo'
 
-// ─── Visual config ────────────────────────────────────────────────────────────
+// ─── NOAH-aligned color palette ───────────────────────────────────────────────
 
-const FILL: Record<HazardArea['severity'], string> = {
-  Critical: '#ff4d4d',
-  High:     '#f39c12',
-  Elevated: '#f1c40f',
+const FILL: Record<HazardLevel, string> = {
+  High:   '#e74c3c', // red
+  Medium: '#e67e22', // orange
+  Low:    '#f4d03f', // yellow
 }
 
-const STROKE: Record<HazardArea['severity'], string> = {
-  Critical: '#cc0000',
-  High:     '#c07800',
-  Elevated: '#c09400',
+const STROKE: Record<HazardLevel, string> = {
+  High:   '#c0392b',
+  Medium: '#ca6f1e',
+  Low:    '#d4ac0d',
+}
+
+const FILL_OPACITY: Record<HazardLevel, number> = {
+  High:   0.55,
+  Medium: 0.50,
+  Low:    0.45,
 }
 
 const EMOJI: Record<HazardArea['disasterType'], string> = {
@@ -36,8 +42,6 @@ const EMOJI: Record<HazardArea['disasterType'], string> = {
   Earthquake: '📳',
 }
 
-/** SVG circle with a disaster-type emoji — matches the emojiIcon pattern used
- *  across the rest of the codebase (no Advanced Marker / mapId required). */
 function hazardCenterIcon(emoji: string, bg: string): string {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44">
     <circle cx="22" cy="22" r="20" fill="${bg}" stroke="white" stroke-width="2.5"/>
@@ -48,8 +52,6 @@ function hazardCenterIcon(emoji: string, bg: string): string {
 }
 
 // ─── Imperative polygon renderer ──────────────────────────────────────────────
-// Uses a ref to hold the google.maps.Polygon so it is created once and only
-// its options are patched when allRescued flips — no flicker on state changes.
 
 interface HazardPolygonProps {
   hazard: HazardArea
@@ -58,21 +60,20 @@ interface HazardPolygonProps {
 }
 
 function HazardPolygon({ hazard, allRescued, onClick }: HazardPolygonProps) {
-  const map = useMap()
+  const map        = useMap()
   const polyRef    = useRef<google.maps.Polygon | null>(null)
   const onClickRef = useRef(onClick)
   onClickRef.current = onClick
 
-  // Create the google.maps.Polygon once per hazard id.
   useEffect(() => {
     if (!map) return
 
     const poly = new google.maps.Polygon({
       paths:        hazard.polygon,
-      fillColor:    FILL[hazard.severity],
-      fillOpacity:  0.45,
-      strokeColor:  STROKE[hazard.severity],
-      strokeWeight: 2.5,
+      fillColor:    FILL[hazard.level],
+      fillOpacity:  FILL_OPACITY[hazard.level],
+      strokeColor:  STROKE[hazard.level],
+      strokeWeight: 2,
       zIndex:       1,
       map,
     })
@@ -88,14 +89,14 @@ function HazardPolygon({ hazard, allRescued, onClick }: HazardPolygonProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, hazard.id])
 
-  // Resolution State 1: patch fill/stroke without rebuilding the polygon.
+  // Resolution State 1: patch colors without rebuilding the polygon object.
   useEffect(() => {
     polyRef.current?.setOptions({
-      fillColor:   allRescued ? '#238636' : FILL[hazard.severity],
-      fillOpacity: allRescued ? 0.25      : 0.45,
-      strokeColor: allRescued ? '#238636' : STROKE[hazard.severity],
+      fillColor:   allRescued ? '#238636'             : FILL[hazard.level],
+      fillOpacity: allRescued ? 0.25                  : FILL_OPACITY[hazard.level],
+      strokeColor: allRescued ? '#238636'             : STROKE[hazard.level],
     })
-  }, [allRescued, hazard.severity])
+  }, [allRescued, hazard.level])
 
   return null
 }
@@ -109,9 +110,6 @@ export default function HazardOverlay() {
 
   const [activeId, setActiveId] = useState<string | null>(null)
 
-  // Compute rescue status for every hazard reactively.
-  // Re-runs automatically whenever households or hazards change,
-  // which is triggered by householdStore.markRescued() — no manual wiring needed.
   const rescueStatus = useMemo(
     () =>
       Object.fromEntries(
@@ -128,10 +126,7 @@ export default function HazardOverlay() {
   )
 
   const handleClear = useCallback(
-    (id: string) => {
-      clearHazard(id)
-      setActiveId(null)
-    },
+    (id: string) => { clearHazard(id); setActiveId(null) },
     [clearHazard],
   )
 
@@ -140,24 +135,21 @@ export default function HazardOverlay() {
   return (
     <>
       {hazards.map((hazard) => {
-        const center     = polygonCenter(hazard.polygon)
+        const center    = polygonCenter(hazard.polygon)
         const { allRescued } = rescueStatus[hazard.id] ?? { allRescued: false }
-        const bgColor    = allRescued ? '#238636' : FILL[hazard.severity]
+        const bgColor   = allRescued ? '#238636' : FILL[hazard.level]
 
         return (
           <Fragment key={hazard.id}>
-            {/* Polygon drawn via the imperative Google Maps JS API */}
             <HazardPolygon
               hazard={hazard}
               allRescued={allRescued}
               onClick={() => setActiveId(hazard.id)}
             />
-
-            {/* Disaster-type emoji marker at the polygon centroid */}
             <Marker
               position={center}
               icon={hazardCenterIcon(EMOJI[hazard.disasterType], bgColor)}
-              title={`${hazard.label} — ${hazard.severity}`}
+              title={`${hazard.label} — ${hazard.level}`}
               zIndex={2}
               onClick={() => setActiveId(hazard.id)}
             />
@@ -165,19 +157,19 @@ export default function HazardOverlay() {
         )
       })}
 
-      {/* InfoWindow shown when a polygon or its center marker is clicked */}
       {activeHazard && (() => {
         const center = polygonCenter(activeHazard.polygon)
         const { allRescued, inside, rescuedCount } =
           rescueStatus[activeHazard.id] ?? { allRescued: false, inside: [], rescuedCount: 0 }
-        const total = inside.length
+        const total    = inside.length
+        const levelClr = FILL[activeHazard.level]
 
         return (
           <InfoWindow position={center} onCloseClick={() => setActiveId(null)}>
             <div
               style={{
                 fontFamily: 'Inter, sans-serif',
-                minWidth: 225,
+                minWidth: 230,
                 background: '#161b22',
                 color: '#c9d1d9',
                 padding: 4,
@@ -197,10 +189,29 @@ export default function HazardOverlay() {
                 {EMOJI[activeHazard.disasterType]} {activeHazard.label}
               </div>
 
-              <div style={{ fontSize: '0.75rem', color: '#8b949e', marginBottom: 10 }}>
-                {activeHazard.disasterType} ·{' '}
-                <span style={{ color: FILL[activeHazard.severity], fontWeight: 700 }}>
-                  {activeHazard.severity}
+              {/* NOAH-style hazard level badge */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: 4,
+                  background: `${levelClr}22`,
+                  border: `1px solid ${levelClr}`,
+                  marginBottom: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: levelClr,
+                  }}
+                />
+                <span style={{ fontWeight: 800, color: levelClr, fontSize: '0.8rem', letterSpacing: 1 }}>
+                  {activeHazard.level.toUpperCase()} HAZARD LEVEL
                 </span>
               </div>
 
@@ -216,20 +227,9 @@ export default function HazardOverlay() {
               >
                 <div style={{ marginBottom: 6 }}>
                   Citizens in zone:{' '}
-                  <strong style={{ color: '#fff' }}>
-                    {rescuedCount} / {total} rescued
-                  </strong>
+                  <strong style={{ color: '#fff' }}>{rescuedCount} / {total} rescued</strong>
                 </div>
-
-                {/* Progress bar */}
-                <div
-                  style={{
-                    height: 6,
-                    background: '#30363d',
-                    borderRadius: 3,
-                    overflow: 'hidden',
-                  }}
-                >
+                <div style={{ height: 6, background: '#30363d', borderRadius: 3, overflow: 'hidden' }}>
                   <div
                     style={{
                       height: '100%',
@@ -240,30 +240,17 @@ export default function HazardOverlay() {
                     }}
                   />
                 </div>
-
                 {allRescued && (
-                  <div
-                    style={{
-                      marginTop: 6,
-                      color: '#238636',
-                      fontWeight: 700,
-                      fontSize: '0.73rem',
-                    }}
-                  >
+                  <div style={{ marginTop: 6, color: '#238636', fontWeight: 700, fontSize: '0.73rem' }}>
                     ✓ All citizens rescued — zone ready to clear
                   </div>
                 )}
               </div>
 
-              {/* Resolution State 2: clearHazardArea() */}
+              {/* Resolution State 2 */}
               <button
                 onClick={() => handleClear(activeHazard.id)}
                 disabled={!allRescued}
-                title={
-                  allRescued
-                    ? 'Remove hazard zone from map (hazard physically cleared)'
-                    : 'All citizens must be rescued before clearing'
-                }
                 style={{
                   width: '100%',
                   padding: '8px',
@@ -278,9 +265,7 @@ export default function HazardOverlay() {
                   letterSpacing: 0.3,
                 }}
               >
-                {allRescued
-                  ? '✓ Clear Hazard Area (Hazard Receded)'
-                  : '🔒 Clear Hazard Area'}
+                {allRescued ? '✓ Clear Hazard Area (Hazard Receded)' : '🔒 Clear Hazard Area'}
               </button>
 
               {!allRescued && total > 0 && (

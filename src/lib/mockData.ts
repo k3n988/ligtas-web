@@ -112,7 +112,7 @@ export const mockHazards: HazardArea[] = [
     id: 'HAZ-001',
     label: 'Singcang–Taculing Flood Zone',
     disasterType: 'Flood',
-    severity: 'Critical',
+    level: 'High',
     polygon: [
       { lat: 10.6675, lng: 122.9570 },
       { lat: 10.6745, lng: 122.9570 },
@@ -124,7 +124,7 @@ export const mockHazards: HazardArea[] = [
     id: 'HAZ-002',
     label: 'Mansilingan Fire Zone',
     disasterType: 'Fire',
-    severity: 'High',
+    level: 'Medium',
     polygon: [
       { lat: 10.6760, lng: 122.9470 },
       { lat: 10.6800, lng: 122.9470 },

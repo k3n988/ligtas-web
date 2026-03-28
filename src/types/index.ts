@@ -52,14 +52,17 @@ export interface Asset {
 // ─── Hazard Overlay types ─────────────────────────────────────────────────────
 
 export type DisasterType = 'Flood' | 'Fire' | 'Landslide' | 'Storm' | 'Earthquake'
-export type HazardSeverity = 'Critical' | 'High' | 'Elevated'
+
+/** NOAH-aligned hazard scale: High > Medium > Low */
+export type HazardLevel = 'High' | 'Medium' | 'Low'
 
 export interface HazardArea {
   id: string
   /** Human-readable zone name shown in the InfoWindow header. */
   label: string
   disasterType: DisasterType
-  severity: HazardSeverity
+  /** Scale of the disaster, set by the command center. */
+  level: HazardLevel
   /** Ordered list of lat/lng vertices defining the polygon boundary. */
   polygon: Array<{ lat: number; lng: number }>
 }
