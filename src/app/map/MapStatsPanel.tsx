@@ -1,15 +1,17 @@
 'use client'
 // src/app/map/MapStatsPanel.tsx
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { TRIAGE_ORDER } from '@/lib/triage'
 import SummaryReportModal from '@/components/dashboard/SummaryReportModal'
+import { useMap } from 'react-leaflet'
 
 export default function MapStatsPanel() {
   const households  = useHouseholdStore((s) => s.households)
   const assets      = useAssetStore((s) => s.assets)
+  const map         = useMap()
   const [showReport, setShowReport] = useState(false)
 
   const pending = households.filter((h) => h.status === 'Pending')

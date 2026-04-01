@@ -1,7 +1,6 @@
 'use client'
 // src/components/map/HouseholdMarker.tsx
 
-import { useState } from 'react'
 import { Marker, InfoWindow } from '@vis.gl/react-google-maps'
 import type { Household } from '@/types'
 import { useHouseholdStore } from '@/store/householdStore'
@@ -21,23 +20,22 @@ function circleIcon(fill: string) {
 }
 
 export default function HouseholdMarker({ household: hh }: Props) {
-  const markRescued = useHouseholdStore((s) => s.markRescued)
+  const markRescued    = useHouseholdStore((s) => s.markRescued)
   const restorePending = useHouseholdStore((s) => s.restorePending)
   const setSelectedId = useHouseholdStore((s) => s.setSelectedId)
+  const selectedId = useHouseholdStore((s) => s.selectedId)
   const assets = useAssetStore((s) => s.assets)
-  const [open, setOpen] = useState(false)
 
   const color = hh.status === 'Rescued' ? '#238636' : hh.triage.hex
   const pos = { lat: hh.lat, lng: hh.lng }
+  const isOpen = selectedId === hh.id
 
   const handleOpen = () => {
-    setOpen(true)
-    setSelectedId(hh.id)   // triggers RouteOverlay in MapView
+    setSelectedId(hh.id)// triggers RouteOverlay in MapView
   }
 
   const handleClose = () => {
-    setOpen(false)
-    setSelectedId(null)    // clears the route
+    setSelectedId(null)// clears the route and closes InfoWindow
   }
 
   // Find nearest asset name for the info panel
@@ -58,20 +56,35 @@ export default function HouseholdMarker({ household: hh }: Props) {
         onClick={handleOpen}
       />
 
-      {open && (
-        <InfoWindow position={pos} onCloseClick={handleClose}>
+      {isOpen && (
+        <InfoWindow 
+          position={pos} 
+          onCloseClick={handleClose} 
+          headerDisabled={true}
+          // Use a class or style to target the internal Google Maps padding
+          // Note: .gm-style-iw-d is the content wrapper inside the bubble
+        >
+          <style>{`
+            .gm-style-iw-c { padding: 0 !important; overflow: hidden !important; background: #161b22 !important; }
+            .gm-style-iw-d { overflow: hidden !important; padding: 0 !important; max-height: none !important; }
+            .gm-ui-hover-full { background: transparent !important; border: none !important; top: 4px !important; right: 4px !important; }
+            .gm-ui-hover-full::before { background-color: #8b949e !important; }
+          `}</style>
           <div
             style={{
               minWidth: 210,
               fontFamily: 'Inter, sans-serif',
               background: '#161b22',
               color: '#c9d1d9',
-              padding: 2,
+              padding: '12px',
+              position: 'relative'
             }}
           >
+            {/* Custom Close Button in case headerDisabled hides the default one */}
+            <button onClick={handleClose} style={{ position: 'absolute', top: 8, right: 8, background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+            
             <div
               style={{
-                color,
                 fontWeight: 'bold',
                 fontSize: '1.05rem',
                 borderBottom: '1px solid #30363d',
@@ -172,8 +185,7 @@ export default function HouseholdMarker({ household: hh }: Props) {
               <button
                 onClick={() => {
                   markRescued(hh.id)
-                  setSelectedId(null)
-                  setOpen(false)
+                  handleClose()
                 }}
                 style={{
                   background: 'transparent',
