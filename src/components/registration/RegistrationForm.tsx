@@ -239,6 +239,126 @@ export default function RegistrationForm() {
         to digitize existing registries pre-disaster.
       </div>
 
+      {/* ── Location (Moved to Top) ────────── */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>GPS / Map Location</label>
+          {pinSource && (
+            <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? '#58a6ff' : '#238636', fontWeight: 600 }}>
+              {pinSource === 'map' ? '🗺 Pinned on map' : '📡 GPS captured'}
+            </span>
+          )}
+        </div>
+
+        {!addressReady && (
+          <div style={{
+            padding: '8px 12px',
+            background: '#161b22',
+            border: '1px dashed #30363d',
+            borderRadius: 4,
+            fontSize: '0.75rem',
+            color: '#8b949e',
+            marginBottom: 8,
+          }}>
+            Fill in City, Barangay, and Street Address below to enable location pinning.
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
+          <input
+            style={{
+              ...inputStyle,
+              opacity: addressReady ? 1 : 0.5,
+            }}
+            type="text"
+            value={coords}
+            onChange={(e) => { setCoords(e.target.value); setPinSource(null) }}
+            placeholder="Lat, Lng — or use buttons →"
+            required
+            readOnly={locating || !addressReady}
+          />
+          <button
+            type="button"
+            onClick={getLocation}
+            disabled={locating || !addressReady}
+            title={addressReady ? 'Auto-detect GPS location' : 'Fill address first'}
+            style={{
+              flexShrink: 0,
+              padding: '0 10px',
+              background: addressReady ? '#30363d' : '#21262d',
+              color: addressReady ? '#fff' : '#8b949e',
+              border: 'none',
+              borderRadius: 4,
+              cursor: addressReady ? 'pointer' : 'not-allowed',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              fontFamily: 'Inter, sans-serif',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            📡 GPS
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => { if (addressReady) setPickingLocation(true) }}
+          disabled={!addressReady}
+          title={addressReady ? 'Click to pin on map' : 'Fill address first'}
+          style={{
+            width: '100%',
+            padding: '8px',
+            background: addressReady ? '#161b22' : '#0d1117',
+            border: `1px solid ${addressReady ? '#58a6ff' : '#30363d'}`,
+            color: addressReady ? '#58a6ff' : '#8b949e',
+            borderRadius: 4,
+            cursor: addressReady ? 'pointer' : 'not-allowed',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          🗺 Pin Location on Map
+        </button>
+      </div>
+
+      {/* ── Vulnerabilities (Moved to Top) ──────────────────────── */}
+      <div style={{ marginBottom: 20 }}>
+        <label style={labelStyle}>Vulnerability Profile (select all that apply)</label>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 10,
+            background: '#21262d',
+            padding: 10,
+            borderRadius: 4,
+            border: '1px solid var(--border-color)',
+          }}
+        >
+          {VULN_OPTIONS.map(({ value, label }) => (
+            <label
+              key={value}
+              style={{ display: 'flex', alignItems: 'center', fontSize: '0.8rem', cursor: 'pointer' }}
+            >
+              <input
+                type="checkbox"
+                checked={vulnArr.includes(value)}
+                onChange={() => toggleVuln(value)}
+                style={{ width: 'auto', marginRight: 8, cursor: 'pointer' }}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        <TriagePreview triage={triage} />
+      </div>
+
+      <div style={sectionDivider}>
+        <small style={{ color: 'var(--accent-blue)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1 }}>
+          ADDRESS & PERSONAL DETAILS
+        </small>
+      </div>
+
       {/* ── Success banner (replaces alert) ───────────────────────── */}
       {saved && (
         <div
@@ -411,95 +531,13 @@ export default function RegistrationForm() {
         </select>
       </div>
 
-      {/* ── Location (gated: address must be filled first) ────────── */}
+      {/* ── Household Head (Moved to Bottom) ───────────────────────── */}
       <div style={{ marginBottom: 15 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-          <label style={{ ...labelStyle, marginBottom: 0 }}>GPS / Map Location</label>
-          {pinSource && (
-            <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? '#58a6ff' : '#238636', fontWeight: 600 }}>
-              {pinSource === 'map' ? '🗺 Pinned on map' : '📡 GPS captured'}
-            </span>
-          )}
-        </div>
-
-        {!addressReady && (
-          <div style={{
-            padding: '8px 12px',
-            background: '#161b22',
-            border: '1px dashed #30363d',
-            borderRadius: 4,
-            fontSize: '0.75rem',
-            color: '#8b949e',
-            marginBottom: 8,
-          }}>
-            Fill in City, Barangay, and Street Address above to enable location pinning.
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
-          <input
-            style={{
-              ...inputStyle,
-              opacity: addressReady ? 1 : 0.5,
-            }}
-            type="text"
-            value={coords}
-            onChange={(e) => { setCoords(e.target.value); setPinSource(null) }}
-            placeholder="Lat, Lng — or use buttons →"
-            required
-            readOnly={locating || !addressReady}
-          />
-          <button
-            type="button"
-            onClick={getLocation}
-            disabled={locating || !addressReady}
-            title={addressReady ? 'Auto-detect GPS location' : 'Fill address first'}
-            style={{
-              flexShrink: 0,
-              padding: '0 10px',
-              background: addressReady ? '#30363d' : '#21262d',
-              color: addressReady ? '#fff' : '#8b949e',
-              border: 'none',
-              borderRadius: 4,
-              cursor: addressReady ? 'pointer' : 'not-allowed',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              fontFamily: 'Inter, sans-serif',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            📡 GPS
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={() => { if (addressReady) setPickingLocation(true) }}
-          disabled={!addressReady}
-          title={addressReady ? 'Click to pin on map' : 'Fill address first'}
-          style={{
-            width: '100%',
-            padding: '8px',
-            background: addressReady ? '#161b22' : '#0d1117',
-            border: `1px solid ${addressReady ? '#58a6ff' : '#30363d'}`,
-            color: addressReady ? '#58a6ff' : '#8b949e',
-            borderRadius: 4,
-            cursor: addressReady ? 'pointer' : 'not-allowed',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            fontFamily: 'Inter, sans-serif',
-          }}
-        >
-          🗺 Pin Location on Map
-        </button>
-      </div>
-
-      {/* ── Household Head ───────────────────────────────────────── */}
-      <div style={sectionDivider}>
         <label style={labelStyle}>Household Head / Patient Name</label>
         <input name="head" type="text" placeholder="Full Name" required style={inputStyle} />
       </div>
 
-      {/* ── Contact + Occupants ──────────────────────────────────── */}
+      {/* ── Contact + Occupants (Moved to Bottom) ──────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, margin: '15px 0' }}>
         <div>
           <label style={labelStyle}>Primary Contact</label>
@@ -508,37 +546,6 @@ export default function RegistrationForm() {
         <div>
           <label style={labelStyle}>Total Occupants</label>
           <input name="occupants" type="number" placeholder="Count" min="1" required style={inputStyle} />
-        </div>
-      </div>
-
-      {/* ── Vulnerabilities ──────────────────────────────────────── */}
-      <div style={sectionDivider}>
-        <label style={labelStyle}>Vulnerability Profile (select all that apply)</label>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 10,
-            background: '#21262d',
-            padding: 10,
-            borderRadius: 4,
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          {VULN_OPTIONS.map(({ value, label }) => (
-            <label
-              key={value}
-              style={{ display: 'flex', alignItems: 'center', fontSize: '0.8rem', cursor: 'pointer' }}
-            >
-              <input
-                type="checkbox"
-                checked={vulnArr.includes(value)}
-                onChange={() => toggleVuln(value)}
-                style={{ width: 'auto', marginRight: 8, cursor: 'pointer' }}
-              />
-              {label}
-            </label>
-          ))}
         </div>
       </div>
 
@@ -552,8 +559,6 @@ export default function RegistrationForm() {
           style={{ ...inputStyle, resize: 'vertical' }}
         />
       </div>
-
-      <TriagePreview triage={triage} />
 
       <button
         type="submit"
