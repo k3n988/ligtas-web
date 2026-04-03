@@ -4,7 +4,6 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import {
-  APIProvider,
   Map,
   useMap,
   useMapsLibrary,
@@ -71,8 +70,8 @@ function PanCoordsController() {
 
   useEffect(() => {
     if (!panToCoords || !map) return
-    map.panTo(panToCoords)
-    map.setZoom(15)
+    map.panTo({ lat: panToCoords.lat, lng: panToCoords.lng })
+    map.setZoom(panToCoords.zoom ?? 15)
     setPanToCoords(null)
   }, [panToCoords, map, setPanToCoords])
 
@@ -272,9 +271,5 @@ function MapInner() {
 }
 
 export default function MapView() {
-  return (
-    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
-      <MapInner />
-    </APIProvider>
-  )
+  return <MapInner />
 }

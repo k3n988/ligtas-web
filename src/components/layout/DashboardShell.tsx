@@ -4,6 +4,7 @@
 
 import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import { APIProvider } from '@vis.gl/react-google-maps'
 import Sidebar from './Sidebar'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
@@ -58,18 +59,20 @@ export default function DashboardShell({ children }: Props) {
   }, [loadHouseholds, loadAssets])
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 450px',
-        height: '100vh',
-        overflow: 'hidden',
-      }}
-    >
-      <MapView />
-      <Sidebar>
-        {user ? children : <GuestPanel />}
-      </Sidebar>
-    </div>
+    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 450px',
+          height: '100vh',
+          overflow: 'hidden',
+        }}
+      >
+        <MapView />
+        <Sidebar>
+          {user ? children : <GuestPanel />}
+        </Sidebar>
+      </div>
+    </APIProvider>
   )
 }

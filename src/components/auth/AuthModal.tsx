@@ -9,13 +9,13 @@ interface Props {
 }
 
 export default function AuthModal({ onClose }: Props) {
-  const [tab, setTab] = useState<'login' | 'signup'>('login')
+  // <-- UPDATED: Pull tab state directly from the global store
+  const { authTab: tab, setAuthTab: setTab, signUp, login, loading } = useAuthStore()
+
   const [contact, setContact] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
-
-  const { signUp, login, loading } = useAuthStore()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

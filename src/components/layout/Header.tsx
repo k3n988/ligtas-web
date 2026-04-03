@@ -4,7 +4,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import AuthModal from '@/components/auth/AuthModal'
@@ -16,35 +17,121 @@ const NAV_TABS = [
   { href: '/admin',    label: '🗺️ DASHBOARD' },
 ]
 
+interface Suggestion {
+  place_id: string
+  description: string
+  main_text: string
+  secondary_text: string
+}
+
 export default function Header() {
   const pathname = usePathname()
   const { user, logout, showModal, setShowModal } = useAuthStore()
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
 
-  const [query, setQuery] = useState('')
-  const [searching, setSearching] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const placesLib = useMapsLibrary('places')
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null)
+  const geocoder = useRef<google.maps.Geocoder | null>(null)
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
+  const [query, setQuery] = useState('')
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Init Google services once the library loads
+  useEffect(() => {
+    if (!placesLib) return
+    autocompleteService.current = new placesLib.AutocompleteService()
+    geocoder.current = new google.maps.Geocoder()
+  }, [placesLib])
+
+  // Fetch suggestions with 300ms debounce using Google Places
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     const q = query.trim()
-    if (!q) return
-    setSearching(true)
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
-        { headers: { 'Accept-Language': 'en' } },
-      )
-      const data = await res.json()
-      if (data && data[0]) {
-        setPanToCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) })
-        setQuery('')
-        inputRef.current?.blur()
-      }
-    } finally {
-      setSearching(false)
+    if (q.length < 2 || !autocompleteService.current) {
+      setSuggestions([])
+      setShowDropdown(false)
+      return
     }
+
+    debounceRef.current = setTimeout(() => {
+      setLoading(true)
+      autocompleteService.current!.getPlacePredictions(
+        { input: q, componentRestrictions: { country: 'ph' } },
+        (predictions, status) => {
+          setLoading(false)
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) {
+            setSuggestions([])
+            return
+          }
+          setSuggestions(
+            predictions.map((p) => ({
+              place_id: p.place_id,
+              description: p.description,
+              main_text: p.structured_formatting.main_text,
+              secondary_text: p.structured_formatting.secondary_text,
+            })),
+          )
+          setShowDropdown(true)
+        },
+      )
+    }, 300)
+
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [query])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+        inputRef.current && !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function selectSuggestion(s: Suggestion) {
+    if (!geocoder.current) return
+    geocoder.current.geocode({ placeId: s.place_id }, (results, status) => {
+      if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+        const loc = results[0].geometry.location
+        setPanToCoords({ lat: loc.lat(), lng: loc.lng() })
+      }
+    })
+    setQuery('')
+    setSuggestions([])
+    setShowDropdown(false)
+    inputRef.current?.blur()
   }
+
+  function useCurrentLocation() {
+    setShowDropdown(false)
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition((pos) => {
+      setPanToCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude, zoom: 17 })
+    })
+  }
+
+  function clearQuery() {
+    setQuery('')
+    setSuggestions([])
+    setShowDropdown(false)
+    inputRef.current?.focus()
+  }
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault()
+    if (suggestions.length > 0) selectSuggestion(suggestions[0])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestions])
 
   return (
     <div style={{ flexShrink: 0 }}>
@@ -125,65 +212,157 @@ export default function Header() {
         )}
       </div>
 
-      {/* ── Search bar (below top bar, like NOAH) ───────────────────────── */}
+      {/* ── Search bar ──────────────────────────────────────────────────── */}
       <div
         style={{
           padding: '10px 14px',
           background: '#0d1117',
           borderBottom: '1px solid var(--border-color)',
+          position: 'relative',
+          zIndex: 200,
         }}
       >
-        <form
-          onSubmit={handleSearch}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            background: '#fff',
-            borderRadius: 22,
-            padding: '5px 6px 5px 14px',
-            boxShadow: '0 1px 6px rgba(0,0,0,0.5)',
-          }}
-        >
-          <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>📍</span>
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Search a place or barangay…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+        <form onSubmit={handleSubmit}>
+          <div
             style={{
-              flex: 1,
-              border: 'none',
-              outline: 'none',
-              background: 'transparent',
-              fontSize: '0.8rem',
-              color: '#111',
-              fontFamily: 'Inter, sans-serif',
-              minWidth: 0,
-            }}
-          />
-          <button
-            type="submit"
-            disabled={searching}
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: '50%',
-              background: searching ? '#8b949e' : '#1f6feb',
-              border: 'none',
-              color: '#fff',
-              cursor: searching ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              fontSize: '0.85rem',
+              gap: 6,
+              background: '#fff',
+              borderRadius: showDropdown ? '14px 14px 0 0' : 22,
+              padding: '5px 6px 5px 14px',
+              boxShadow: '0 1px 6px rgba(0,0,0,0.5)',
+              transition: 'border-radius 0.1s',
             }}
           >
-            {searching ? '…' : '🔍'}
-          </button>
+            <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>📍</span>
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search a place or barangay…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => { if (suggestions.length > 0) setShowDropdown(true) }}
+              style={{
+                flex: 1,
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                fontSize: '0.8rem',
+                color: '#111',
+                fontFamily: 'Inter, sans-serif',
+                minWidth: 0,
+              }}
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={clearQuery}
+                style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', padding: '0 4px', fontSize: '1rem', lineHeight: 1 }}
+              >
+                ×
+              </button>
+            )}
+            <button
+              type="submit"
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: '50%',
+                background: loading ? '#8b949e' : '#1f6feb',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                fontSize: '0.85rem',
+              }}
+            >
+              {loading ? '…' : '🔍'}
+            </button>
+          </div>
         </form>
+
+        {/* Dropdown */}
+        {showDropdown && (
+          <div
+            ref={dropdownRef}
+            style={{
+              position: 'absolute',
+              left: 14,
+              right: 14,
+              top: '100%',
+              marginTop: -10,
+              background: '#fff',
+              borderRadius: '0 0 14px 14px',
+              boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
+              overflow: 'hidden',
+              zIndex: 300,
+            }}
+          >
+            {/* Current location row */}
+            <button
+              onClick={useCurrentLocation}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                width: '100%',
+                padding: '11px 16px',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: '1px solid #eee',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <span style={{ fontSize: '1rem', color: '#1f6feb' }}>🎯</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1f6feb' }}>
+                Your Current Location
+              </span>
+            </button>
+
+            {/* Results */}
+            {suggestions.map((s, i) => (
+              <button
+                key={s.place_id}
+                onClick={() => selectSuggestion(s)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  width: '100%',
+                  padding: '10px 16px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: i < suggestions.length - 1 ? '1px solid #f0f0f0' : 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <span style={{ fontSize: '0.85rem', marginTop: 1, flexShrink: 0 }}>📍</span>
+                <div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#111', lineHeight: 1.3 }}>
+                    {s.main_text}
+                  </div>
+                  {s.secondary_text && (
+                    <div style={{ fontSize: '0.7rem', color: '#888', marginTop: 1 }}>
+                      {s.secondary_text}
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+
+            {suggestions.length === 0 && !loading && (
+              <div style={{ padding: '12px 16px', fontSize: '0.78rem', color: '#888' }}>
+                No results found.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Nav tabs (logged in only) ────────────────────────────────────── */}

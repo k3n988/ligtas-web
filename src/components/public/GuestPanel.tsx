@@ -1,9 +1,11 @@
 'use client'
 // src/components/public/GuestPanel.tsx
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
+import { useHouseholdStore } from '@/store/householdStore'
 
 // ── Location data ────────────────────────────────────────────────────────────
 
@@ -114,6 +116,27 @@ interface AreaStatus {
 
 export default function GuestPanel() {
   const setShowModal = useAuthStore((s) => s.setShowModal)
+  const setAuthTab = useAuthStore((s) => s.setAuthTab) // <-- ADDED: Destructure setAuthTab from store
+  const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
+  const geocodingLib = useMapsLibrary('geocoding')
+  const geocoder = useRef<google.maps.Geocoder | null>(null)
+
+  useEffect(() => {
+    if (geocodingLib) geocoder.current = new geocodingLib.Geocoder()
+  }, [geocodingLib])
+
+  function geocodeAndPan(q: string, zoom: number) {
+    if (!geocoder.current) return
+    geocoder.current.geocode(
+      { address: q, componentRestrictions: { country: 'ph' } },
+      (results, status) => {
+        if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+          const loc = results[0].geometry.location
+          setPanToCoords({ lat: loc.lat(), lng: loc.lng(), zoom })
+        }
+      },
+    )
+  }
 
   const [city, setCity] = useState('')
   const [barangay, setBarangay] = useState('')
@@ -124,6 +147,7 @@ export default function GuestPanel() {
   const barangays = city ? (BARANGAYS_BY_CITY[city] ?? []) : []
   const hotlines = city ? (HOTLINES[city] ?? [{ label: 'National Emergency', number: '911' }]) : []
 
+  // Fetch area status when barangay is selected
   useEffect(() => {
     if (!city || !barangay) { setStatus(null); setNoData(false); return }
 
@@ -147,6 +171,14 @@ export default function GuestPanel() {
     setBarangay('')
     setStatus(null)
     setNoData(false)
+    if (!c) return
+    geocodeAndPan(`${c}, Negros Occidental, Philippines`, 13)
+  }
+
+  function handleBarangayChange(b: string) {
+    setBarangay(b)
+    if (!b || !city) return
+    geocodeAndPan(`${b}, ${city}, Philippines`, 16)
   }
 
   const alertCfg = status ? (ALERT_CONFIG[status.alert_level] ?? ALERT_CONFIG['Normal']) : null
@@ -181,7 +213,7 @@ export default function GuestPanel() {
           </select>
           <select
             value={barangay}
-            onChange={(e) => setBarangay(e.target.value)}
+            onChange={(e) => handleBarangayChange(e.target.value)}
             disabled={!city || barangays.length === 0}
             style={{ ...selectStyle, opacity: !city ? 0.5 : 1 }}
           >
@@ -257,7 +289,11 @@ export default function GuestPanel() {
           Make sure rescuers know you are there. Register seniors, PWDs, bedridden, and infants before a disaster strikes — so they are first on the priority list.
         </p>
         <button
-          onClick={() => setShowModal(true)}
+          // <-- UPDATED: First switch to 'signup' tab, then open the modal
+          onClick={() => {
+            setAuthTab('signup')
+            setShowModal(true)
+          }}
           style={{
             width: '100%',
             padding: '10px',

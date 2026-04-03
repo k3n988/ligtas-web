@@ -7,7 +7,7 @@ import { supabase, rowToHousehold, householdToRow } from '@/lib/supabase'
 interface HouseholdStore {
   households: Household[]
   panToId: string | null
-  panToCoords: { lat: number; lng: number } | null
+  panToCoords: { lat: number; lng: number; zoom?: number } | null
   selectedId: string | null
   pickingLocation: boolean
   pendingCoords: { lat: number; lng: number } | null
@@ -20,7 +20,7 @@ interface HouseholdStore {
   markRescued: (id: string) => Promise<void>
   restorePending: (id: string) => Promise<void>
   setPanTo: (id: string | null) => void
-  setPanToCoords: (c: { lat: number; lng: number } | null) => void
+  setPanToCoords: (c: { lat: number; lng: number; zoom?: number } | null) => void
   setSelectedId: (id: string | null) => void
   dispatchRescue: (householdId: string, assetId: string) => Promise<void>
   setPickingLocation: (v: boolean) => void
