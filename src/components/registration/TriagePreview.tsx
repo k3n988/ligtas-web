@@ -18,9 +18,10 @@ export default function TriagePreview({ triage }: Props) {
         textAlign: 'center',
         fontWeight: 'bold',
         fontSize: '0.9rem',
-        border: `1px dashed ${triage.hex}`,
-        background: 'rgba(0,0,0,0.2)',
-        color: triage.hex,
+        textTransform: 'uppercase',
+        border: isDefault ? '1px dashed #8b949e' : `2px solid ${triage.hex}`,
+        background: isDefault ? 'rgba(0,0,0,0.2)' : `${triage.hex}1a`,
+        color: triage.hex || '#8b949e',
         transition: 'all 0.2s',
       }}
     >
