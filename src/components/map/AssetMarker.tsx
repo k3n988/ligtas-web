@@ -39,35 +39,47 @@ export default function AssetMarker({ asset }: Props) {
       />
 
       {open && (
-        <InfoWindow position={pos} onCloseClick={() => setOpen(false)}>
+        <InfoWindow 
+          position={pos} 
+          onCloseClick={() => setOpen(false)}
+          headerDisabled={true}
+        >
+          <style>{`
+            .gm-style-iw-c { padding: 0 !important; overflow: hidden !important; background: #161b22 !important; }
+            .gm-style-iw-d { overflow: hidden !important; padding: 0 !important; max-height: none !important; }
+          `}</style>
           <div
             style={{
               fontFamily: 'Inter, sans-serif',
-              minWidth: 160,
+              minWidth: 180,
               background: '#161b22',
               color: '#c9d1d9',
-              padding: 2,
+              padding: '12px',
+              position: 'relative'
             }}
           >
+            <button 
+              onClick={() => setOpen(false)} 
+              style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: '1rem' }}
+            >
+              ✕
+            </button>
+
             <div style={{ fontWeight: 'bold', marginBottom: 4, color: '#fff' }}>
               {asset.icon} {asset.name}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#8b949e', marginBottom: 8 }}>
               {asset.type} — {asset.unit}
             </div>
-            <span
+            <div
               style={{
-                display: 'inline-block',
-                padding: '2px 8px',
-                borderRadius: 4,
-                background: STATUS_COLOR[asset.status],
-                color: '#fff',
+                color: STATUS_COLOR[asset.status],
                 fontSize: '0.75rem',
                 fontWeight: 'bold',
               }}
             >
-              {asset.status}
-            </span>
+              • {asset.status.toUpperCase()}
+            </div>
           </div>
         </InfoWindow>
       )}

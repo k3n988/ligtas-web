@@ -151,16 +151,14 @@ export default function HouseholdMarker({ household: hh }: Props) {
                 <div
                   style={{
                     flex: 1,
-                    textAlign: 'center',
-                    padding: '6px',
-                    background: '#238636',
-                    color: '#fff',
-                    borderRadius: 4,
+                    textAlign: 'left',
+                    padding: '6px 0',
+                    color: '#3fb950',
                     fontWeight: 'bold',
-                    fontSize: '0.8rem',
+                    fontSize: '0.85rem',
                   }}
                 >
-                  STATUS: RESCUED
+                  ✓ STATUS: RESCUED
                 </div>
                 <button
                   onClick={() => {
@@ -188,11 +186,11 @@ export default function HouseholdMarker({ household: hh }: Props) {
                   handleClose()
                 }}
                 style={{
-                  background: 'transparent',
-                  border: '1px solid #238636',
-                  color: '#238636',
+                  background: '#238636',
+                  border: 'none',
+                  color: '#ffffff',
                   width: '100%',
-                  padding: '8px',
+                  padding: '10px',
                   cursor: 'pointer',
                   borderRadius: 4,
                   fontWeight: 'bold',

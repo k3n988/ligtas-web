@@ -87,6 +87,18 @@ const sectionDivider: React.CSSProperties = {
   paddingTop: 15,
 }
 
+const subHeaderStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '0.85rem',
+  fontWeight: 800,
+  color: '#fff',
+  letterSpacing: '0.05em',
+  textTransform: 'uppercase',
+  marginBottom: 12,
+  borderLeft: '4px solid var(--accent-blue)',
+  paddingLeft: 10,
+}
+
 export default function RegistrationForm() {
   const addHousehold    = useHouseholdStore((s) => s.addHousehold)
   const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
@@ -146,7 +158,7 @@ export default function RegistrationForm() {
       },
       (err) => {
         setCoords('')
-        setLocating(false)
+        setLocating(false); setPinSource(null)
         console.error('GPS Error:', err.message)
       },
     )
@@ -221,8 +233,7 @@ export default function RegistrationForm() {
       {/* ── LGU context header ──────────────────────────────────────── */}
       <div
         style={{
-          background: '#0d1117',
-          border: '1px solid #30363d',
+          background: '#0000c3',
           borderLeft: '3px solid var(--accent-blue)',
           borderRadius: 4,
           padding: '10px 14px',
@@ -232,17 +243,20 @@ export default function RegistrationForm() {
           lineHeight: 1.6,
         }}
       >
-        <strong style={{ color: '#fff', display: 'block', marginBottom: 2 }}>
+        <strong style={{ color: '#fff', display: 'block', marginBottom: 2, fontSize: '0.85rem' }}>
           📋 LGU Vulnerability Registry — Authorized Personnel Only
         </strong>
-        For use by Barangay Health Workers (BHWs), CSWDO, and LGU field staff
-        to digitize existing registries pre-disaster.
+        <span style={{ color: '#e9d5ff' }}>
+          For use by Barangay Health Workers (BHWs), CSWDO, and LGU field staff
+          to digitize existing registries pre-disaster.
+        </span>
       </div>
 
       {/* ── Location (Moved to Top) ────────── */}
       <div style={{ marginBottom: 20 }}>
+        <h3 style={subHeaderStyle}>Location Details</h3>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-          <label style={{ ...labelStyle, marginBottom: 0 }}>GPS / Map Location</label>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>LATITUDE & LONGITUDE</label>
           {pinSource && (
             <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? '#58a6ff' : '#238636', fontWeight: 600 }}>
               {pinSource === 'map' ? '🗺 Pinned on map' : '📡 GPS captured'}
@@ -273,7 +287,7 @@ export default function RegistrationForm() {
             type="text"
             value={coords}
             onChange={(e) => { setCoords(e.target.value); setPinSource(null) }}
-            placeholder="Lat, Lng — or use buttons →"
+            placeholder="LATITUDE, LONGITUDE — or use buttons →"
             required
             readOnly={locating || !addressReady}
           />
@@ -285,9 +299,9 @@ export default function RegistrationForm() {
             style={{
               flexShrink: 0,
               padding: '0 10px',
-              background: addressReady ? '#30363d' : '#21262d',
+              background: addressReady ? '#238636' : '#21262d',
               color: addressReady ? '#fff' : '#8b949e',
-              border: 'none',
+              border: addressReady ? '1px solid #2ea043' : '1px solid #30363d',
               borderRadius: 4,
               cursor: addressReady ? 'pointer' : 'not-allowed',
               fontSize: '0.8rem',
@@ -323,6 +337,7 @@ export default function RegistrationForm() {
 
       {/* ── Vulnerabilities (Moved to Top) ──────────────────────── */}
       <div style={{ marginBottom: 20 }}>
+        <h3 style={subHeaderStyle}>Vulnerability Profile</h3>
         <label style={labelStyle}>Vulnerability Profile (select all that apply)</label>
         <div
           style={{
@@ -338,7 +353,17 @@ export default function RegistrationForm() {
           {VULN_OPTIONS.map(({ value, label }) => (
             <label
               key={value}
-              style={{ display: 'flex', alignItems: 'center', fontSize: '0.8rem', cursor: 'pointer' }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                fontSize: '0.8rem', 
+                cursor: 'pointer',
+                background: vulnArr.includes(value) ? '#30363d' : 'transparent',
+                padding: '4px 8px',
+                borderRadius: '20px',
+                border: `1px solid ${vulnArr.includes(value) ? '#58a6ff' : '#30363d'}`,
+                color: (value === 'Bedridden' || value === 'Oxygen') && vulnArr.includes(value) ? '#ff4d4d' : '#c9d1d9'
+              }}
             >
               <input
                 type="checkbox"
@@ -353,11 +378,8 @@ export default function RegistrationForm() {
         <TriagePreview triage={triage} />
       </div>
 
-      <div style={sectionDivider}>
-        <small style={{ color: 'var(--accent-blue)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1 }}>
-          ADDRESS & PERSONAL DETAILS
-        </small>
-      </div>
+      <div style={sectionDivider} />
+      <h3 style={subHeaderStyle}>Personal & Address Details</h3>
 
       {/* ── Success banner (replaces alert) ───────────────────────── */}
       {saved && (
@@ -400,31 +422,34 @@ export default function RegistrationForm() {
       {/* ── Source Registry ──────────────────────────────────────── */}
       <div style={{ marginBottom: isSelfReported ? 10 : 15 }}>
         <label style={labelStyle}>Source Registry / Data Origin</label>
-        <select
-          name="source"
-          required
-          style={inputStyle}
-          value={sourceVal}
-          onChange={(e) => setSourceVal(e.target.value as RegistrySource)}
-        >
-          <option value="" disabled>Select data source</option>
-          {SOURCE_OPTIONS.map(({ value, label }) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
+        <div style={{ position: 'relative' }}>
+          <select
+            name="source"
+            required
+            style={{ ...inputStyle, appearance: 'none' }}
+            value={sourceVal}
+            onChange={(e) => setSourceVal(e.target.value as RegistrySource)}
+          >
+            <option value="" disabled>Select data source</option>
+            {SOURCE_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: '0.7rem' }}>▼</span>
+        </div>
       </div>
 
       {/* ── Self-Reported warning + document upload ──────────────── */}
       {isSelfReported && (
         <div style={{ marginBottom: 15 }}>
           <div style={{
-            background: '#1e1a0e',
+            background: '#2d2711',
             border: '1px solid #f39c12',
             borderRadius: 4,
             padding: '10px 14px',
             marginBottom: 10,
             fontSize: '0.75rem',
-            color: '#f39c12',
+            color: '#ffdf5d',
             lineHeight: 1.6,
           }}>
             <strong style={{ display: 'block', marginBottom: 2 }}>⚠️ Pending Admin Review</strong>
@@ -451,18 +476,21 @@ export default function RegistrationForm() {
       {/* ── City ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 15 }}>
         <label style={labelStyle}>City / Municipality</label>
-        <select
-          name="city"
-          required
-          style={inputStyle}
-          value={cityVal}
-          onChange={(e) => { setCityVal(e.target.value); setBarangayVal('') }}
-        >
-          <option value="" disabled>Select City / Municipality</option>
-          {CITIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+        <div style={{ position: 'relative' }}>
+          <select
+            name="city"
+            required
+            style={{ ...inputStyle, appearance: 'none' }}
+            value={cityVal}
+            onChange={(e) => { setCityVal(e.target.value); setBarangayVal('') }}
+          >
+            <option value="" disabled>Select City / Municipality</option>
+            {CITIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: '0.7rem' }}>▼</span>
+        </div>
       </div>
 
       {/* ── Barangay + Purok ─────────────────────────────────────── */}
@@ -477,18 +505,21 @@ export default function RegistrationForm() {
             )}
           </label>
           {cityVal && BARANGAYS_BY_CITY[cityVal] ? (
-            <select
-              name="barangay"
-              required
-              style={inputStyle}
-              value={barangayVal}
-              onChange={(e) => setBarangayVal(e.target.value)}
-            >
-              <option value="" disabled>Select Barangay</option>
-              {barangays.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
+            <div style={{ position: 'relative' }}>
+              <select
+                name="barangay"
+                required
+                style={{ ...inputStyle, appearance: 'none' }}
+                value={barangayVal}
+                onChange={(e) => setBarangayVal(e.target.value)}
+              >
+                <option value="" disabled>Select Barangay</option>
+                {barangays.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+              <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: '0.7rem' }}>▼</span>
+            </div>
           ) : (
             <input
               name="barangay"
