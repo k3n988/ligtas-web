@@ -7,7 +7,9 @@ import dynamic from 'next/dynamic'
 import Sidebar from './Sidebar'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
+import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
+import GuestPanel from '@/components/public/GuestPanel'
 
 const MapView = dynamic(() => import('@/components/map/MapView'), {
   ssr: false,
@@ -36,6 +38,8 @@ interface Props {
 export default function DashboardShell({ children }: Props) {
   const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
   const loadAssets     = useAssetStore((s) => s.loadAssets)
+  const user           = useAuthStore((s) => s.user)
+
   useEffect(() => {
     void loadHouseholds()
     void loadAssets()
@@ -63,7 +67,9 @@ export default function DashboardShell({ children }: Props) {
       }}
     >
       <MapView />
-      <Sidebar>{children}</Sidebar>
+      <Sidebar>
+        {user ? children : <GuestPanel />}
+      </Sidebar>
     </div>
   )
 }
