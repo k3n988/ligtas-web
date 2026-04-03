@@ -1,5 +1,5 @@
 'use client'
-// src/app/admin/HouseholdTable.tsx
+// src/app/(dashboard)/admin/HouseholdTable.tsx
 
 import { useState } from 'react'
 import { useHouseholdStore } from '@/store/householdStore'
@@ -15,13 +15,13 @@ const TRIAGE_COLOR: Record<string, string> = {
 
 const VULN_OPTIONS: { value: Vulnerability; label: string }[] = [
   { value: 'Bedridden',  label: 'Bedridden'        },
-  { value: 'Senior',     label: 'Senior Citizen'    },
-  { value: 'Wheelchair', label: 'Wheelchair User'   },
-  { value: 'Infant',     label: 'Infant / Toddler'  },
-  { value: 'Pregnant',   label: 'Pregnant'           },
-  { value: 'PWD',        label: 'PWD'                },
-  { value: 'Oxygen',     label: 'Oxygen Dependent'  },
-  { value: 'Dialysis',   label: 'Dialysis Patient'  },
+  { value: 'Senior',     label: 'Senior Citizen'   },
+  { value: 'Wheelchair', label: 'Wheelchair User'  },
+  { value: 'Infant',     label: 'Infant / Toddler' },
+  { value: 'Pregnant',   label: 'Pregnant'         },
+  { value: 'PWD',        label: 'PWD'              },
+  { value: 'Oxygen',     label: 'Oxygen Dependent' },
+  { value: 'Dialysis',   label: 'Dialysis Patient' },
 ]
 
 const SOURCE_OPTIONS: RegistrySource[] = [
@@ -328,18 +328,19 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
 
 // ── Main Table ────────────────────────────────────────────────────────────────
 
-export default function HouseholdTable() {
+// Nag-add tayo ng "view" prop para pwede mong i-control kung aling view ang lalabas 
+// mula sa labas (sa mismong page.tsx)
+export default function HouseholdTable({ view = 'registry' }: { view?: 'registry' | 'pending' }) {
   const households       = useHouseholdStore((s) => s.households)
   const deleteHousehold  = useHouseholdStore((s) => s.deleteHousehold)
   const approveHousehold = useHouseholdStore((s) => s.approveHousehold)
   const rejectHousehold  = useHouseholdStore((s) => s.rejectHousehold)
 
-  const [activeTab,    setActiveTab]    = useState<'registry' | 'pending'>('registry')
-  const [search,       setSearch]       = useState('')
-  const [filterStatus, setFilterStatus] = useState<'All' | 'Pending' | 'Rescued'>('All')
-  const [editTarget,   setEditTarget]   = useState<Household | null>(null)
-  const [confirmId,    setConfirmId]    = useState<string | null>(null)
-  const [approvingId,  setApprovingId]  = useState<string | null>(null)
+  const [search,         setSearch]       = useState('')
+  const [filterStatus,   setFilterStatus] = useState<'All' | 'Pending' | 'Rescued'>('All')
+  const [editTarget,     setEditTarget]   = useState<Household | null>(null)
+  const [confirmId,      setConfirmId]    = useState<string | null>(null)
+  const [approvingId,    setApprovingId]  = useState<string | null>(null)
 
   const pendingApprovals = households.filter((hh) => hh.approvalStatus === 'pending_review')
 
@@ -371,43 +372,7 @@ export default function HouseholdTable() {
 
   return (
     <>
-      {/* Tab switcher */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid #30363d', paddingBottom: 0 }}>
-        {(['registry', 'pending'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '9px 18px',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === tab ? '2px solid #58a6ff' : '2px solid transparent',
-              color: activeTab === tab ? '#58a6ff' : '#8b949e',
-              fontWeight: 700, fontSize: '0.8rem',
-              cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-              textTransform: 'uppercase', letterSpacing: 0.8,
-              marginBottom: -1,
-            }}
-          >
-            {tab === 'registry' ? 'Household Registry' : (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                Pending Approvals
-                {pendingApprovals.length > 0 && (
-                  <span style={{
-                    background: '#f39c12', color: '#0d1117',
-                    borderRadius: 10, fontSize: '0.68rem',
-                    fontWeight: 800, padding: '1px 6px', lineHeight: '1.4',
-                  }}>
-                    {pendingApprovals.length}
-                  </span>
-                )}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'pending' ? (
+      {view === 'pending' ? (
         /* ── Pending Approvals Tab ── */
         pendingApprovals.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 20px', color: '#8b949e', fontSize: '0.9rem' }}>
@@ -581,7 +546,6 @@ export default function HouseholdTable() {
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>Triage</th>
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>Status</th>
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>Source</th>
-                  {/* ── New timestamps column ── */}
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>Timestamps</th>
                   <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600 }}>Actions</th>
                 </tr>
