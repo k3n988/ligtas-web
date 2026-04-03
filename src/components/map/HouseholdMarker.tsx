@@ -5,6 +5,7 @@ import { Marker, InfoWindow } from '@vis.gl/react-google-maps'
 import type { Household } from '@/types'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
+import { useAuthStore } from '@/store/authStore' // <-- ADDED AUTH STORE
 import { haversineKm } from '@/lib/geo'
 
 interface Props {
@@ -25,6 +26,7 @@ export default function HouseholdMarker({ household: hh }: Props) {
   const setSelectedId = useHouseholdStore((s) => s.setSelectedId)
   const selectedId = useHouseholdStore((s) => s.selectedId)
   const assets = useAssetStore((s) => s.assets)
+  const user = useAuthStore((s) => s.user) // <-- CHECK IF ADMIN IS LOGGED IN
 
   const color = hh.status === 'Rescued' ? '#238636' : hh.triage.hex
   const pos = { lat: hh.lat, lng: hh.lng }
@@ -47,12 +49,16 @@ export default function HouseholdMarker({ household: hh }: Props) {
       )
     : null
 
+  // Dito natin chine-check. Kung walang admin, Guest View ang gagamitin.
+  const isGuest = !user;
+
   return (
     <>
       <Marker
         position={pos}
         icon={circleIcon(color)}
-        title={hh.head}
+        // Kapag guest, wag ilabas ang name sa tooltip hover
+        title={isGuest ? 'Priority Area' : hh.head} 
         onClick={handleOpen}
       />
 
@@ -83,6 +89,7 @@ export default function HouseholdMarker({ household: hh }: Props) {
             {/* Custom Close Button in case headerDisabled hides the default one */}
             <button onClick={handleClose} style={{ position: 'absolute', top: 8, right: 8, background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
             
+            {/* ── HEADER ── */}
             <div
               style={{
                 fontWeight: 'bold',
@@ -92,26 +99,48 @@ export default function HouseholdMarker({ household: hh }: Props) {
                 marginBottom: 8,
               }}
             >
-              {hh.head}
+              {isGuest ? 'Priority Household' : hh.head}
             </div>
+
+            {/* ── BODY DETAILS ── */}
             <div style={{ fontSize: '0.8rem', lineHeight: 1.6, marginBottom: 10 }}>
-              <b>ID:</b> {hh.id}
-              <br />
-              <b>Loc:</b> {hh.street}, {hh.barangay}
-              <br />
-              <b>Occupants:</b> {hh.occupants} &nbsp;|&nbsp; <b>Structure:</b> {hh.structure}
-              <br />
-              {hh.source && (
+              
+              {/* ADMIN VIEW: Sees everything */}
+              {!isGuest && (
                 <>
-                  <b>Source:</b>{' '}
-                  <span style={{ color: '#58a6ff' }}>{hh.source}</span>
+                  <b>ID:</b> {hh.id}
                   <br />
+                  <b>Loc:</b> {hh.street}, {hh.barangay}
+                  <br />
+                  <b>Occupants:</b> {hh.occupants} &nbsp;|&nbsp; <b>Structure:</b> {hh.structure}
+                  <br />
+                  {hh.source && (
+                    <>
+                      <b>Source:</b>{' '}
+                      <span style={{ color: '#58a6ff' }}>{hh.source}</span>
+                      <br />
+                    </>
+                  )}
+                  <b>Notes:</b>{' '}
+                  <em style={{ color: '#8b949e' }}>{hh.notes || 'None'}</em>
                 </>
               )}
-              <b>Notes:</b>{' '}
-              <em style={{ color: '#8b949e' }}>{hh.notes || 'None'}</em>
+
+              {/* GUEST VIEW: Sees limited info only */}
+              {isGuest && (
+                <>
+                  <b>Brgy:</b> {hh.barangay}
+                  <br />
+                  <b>Triage Level:</b> <span style={{color: hh.triage.hex, fontWeight: 'bold'}}>{hh.triage.level}</span>
+                  <br />
+                  <em style={{ color: '#8b949e', fontSize: '0.7rem' }}>Personal details hidden for privacy.</em>
+                </>
+              )}
+
             </div>
-            {nearest && hh.status !== 'Rescued' && (
+
+            {/* ── NEAREST ASSET ROUTING (ADMIN ONLY) ── */}
+            {!isGuest && nearest && hh.status !== 'Rescued' && (
               <div
                 style={{
                   marginBottom: 10,
@@ -127,7 +156,9 @@ export default function HouseholdMarker({ household: hh }: Props) {
                 &nbsp;({(haversineKm(hh.lat, hh.lng, nearest.lat, nearest.lng) * 1000).toFixed(0)} m away)
               </div>
             )}
-            <div style={{ marginBottom: 10 }}>
+
+            {/* ── VULNERABILITY TAGS (VISIBLE TO BOTH) ── */}
+            <div style={{ marginBottom: isGuest ? 0 : 10 }}>
               {hh.vulnArr.map((v) => (
                 <span
                   key={v}
@@ -146,61 +177,66 @@ export default function HouseholdMarker({ household: hh }: Props) {
                 </span>
               ))}
             </div>
-            {hh.status === 'Rescued' ? (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <div
-                  style={{
-                    flex: 1,
-                    textAlign: 'left',
-                    padding: '6px 0',
-                    color: '#3fb950',
-                    fontWeight: 'bold',
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  ✓ STATUS: RESCUED
+
+            {/* ── ACTION BUTTONS (ADMIN ONLY) ── */}
+            {!isGuest && (
+              hh.status === 'Rescued' ? (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <div
+                    style={{
+                      flex: 1,
+                      textAlign: 'left',
+                      padding: '6px 0',
+                      color: '#3fb950',
+                      fontWeight: 'bold',
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    ✓ STATUS: RESCUED
+                  </div>
+                  <button
+                    onClick={() => {
+                      restorePending(hh.id)
+                    }}
+                    title="Undo — restore to Pending"
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid #30363d',
+                      color: '#8b949e',
+                      borderRadius: 4,
+                      padding: '6px 10px',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      fontFamily: 'Inter, sans-serif',
+                    }}
+                  >
+                    ↩
+                  </button>
                 </div>
+              ) : (
                 <button
                   onClick={() => {
-                    restorePending(hh.id)
+                    markRescued(hh.id)
+                    handleClose()
                   }}
-                  title="Undo — restore to Pending"
                   style={{
-                    background: 'transparent',
-                    border: '1px solid #30363d',
-                    color: '#8b949e',
-                    borderRadius: 4,
-                    padding: '6px 10px',
+                    background: '#238636',
+                    border: 'none',
+                    color: '#ffffff',
+                    width: '100%',
+                    padding: '10px',
                     cursor: 'pointer',
-                    fontSize: '0.75rem',
+                    borderRadius: 4,
+                    fontWeight: 'bold',
+                    fontSize: '0.8rem',
                     fontFamily: 'Inter, sans-serif',
                   }}
                 >
-                  ↩
+                  MARK AS RESCUED
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  markRescued(hh.id)
-                  handleClose()
-                }}
-                style={{
-                  background: '#238636',
-                  border: 'none',
-                  color: '#ffffff',
-                  width: '100%',
-                  padding: '10px',
-                  cursor: 'pointer',
-                  borderRadius: 4,
-                  fontWeight: 'bold',
-                  fontSize: '0.8rem',
-                  fontFamily: 'Inter, sans-serif',
-                }}
-              >
-                MARK AS RESCUED
-              </button>
+              )
             )}
+            
           </div>
         </InfoWindow>
       )}

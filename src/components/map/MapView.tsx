@@ -11,6 +11,7 @@ import {
 } from '@vis.gl/react-google-maps'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
+import { useAuthStore } from '@/store/authStore' // <-- ADDED AUTH STORE
 import { haversineKm } from '@/lib/geo'
 import HouseholdMarker from './HouseholdMarker'
 import AssetMarker from './AssetMarker'
@@ -101,6 +102,7 @@ function RouteOverlay() {
   const households = useHouseholdStore((s) => s.households)
   const assets = useAssetStore((s) => s.assets)
   const selectedId = useHouseholdStore((s) => s.selectedId)
+  const user = useAuthStore((s) => s.user) // <-- CHECK IF ADMIN IS LOGGED IN
 
   const [renderer, setRenderer] = useState<google.maps.DirectionsRenderer | null>(null)
 
@@ -123,7 +125,11 @@ function RouteOverlay() {
 
   // Request route whenever selectedId changes
   useEffect(() => {
-    if (!renderer || !routesLib || !map) return
+    // If no renderer, no map, OR NO USER LOGGED IN, do not draw routes.
+    if (!renderer || !routesLib || !map || !user) {
+      renderer?.setMap(null)
+      return
+    }
 
     if (!selectedId) {
       renderer.setMap(null)
@@ -156,7 +162,7 @@ function RouteOverlay() {
         }
       },
     )
-  }, [selectedId, households, assets, renderer, routesLib, map])
+  }, [selectedId, households, assets, renderer, routesLib, map, user])
 
   return null
 }
@@ -168,6 +174,7 @@ function MapInner() {
   const pendingCoords = useHouseholdStore((s) => s.pendingCoords)
   const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
   const setPendingCoords = useHouseholdStore((s) => s.setPendingCoords)
+  const user = useAuthStore((s) => s.user) // <-- CHECK IF ADMIN IS LOGGED IN
 
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
@@ -247,10 +254,13 @@ function MapInner() {
         <PickCursorController />
         <RouteOverlay />
 
+        {/* ALWAYS SHOW APPROVED HOUSEHOLDS (Guest or Admin) */}
         {households.filter((hh) => hh.approvalStatus === 'approved').map((hh) => (
           <HouseholdMarker key={hh.id} household={hh} />
         ))}
-        {assets.map((asset) => (
+
+        {/* ONLY SHOW ASSETS IF ADMIN IS LOGGED IN */}
+        {user && assets.map((asset) => (
           <AssetMarker key={asset.id} asset={asset} />
         ))}
 
