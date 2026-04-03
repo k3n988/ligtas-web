@@ -56,6 +56,10 @@ export interface Household {
   documentUrl?: string
   assignedAssetId?: string
   dispatchedAt?: string
+  
+  // ---> Dinagdag natin 'to para sa Supabase timestamps! <---
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Asset {
@@ -69,4 +73,3 @@ export interface Asset {
   icon: string
   address?: string
 }
-

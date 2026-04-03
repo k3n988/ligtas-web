@@ -37,30 +37,99 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
+// ── Timestamp helpers ─────────────────────────────────────────────────────────
+
+function formatDate(iso?: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-PH', {
+    month: 'short', day: 'numeric', year: 'numeric',
+  })
+}
+
+function formatTime(iso?: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleTimeString('en-PH', {
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  })
+}
+
+// ── Timestamp cell ─────────────────────────────────────────────────────────────
+
+function TimestampCell({
+  createdAt,
+  updatedAt,
+}: {
+  createdAt?: string | null
+  updatedAt?: string | null
+}) {
+  const wasEdited = updatedAt && updatedAt !== createdAt
+
+  return (
+    <td style={{ padding: '12px 14px', minWidth: 148 }}>
+      {/* Created */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={{ fontSize: '0.62rem', color: '#58a6ff', fontWeight: 700, letterSpacing: 0.5 }}>
+          CREATED
+        </span>
+      </div>
+      <div style={{ fontSize: '0.74rem', color: '#c9d1d9', marginTop: 1 }}>
+        {formatDate(createdAt)}
+      </div>
+      <div style={{ fontSize: '0.68rem', color: '#8b949e' }}>
+        {formatTime(createdAt)}
+      </div>
+
+      {/* Updated — only show when different from created */}
+      {wasEdited && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+            <span style={{ fontSize: '0.62rem', color: '#f39c12', fontWeight: 700, letterSpacing: 0.5 }}>
+              UPDATED
+            </span>
+          </div>
+          <div style={{ fontSize: '0.74rem', color: '#c9d1d9', marginTop: 1 }}>
+            {formatDate(updatedAt)}
+          </div>
+          <div style={{ fontSize: '0.68rem', color: '#8b949e' }}>
+            {formatTime(updatedAt)}
+          </div>
+        </>
+      )}
+    </td>
+  )
+}
+
 // ── Edit Modal ────────────────────────────────────────────────────────────────
 
 function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
   const updateHousehold = useHouseholdStore((s) => s.updateHousehold)
 
-  const [head,     setHead]     = useState(hh.head)
-  const [contact,  setContact]  = useState(hh.contact)
-  const [occupants,setOccupants]= useState(hh.occupants)
-  const [notes,    setNotes]    = useState(hh.notes)
-  const [source,   setSource]   = useState<RegistrySource | ''>(hh.source ?? '')
-  const [status,   setStatus]   = useState<'Pending' | 'Rescued'>(hh.status)
-  const [vulnArr,  setVulnArr]  = useState<Vulnerability[]>(hh.vulnArr)
-  const [saving,   setSaving]   = useState(false)
+  const [head,      setHead]      = useState(hh.head)
+  const [contact,   setContact]   = useState(hh.contact)
+  const [occupants, setOccupants] = useState(hh.occupants)
+  const [notes,     setNotes]     = useState(hh.notes)
+  const [source,    setSource]    = useState<RegistrySource | ''>(hh.source ?? '')
+  const [status,    setStatus]    = useState<'Pending' | 'Rescued'>(hh.status)
+  const [vulnArr,   setVulnArr]   = useState<Vulnerability[]>(hh.vulnArr)
+  const [saving,    setSaving]    = useState(false)
 
   const toggleVuln = (v: Vulnerability) =>
-    setVulnArr((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v])
+    setVulnArr((prev) =>
+      prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
+    )
 
   const handleSave = async () => {
     setSaving(true)
     const triage = assessTriage(vulnArr)
+    // Stamp updated_at with the current time on every admin edit
+    const updated_at = new Date().toISOString()
     await updateHousehold(hh.id, {
       head, contact, occupants, notes,
       source: source as RegistrySource || undefined,
       status, vulnArr, triage,
+      updated_at,
     })
     setSaving(false)
     onClose()
@@ -103,11 +172,29 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
             <div style={{ fontSize: '0.72rem', color: '#8b949e', marginTop: 2 }}>
               ID: {hh.id} &mdash; {hh.street}, Brgy. {hh.barangay}
             </div>
+            {/* Timestamps in modal header */}
+            <div style={{ display: 'flex', gap: 14, marginTop: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.68rem', color: '#8b949e' }}>
+                <span style={{ color: '#58a6ff', fontWeight: 700 }}>Created:</span>{' '}
+                {formatDate(hh.created_at)} {formatTime(hh.created_at)}
+              </span>
+              {hh.updated_at && hh.updated_at !== hh.created_at && (
+                <span style={{ fontSize: '0.68rem', color: '#8b949e' }}>
+                  <span style={{ color: '#f39c12', fontWeight: 700 }}>Last edited:</span>{' '}
+                  {formatDate(hh.updated_at)} {formatTime(hh.updated_at)}
+                </span>
+              )}
+            </div>
           </div>
-          <button onClick={onClose} style={{
-            background: 'transparent', border: 'none',
-            color: '#8b949e', fontSize: '1.1rem', cursor: 'pointer',
-          }}>✕</button>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent', border: 'none',
+              color: '#8b949e', fontSize: '1.1rem', cursor: 'pointer',
+            }}
+          >
+            ✕
+          </button>
         </div>
 
         {/* Body */}
@@ -145,7 +232,11 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
               <label style={{ display: 'block', fontSize: '0.7rem', color: '#8b949e', marginBottom: 4, textTransform: 'uppercase' }}>
                 Status
               </label>
-              <select value={status} onChange={(e) => setStatus(e.target.value as 'Pending' | 'Rescued')} style={inputStyle}>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as 'Pending' | 'Rescued')}
+                style={inputStyle}
+              >
                 <option value="Pending">Pending</option>
                 <option value="Rescued">Rescued</option>
               </select>
@@ -154,7 +245,11 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
               <label style={{ display: 'block', fontSize: '0.7rem', color: '#8b949e', marginBottom: 4, textTransform: 'uppercase' }}>
                 Source Registry
               </label>
-              <select value={source} onChange={(e) => setSource(e.target.value as RegistrySource)} style={inputStyle}>
+              <select
+                value={source}
+                onChange={(e) => setSource(e.target.value as RegistrySource)}
+                style={inputStyle}
+              >
                 <option value="">— None —</option>
                 {SOURCE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -234,17 +329,17 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
 // ── Main Table ────────────────────────────────────────────────────────────────
 
 export default function HouseholdTable() {
-  const households        = useHouseholdStore((s) => s.households)
-  const deleteHousehold   = useHouseholdStore((s) => s.deleteHousehold)
-  const approveHousehold  = useHouseholdStore((s) => s.approveHousehold)
-  const rejectHousehold   = useHouseholdStore((s) => s.rejectHousehold)
+  const households       = useHouseholdStore((s) => s.households)
+  const deleteHousehold  = useHouseholdStore((s) => s.deleteHousehold)
+  const approveHousehold = useHouseholdStore((s) => s.approveHousehold)
+  const rejectHousehold  = useHouseholdStore((s) => s.rejectHousehold)
 
-  const [activeTab,   setActiveTab]   = useState<'registry' | 'pending'>('registry')
-  const [search,      setSearch]      = useState('')
-  const [filterStatus,setFilterStatus]= useState<'All' | 'Pending' | 'Rescued'>('All')
-  const [editTarget,  setEditTarget]  = useState<Household | null>(null)
-  const [confirmId,   setConfirmId]   = useState<string | null>(null)
-  const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [activeTab,    setActiveTab]    = useState<'registry' | 'pending'>('registry')
+  const [search,       setSearch]       = useState('')
+  const [filterStatus, setFilterStatus] = useState<'All' | 'Pending' | 'Rescued'>('All')
+  const [editTarget,   setEditTarget]   = useState<Household | null>(null)
+  const [confirmId,    setConfirmId]    = useState<string | null>(null)
+  const [approvingId,  setApprovingId]  = useState<string | null>(null)
 
   const pendingApprovals = households.filter((hh) => hh.approvalStatus === 'pending_review')
 
@@ -253,7 +348,8 @@ export default function HouseholdTable() {
     .filter((hh) => {
       const matchStatus = filterStatus === 'All' || hh.status === filterStatus
       const q = search.toLowerCase()
-      const matchSearch = !q ||
+      const matchSearch =
+        !q ||
         hh.head.toLowerCase().includes(q) ||
         hh.barangay.toLowerCase().includes(q) ||
         hh.city.toLowerCase().includes(q) ||
@@ -355,6 +451,15 @@ export default function HouseholdTable() {
                     <span>{hh.contact}</span>
                     <span style={{ margin: '0 8px' }}>·</span>
                     <span>{hh.occupants} occupant{hh.occupants !== 1 ? 's' : ''}</span>
+                    {/* Submitted timestamp */}
+                    {hh.created_at && (
+                      <>
+                        <span style={{ margin: '0 8px' }}>·</span>
+                        <span style={{ color: '#58a6ff' }}>
+                          Submitted {formatDate(hh.created_at)} {formatTime(hh.created_at)}
+                        </span>
+                      </>
+                    )}
                   </div>
                   {hh.vulnArr.length > 0 && (
                     <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -464,22 +569,27 @@ export default function HouseholdTable() {
 
           {/* Table */}
           <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #30363d' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 780 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 980 }}>
               <thead>
-                <tr style={{ background: '#161b22', color: '#8b949e', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: 0.8 }}>
+                <tr style={{
+                  background: '#161b22', color: '#8b949e',
+                  textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: 0.8,
+                }}>
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>ID</th>
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>Household Head</th>
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>Location</th>
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>Triage</th>
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>Status</th>
                   <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>Source</th>
+                  {/* ── New timestamps column ── */}
+                  <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600 }}>Timestamps</th>
                   <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: '#8b949e' }}>
+                    <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#8b949e' }}>
                       No households found.
                     </td>
                   </tr>
@@ -535,6 +645,13 @@ export default function HouseholdTable() {
                     <td style={{ padding: '12px 14px', color: '#8b949e', fontSize: '0.75rem' }}>
                       {hh.source ?? '—'}
                     </td>
+
+                    {/* ── Timestamps ── */}
+                    <TimestampCell
+                      createdAt={hh.created_at}
+                      updatedAt={hh.updated_at}
+                    />
+
                     <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                       {confirmId === hh.id ? (
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center' }}>

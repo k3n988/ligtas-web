@@ -36,6 +36,10 @@ export function rowToHousehold(row: any): Household {
     documentUrl:     row.document_url       ?? undefined,
     assignedAssetId: row.assigned_asset_id  ?? undefined,
     dispatchedAt:    row.dispatched_at      ?? undefined,
+    
+    // ---> ETO YUNG KULANG! Dinagdag na natin para pumasa sa UI <---
+    created_at:      row.created_at         ?? undefined,
+    updated_at:      row.updated_at         ?? undefined,
   }
 }
 
@@ -63,5 +67,8 @@ export function householdToRow(h: Household) {
     document_url:       h.documentUrl        ?? null,
     assigned_asset_id:  h.assignedAssetId    ?? null,
     dispatched_at:      h.dispatchedAt       ?? null,
+    
+    // ---> Para ma-save rin kapag may update <---
+    updated_at:         h.updated_at         ?? null,
   }
 }
