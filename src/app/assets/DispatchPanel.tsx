@@ -1,7 +1,7 @@
-'use client'
 // src/app/dispatch/DispatchPanel.tsx
+'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useAssetStore } from '@/store/assetStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import { TRIAGE_ORDER } from '@/lib/triage'
@@ -14,116 +14,82 @@ export default function DispatchPanel() {
   const setPanTo = useHouseholdStore((s) => s.setPanTo)
   const [showAddForm, setShowAddForm] = useState(false)
 
-  // Listen for asset pan events dispatched by AssetCard
+  // Memoize the filtering logic so it only recalculates when 'households' change
+  const { pending, critical } = useMemo(() => {
+    const pendingList = households.filter((h) => h.status === 'Pending')
+    const criticalList = pendingList.filter((h) => h.triage.level === 'CRITICAL')
+    return { pending: pendingList, critical: criticalList }
+  }, [households])
+
+  // TODO: Consider moving this event logic into Zustand instead of window events
   useEffect(() => {
     const handler = (e: Event) => {
       const { lat, lng } = (e as CustomEvent<{ lat: number; lng: number }>).detail
-      // Find the nearest pending critical household to that asset
-      const pending = households.filter((h) => h.status === 'Pending')
+      
       if (pending.length === 0) return
+      
       const sorted = [...pending].sort(
-        (a, b) => TRIAGE_ORDER[a.triage.level] - TRIAGE_ORDER[b.triage.level],
+        (a, b) => TRIAGE_ORDER[a.triage.level] - TRIAGE_ORDER[b.triage.level]
       )
-      // Just pan to asset position for now via a temporary store hack
-      void lat; void lng
+      
+      // Temporary hack: ignoring lat/lng to pan to the first critical household
       setPanTo(sorted[0].id)
     }
+    
     window.addEventListener('ligtas:panToAsset', handler)
     return () => window.removeEventListener('ligtas:panToAsset', handler)
-  }, [households, setPanTo])
+  }, [pending, setPanTo])
 
-  const pending = households.filter((h) => h.status === 'Pending')
-  const critical = pending.filter((h) => h.triage.level === 'CRITICAL')
+  const activeAssetsCount = assets.filter((a) => a.status === 'Active').length
+  const dispatchingAssetsCount = assets.filter((a) => a.status === 'Dispatching').length
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <h2
-          style={{
-            margin: 0,
-            fontSize: '0.8rem',
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: 1,
-          }}
-        >
+    <div className="flex flex-col">
+      <div className="flex justify-between items-center mb-1.5">
+        <h2 className="m-0 text-xs text-gray-400 uppercase tracking-wide">
           Assets
         </h2>
         <button
           onClick={() => setShowAddForm((v) => !v)}
-          style={{
-            background: showAddForm ? '#21262d' : '#238636',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 4,
-            padding: '5px 12px',
-            cursor: 'pointer',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            fontFamily: 'Inter, sans-serif',
-          }}
+          className={`px-3 py-1.5 rounded text-xs font-bold font-sans text-white border-none cursor-pointer ${
+            showAddForm ? 'bg-[#21262d]' : 'bg-[#238636]'
+          }`}
         >
           {showAddForm ? '✕ Cancel' : '+ Add Asset'}
         </button>
       </div>
 
-      <p style={{ margin: '0 0 16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        {assets.filter((a) => a.status === 'Active').length} active &mdash;{' '}
-        {assets.filter((a) => a.status === 'Dispatching').length} dispatching
+      <p className="m-0 mb-4 text-xs text-gray-400">
+        {activeAssetsCount} active &mdash; {dispatchingAssetsCount} dispatching
       </p>
 
       {showAddForm && <AddAssetForm onClose={() => setShowAddForm(false)} />}
 
-      {assets.map((asset) => (
-        <AssetCard key={asset.id} asset={asset} />
-      ))}
+      <div className="flex flex-col gap-2">
+        {assets.map((asset) => (
+          <AssetCard key={asset.id} asset={asset} />
+        ))}
+      </div>
 
       {critical.length > 0 && (
         <>
-          <h2
-            style={{
-              margin: '20px 0 10px',
-              fontSize: '0.8rem',
-              color: '#ff4d4d',
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-            }}
-          >
+          <h2 className="mt-5 mb-2.5 text-xs text-red-500 uppercase tracking-wide">
             🚨 Critical — Awaiting Dispatch ({critical.length})
           </h2>
           {critical.map((hh) => (
             <div
               key={hh.id}
-              style={{
-                padding: '10px 14px',
-                marginBottom: 8,
-                background: '#21262d',
-                borderRadius: 6,
-                borderLeft: '3px solid #ff4d4d',
-                fontSize: '0.82rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
+              className="px-3.5 py-2.5 mb-2 bg-[#21262d] rounded-md border-l-4 border-red-500 text-sm flex justify-between items-center"
             >
               <div>
-                <div style={{ fontWeight: 600, color: '#fff', marginBottom: 2 }}>{hh.head}</div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                <div className="font-semibold text-white mb-0.5">{hh.head}</div>
+                <div className="text-gray-400 text-xs">
                   {hh.street}, {hh.barangay}
                 </div>
               </div>
               <button
                 onClick={() => setPanTo(hh.id)}
-                style={{
-                  background: '#30363d',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 4,
-                  padding: '6px 10px',
-                  cursor: 'pointer',
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                }}
+                className="bg-[#30363d] text-white border-none rounded px-2.5 py-1.5 cursor-pointer text-xs font-semibold"
               >
                 📍
               </button>
