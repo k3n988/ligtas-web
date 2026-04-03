@@ -87,18 +87,6 @@ const sectionDivider: React.CSSProperties = {
   paddingTop: 15,
 }
 
-const subHeaderStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '0.85rem',
-  fontWeight: 800,
-  color: '#fff',
-  letterSpacing: '0.05em',
-  textTransform: 'uppercase',
-  marginBottom: 12,
-  borderLeft: '4px solid var(--accent-blue)',
-  paddingLeft: 10,
-}
-
 export default function RegistrationForm() {
   const addHousehold    = useHouseholdStore((s) => s.addHousehold)
   const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
@@ -158,7 +146,7 @@ export default function RegistrationForm() {
       },
       (err) => {
         setCoords('')
-        setLocating(false); setPinSource(null)
+        setLocating(false)
         console.error('GPS Error:', err.message)
       },
     )
@@ -233,7 +221,8 @@ export default function RegistrationForm() {
       {/* ── LGU context header ──────────────────────────────────────── */}
       <div
         style={{
-          background: '#0000c3',
+          background: '#0d1117',
+          border: '1px solid #30363d',
           borderLeft: '3px solid var(--accent-blue)',
           borderRadius: 4,
           padding: '10px 14px',
@@ -243,143 +232,12 @@ export default function RegistrationForm() {
           lineHeight: 1.6,
         }}
       >
-        <strong style={{ color: '#fff', display: 'block', marginBottom: 2, fontSize: '0.85rem' }}>
+        <strong style={{ color: '#fff', display: 'block', marginBottom: 2 }}>
           📋 LGU Vulnerability Registry — Authorized Personnel Only
         </strong>
-        <span style={{ color: '#e9d5ff' }}>
-          For use by Barangay Health Workers (BHWs), CSWDO, and LGU field staff
-          to digitize existing registries pre-disaster.
-        </span>
+        For use by Barangay Health Workers (BHWs), CSWDO, and LGU field staff
+        to digitize existing registries pre-disaster.
       </div>
-
-      {/* ── Location (Moved to Top) ────────── */}
-      <div style={{ marginBottom: 20 }}>
-        <h3 style={subHeaderStyle}>Location Details</h3>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-          <label style={{ ...labelStyle, marginBottom: 0 }}>LATITUDE & LONGITUDE</label>
-          {pinSource && (
-            <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? '#58a6ff' : '#238636', fontWeight: 600 }}>
-              {pinSource === 'map' ? '🗺 Pinned on map' : '📡 GPS captured'}
-            </span>
-          )}
-        </div>
-
-        {!addressReady && (
-          <div style={{
-            padding: '8px 12px',
-            background: '#161b22',
-            border: '1px dashed #30363d',
-            borderRadius: 4,
-            fontSize: '0.75rem',
-            color: '#8b949e',
-            marginBottom: 8,
-          }}>
-            Fill in City, Barangay, and Street Address below to enable location pinning.
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
-          <input
-            style={{
-              ...inputStyle,
-              opacity: addressReady ? 1 : 0.5,
-            }}
-            type="text"
-            value={coords}
-            onChange={(e) => { setCoords(e.target.value); setPinSource(null) }}
-            placeholder="LATITUDE, LONGITUDE — or use buttons →"
-            required
-            readOnly={locating || !addressReady}
-          />
-          <button
-            type="button"
-            onClick={getLocation}
-            disabled={locating || !addressReady}
-            title={addressReady ? 'Auto-detect GPS location' : 'Fill address first'}
-            style={{
-              flexShrink: 0,
-              padding: '0 10px',
-              background: addressReady ? '#238636' : '#21262d',
-              color: addressReady ? '#fff' : '#8b949e',
-              border: addressReady ? '1px solid #2ea043' : '1px solid #30363d',
-              borderRadius: 4,
-              cursor: addressReady ? 'pointer' : 'not-allowed',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              fontFamily: 'Inter, sans-serif',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            📡 GPS
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={() => { if (addressReady) setPickingLocation(true) }}
-          disabled={!addressReady}
-          title={addressReady ? 'Click to pin on map' : 'Fill address first'}
-          style={{
-            width: '100%',
-            padding: '8px',
-            background: addressReady ? '#161b22' : '#0d1117',
-            border: `1px solid ${addressReady ? '#58a6ff' : '#30363d'}`,
-            color: addressReady ? '#58a6ff' : '#8b949e',
-            borderRadius: 4,
-            cursor: addressReady ? 'pointer' : 'not-allowed',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            fontFamily: 'Inter, sans-serif',
-          }}
-        >
-          🗺 Pin Location on Map
-        </button>
-      </div>
-
-      {/* ── Vulnerabilities (Moved to Top) ──────────────────────── */}
-      <div style={{ marginBottom: 20 }}>
-        <h3 style={subHeaderStyle}>Vulnerability Profile</h3>
-        <label style={labelStyle}>Vulnerability Profile (select all that apply)</label>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 10,
-            background: '#21262d',
-            padding: 10,
-            borderRadius: 4,
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          {VULN_OPTIONS.map(({ value, label }) => (
-            <label
-              key={value}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                fontSize: '0.8rem', 
-                cursor: 'pointer',
-                background: vulnArr.includes(value) ? '#30363d' : 'transparent',
-                padding: '4px 8px',
-                borderRadius: '20px',
-                border: `1px solid ${vulnArr.includes(value) ? '#58a6ff' : '#30363d'}`,
-                color: (value === 'Bedridden' || value === 'Oxygen') && vulnArr.includes(value) ? '#ff4d4d' : '#c9d1d9'
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={vulnArr.includes(value)}
-                onChange={() => toggleVuln(value)}
-                style={{ width: 'auto', marginRight: 8, cursor: 'pointer' }}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-        <TriagePreview triage={triage} />
-      </div>
-
-      <div style={sectionDivider} />
-      <h3 style={subHeaderStyle}>Personal & Address Details</h3>
 
       {/* ── Success banner (replaces alert) ───────────────────────── */}
       {saved && (
@@ -422,34 +280,31 @@ export default function RegistrationForm() {
       {/* ── Source Registry ──────────────────────────────────────── */}
       <div style={{ marginBottom: isSelfReported ? 10 : 15 }}>
         <label style={labelStyle}>Source Registry / Data Origin</label>
-        <div style={{ position: 'relative' }}>
-          <select
-            name="source"
-            required
-            style={{ ...inputStyle, appearance: 'none' }}
-            value={sourceVal}
-            onChange={(e) => setSourceVal(e.target.value as RegistrySource)}
-          >
-            <option value="" disabled>Select data source</option>
-            {SOURCE_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: '0.7rem' }}>▼</span>
-        </div>
+        <select
+          name="source"
+          required
+          style={inputStyle}
+          value={sourceVal}
+          onChange={(e) => setSourceVal(e.target.value as RegistrySource)}
+        >
+          <option value="" disabled>Select data source</option>
+          {SOURCE_OPTIONS.map(({ value, label }) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
       </div>
 
       {/* ── Self-Reported warning + document upload ──────────────── */}
       {isSelfReported && (
         <div style={{ marginBottom: 15 }}>
           <div style={{
-            background: '#2d2711',
+            background: '#1e1a0e',
             border: '1px solid #f39c12',
             borderRadius: 4,
             padding: '10px 14px',
             marginBottom: 10,
             fontSize: '0.75rem',
-            color: '#ffdf5d',
+            color: '#f39c12',
             lineHeight: 1.6,
           }}>
             <strong style={{ display: 'block', marginBottom: 2 }}>⚠️ Pending Admin Review</strong>
@@ -476,21 +331,18 @@ export default function RegistrationForm() {
       {/* ── City ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 15 }}>
         <label style={labelStyle}>City / Municipality</label>
-        <div style={{ position: 'relative' }}>
-          <select
-            name="city"
-            required
-            style={{ ...inputStyle, appearance: 'none' }}
-            value={cityVal}
-            onChange={(e) => { setCityVal(e.target.value); setBarangayVal('') }}
-          >
-            <option value="" disabled>Select City / Municipality</option>
-            {CITIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: '0.7rem' }}>▼</span>
-        </div>
+        <select
+          name="city"
+          required
+          style={inputStyle}
+          value={cityVal}
+          onChange={(e) => { setCityVal(e.target.value); setBarangayVal('') }}
+        >
+          <option value="" disabled>Select City / Municipality</option>
+          {CITIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
 
       {/* ── Barangay + Purok ─────────────────────────────────────── */}
@@ -505,21 +357,18 @@ export default function RegistrationForm() {
             )}
           </label>
           {cityVal && BARANGAYS_BY_CITY[cityVal] ? (
-            <div style={{ position: 'relative' }}>
-              <select
-                name="barangay"
-                required
-                style={{ ...inputStyle, appearance: 'none' }}
-                value={barangayVal}
-                onChange={(e) => setBarangayVal(e.target.value)}
-              >
-                <option value="" disabled>Select Barangay</option>
-                {barangays.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-              <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: '0.7rem' }}>▼</span>
-            </div>
+            <select
+              name="barangay"
+              required
+              style={inputStyle}
+              value={barangayVal}
+              onChange={(e) => setBarangayVal(e.target.value)}
+            >
+              <option value="" disabled>Select Barangay</option>
+              {barangays.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
           ) : (
             <input
               name="barangay"
@@ -562,13 +411,95 @@ export default function RegistrationForm() {
         </select>
       </div>
 
-      {/* ── Household Head (Moved to Bottom) ───────────────────────── */}
+      {/* ── Location (gated: address must be filled first) ────────── */}
       <div style={{ marginBottom: 15 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>GPS / Map Location</label>
+          {pinSource && (
+            <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? '#58a6ff' : '#238636', fontWeight: 600 }}>
+              {pinSource === 'map' ? '🗺 Pinned on map' : '📡 GPS captured'}
+            </span>
+          )}
+        </div>
+
+        {!addressReady && (
+          <div style={{
+            padding: '8px 12px',
+            background: '#161b22',
+            border: '1px dashed #30363d',
+            borderRadius: 4,
+            fontSize: '0.75rem',
+            color: '#8b949e',
+            marginBottom: 8,
+          }}>
+            Fill in City, Barangay, and Street Address above to enable location pinning.
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
+          <input
+            style={{
+              ...inputStyle,
+              opacity: addressReady ? 1 : 0.5,
+            }}
+            type="text"
+            value={coords}
+            onChange={(e) => { setCoords(e.target.value); setPinSource(null) }}
+            placeholder="Lat, Lng — or use buttons →"
+            required
+            readOnly={locating || !addressReady}
+          />
+          <button
+            type="button"
+            onClick={getLocation}
+            disabled={locating || !addressReady}
+            title={addressReady ? 'Auto-detect GPS location' : 'Fill address first'}
+            style={{
+              flexShrink: 0,
+              padding: '0 10px',
+              background: addressReady ? '#30363d' : '#21262d',
+              color: addressReady ? '#fff' : '#8b949e',
+              border: 'none',
+              borderRadius: 4,
+              cursor: addressReady ? 'pointer' : 'not-allowed',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              fontFamily: 'Inter, sans-serif',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            📡 GPS
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => { if (addressReady) setPickingLocation(true) }}
+          disabled={!addressReady}
+          title={addressReady ? 'Click to pin on map' : 'Fill address first'}
+          style={{
+            width: '100%',
+            padding: '8px',
+            background: addressReady ? '#161b22' : '#0d1117',
+            border: `1px solid ${addressReady ? '#58a6ff' : '#30363d'}`,
+            color: addressReady ? '#58a6ff' : '#8b949e',
+            borderRadius: 4,
+            cursor: addressReady ? 'pointer' : 'not-allowed',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          🗺 Pin Location on Map
+        </button>
+      </div>
+
+      {/* ── Household Head ───────────────────────────────────────── */}
+      <div style={sectionDivider}>
         <label style={labelStyle}>Household Head / Patient Name</label>
         <input name="head" type="text" placeholder="Full Name" required style={inputStyle} />
       </div>
 
-      {/* ── Contact + Occupants (Moved to Bottom) ──────────────────── */}
+      {/* ── Contact + Occupants ──────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, margin: '15px 0' }}>
         <div>
           <label style={labelStyle}>Primary Contact</label>
@@ -577,6 +508,37 @@ export default function RegistrationForm() {
         <div>
           <label style={labelStyle}>Total Occupants</label>
           <input name="occupants" type="number" placeholder="Count" min="1" required style={inputStyle} />
+        </div>
+      </div>
+
+      {/* ── Vulnerabilities ──────────────────────────────────────── */}
+      <div style={sectionDivider}>
+        <label style={labelStyle}>Vulnerability Profile (select all that apply)</label>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 10,
+            background: '#21262d',
+            padding: 10,
+            borderRadius: 4,
+            border: '1px solid var(--border-color)',
+          }}
+        >
+          {VULN_OPTIONS.map(({ value, label }) => (
+            <label
+              key={value}
+              style={{ display: 'flex', alignItems: 'center', fontSize: '0.8rem', cursor: 'pointer' }}
+            >
+              <input
+                type="checkbox"
+                checked={vulnArr.includes(value)}
+                onChange={() => toggleVuln(value)}
+                style={{ width: 'auto', marginRight: 8, cursor: 'pointer' }}
+              />
+              {label}
+            </label>
+          ))}
         </div>
       </div>
 
@@ -590,6 +552,8 @@ export default function RegistrationForm() {
           style={{ ...inputStyle, resize: 'vertical' }}
         />
       </div>
+
+      <TriagePreview triage={triage} />
 
       <button
         type="submit"

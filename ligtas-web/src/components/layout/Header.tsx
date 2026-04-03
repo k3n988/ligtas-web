@@ -8,8 +8,8 @@ const NAV_TABS = [
   { href: '/register',  label: '📝 REGISTER'  },
   { href: '/queue',     label: '🚨 QUEUE'     },
   { href: '/assets',    label: '🚤 ASSETS'    },
-  { href: '/admin',       label: '🗺️ DASHBOARD' },
- 
+  { href: '/map',       label: '🗺️ DASHBOARD' },
+  { href: '/admin',     label: '⚙️ ADMIN'     },
 ]
 
 export default function Header() {

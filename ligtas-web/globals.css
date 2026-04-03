@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/* ── L.I.G.T.A.S. design tokens ── */
+:root {
+  --bg-dark:         #0d1117;
+  --panel-bg:        #161b22;
+  --border-color:    #30363d;
+  --accent-blue:     #58a6ff;
+  --critical-red:    #ff4d4d;
+  --high-orange:     #f39c12;
+  --elevated-yellow: #f1c40f;
+  --resolved-green:  #238636;
+  --text-main:       #c9d1d9;
+  --text-muted:      #8b949e;
+}
+
+/* ── Base reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--bg-dark); }
+::-webkit-scrollbar-thumb  { background: var(--border-color); border-radius: 3px; }
+
+/* ── Hide scrollbar on tab strip ── */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── Google Maps InfoWindow dark theme override ── */
+.gm-style .gm-style-iw-c {
+  background: #161b22 !important;
+  border: 1px solid #30363d !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.6) !important;
+  padding: 0 !important;
+}
+.gm-style .gm-style-iw-d { overflow: hidden !important; }
+.gm-style .gm-style-iw-t::after { background: #161b22 !important; }
+.gm-style-iw-tc::after { background: #161b22 !important; }
+.gm-ui-hover-effect > span { background-color: #8b949e !important; }
+
+/* ── Form input focus ring ── */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent-blue) !important;
+}
+
+/* ── Print: show only the summary report modal ── */
+@media print {
+  body > * { display: none !important; }
+  .summary-report-modal {
+    display: block !important;
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
