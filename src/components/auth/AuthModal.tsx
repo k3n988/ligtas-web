@@ -9,7 +9,6 @@ interface Props {
 }
 
 export default function AuthModal({ onClose }: Props) {
-  // <-- UPDATED: Pull tab state directly from the global store
   const { authTab: tab, setAuthTab: setTab, signUp, login, loading } = useAuthStore()
 
   const [contact, setContact] = useState('')
@@ -127,20 +126,23 @@ export default function AuthModal({ onClose }: Props) {
         {/* Info blurb */}
         <p style={{ fontSize: '0.72rem', color: '#8b949e', margin: '0 0 18px', lineHeight: 1.5 }}>
           {tab === 'login'
-            ? 'Use your household contact number and password to sign in.'
-            : 'Register using your household contact number. All members of a household share the same number.'}
+            ? 'Use your email or household contact number and password to sign in.'
+            : 'Register using your email or household contact number.'}
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
+            {/* UPDATED: Changed Label to include Email */}
             <label style={labelStyle}>Username</label>
             <input
-              type="tel"
-              placeholder="juan@gmail.com or 09XX-XXX-XXXX"
+              type="text" /* <--- CRITICAL FIX: Changed from "tel" to "text" para gumana sa mobile */
+              placeholder="Email or 09XX-XXX-XXXX"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               required
               style={inputStyle}
+              autoCapitalize="none" /* <--- ADDED: Prevents mobile from capitalizing the first letter of an email */
+              autoCorrect="off"     /* <--- ADDED: Prevents mobile autocorrect from changing the email */
             />
           </div>
 
