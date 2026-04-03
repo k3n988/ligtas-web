@@ -1,9 +1,12 @@
 'use client'
 // src/components/layout/Header.tsx
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useRef } from 'react'
 import { useAuthStore } from '@/store/authStore'
+import { useHouseholdStore } from '@/store/householdStore'
 import AuthModal from '@/components/auth/AuthModal'
 
 const NAV_TABS = [
@@ -16,36 +19,72 @@ const NAV_TABS = [
 export default function Header() {
   const pathname = usePathname()
   const { user, logout, showModal, setShowModal } = useAuthStore()
+  const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
+
+  const [query, setQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    const q = query.trim()
+    if (!q) return
+    setSearching(true)
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+        { headers: { 'Accept-Language': 'en' } },
+      )
+      const data = await res.json()
+      if (data && data[0]) {
+        setPanToCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) })
+        setQuery('')
+        inputRef.current?.blur()
+      }
+    } finally {
+      setSearching(false)
+    }
+  }
 
   return (
     <div style={{ flexShrink: 0 }}>
-      {/* Top bar */}
+
+      {/* ── Top bar ─────────────────────────────────────────────────────── */}
       <div
         style={{
-          padding: '12px 16px',
+          padding: '10px 14px',
           background: '#000',
           borderBottom: '2px solid var(--critical-red)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 12,
+          gap: 10,
         }}
       >
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.15rem', color: '#fff', letterSpacing: 2 }}>
-            L.I.G.T.A.S. DASHBOARD
-          </h1>
-          <small style={{ color: 'var(--accent-blue)', fontSize: '0.7rem' }}>
-            BACOLOD DRRMO | COMMAND CENTER
-          </small>
+        {/* Logo + title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Image
+            src="/logo2.png"
+            alt="LIGTAS Logo"
+            width={42}
+            height={42}
+            priority
+            style={{ objectFit: 'contain' }}
+          />
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', letterSpacing: 2, lineHeight: 1.1 }}>
+              L.I.G.T.A.S.
+            </h1>
+            <p style={{ margin: 0, fontSize: '0.53rem', color: '#8b949e', letterSpacing: 0.3, lineHeight: 1.45 }}>
+              Location Intelligence &amp; Geospatial Triage<br />for Accelerated Support
+            </p>
+          </div>
         </div>
 
-        {/* Auth control */}
+        {/* Auth */}
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <span style={{ fontSize: '0.65rem', color: '#8b949e', letterSpacing: 0.5 }}>
-              {user.contact}
-            </span>
+            <span style={{ fontSize: '0.62rem', color: '#8b949e' }}>{user.contact}</span>
             <button
               onClick={logout}
               style={{
@@ -54,7 +93,7 @@ export default function Header() {
                 border: '1px solid #30363d',
                 color: '#8b949e',
                 borderRadius: 4,
-                fontSize: '0.65rem',
+                fontSize: '0.62rem',
                 fontWeight: 600,
                 letterSpacing: 1,
                 cursor: 'pointer',
@@ -86,7 +125,68 @@ export default function Header() {
         )}
       </div>
 
-      {/* Nav tabs — only when logged in */}
+      {/* ── Search bar (below top bar, like NOAH) ───────────────────────── */}
+      <div
+        style={{
+          padding: '10px 14px',
+          background: '#0d1117',
+          borderBottom: '1px solid var(--border-color)',
+        }}
+      >
+        <form
+          onSubmit={handleSearch}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            background: '#fff',
+            borderRadius: 22,
+            padding: '5px 6px 5px 14px',
+            boxShadow: '0 1px 6px rgba(0,0,0,0.5)',
+          }}
+        >
+          <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>📍</span>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search a place or barangay…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={{
+              flex: 1,
+              border: 'none',
+              outline: 'none',
+              background: 'transparent',
+              fontSize: '0.8rem',
+              color: '#111',
+              fontFamily: 'Inter, sans-serif',
+              minWidth: 0,
+            }}
+          />
+          <button
+            type="submit"
+            disabled={searching}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: '50%',
+              background: searching ? '#8b949e' : '#1f6feb',
+              border: 'none',
+              color: '#fff',
+              cursor: searching ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              fontSize: '0.85rem',
+            }}
+          >
+            {searching ? '…' : '🔍'}
+          </button>
+        </form>
+      </div>
+
+      {/* ── Nav tabs (logged in only) ────────────────────────────────────── */}
       {user && (
         <div
           style={{

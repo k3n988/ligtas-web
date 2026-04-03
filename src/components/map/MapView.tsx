@@ -63,6 +63,22 @@ function PanController() {
   return null
 }
 
+/** Pans the map to arbitrary coordinates (used by the search bar). */
+function PanCoordsController() {
+  const map = useMap()
+  const panToCoords = useHouseholdStore((s) => s.panToCoords)
+  const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
+
+  useEffect(() => {
+    if (!panToCoords || !map) return
+    map.panTo(panToCoords)
+    map.setZoom(15)
+    setPanToCoords(null)
+  }, [panToCoords, map, setPanToCoords])
+
+  return null
+}
+
 /** Changes the map cursor to a crosshair while location-picking is active. */
 function PickCursorController() {
   const map = useMap()
@@ -228,6 +244,7 @@ function MapInner() {
         onClick={handleMapClick}
       >
         <PanController />
+        <PanCoordsController />
         <PickCursorController />
         <RouteOverlay />
 
