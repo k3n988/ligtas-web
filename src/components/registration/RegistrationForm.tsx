@@ -46,7 +46,6 @@ const SOURCE_OPTIONS: { value: RegistrySource; label: string }[] = [
   { value: 'Maternal Health Record',   label: 'Maternal Health Record (RHU/BHW)'    },
   { value: 'CSWDO Database',           label: 'CSWDO Database'                       },
   { value: 'BHW Field Survey',         label: 'BHW Field Survey / Community Round'  },
-  { value: 'Self-Reported',            label: 'Self-Reported (Citizen Submission)'   },
 ]
 
 const VULN_OPTIONS: { value: Vulnerability; label: string }[] = [
