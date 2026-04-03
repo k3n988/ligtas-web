@@ -44,9 +44,9 @@ const SOURCE_OPTIONS: { value: RegistrySource; label: string }[] = [
   { value: 'Senior Citizen Registry',  label: 'Senior Citizen Registry (OSCA)'      },
   { value: 'PWD Registry',             label: 'PWD Registry (CPDAO)'                },
   { value: 'Maternal Health Record',   label: 'Maternal Health Record (RHU/BHW)'    },
-  { value: 'CSWDO Database',           label: 'CSWDO Database'                       },
+  { value: 'CSWDO Database',           label: 'CSWDO Database'                      },
   { value: 'BHW Field Survey',         label: 'BHW Field Survey / Community Round'  },
-  { value: 'Self-Reported',            label: 'Self-Reported (Citizen Submission)'   },
+  { value: 'Self-Reported',            label: 'Self-Reported (Citizen Submission)'  },
 ]
 
 const VULN_OPTIONS: { value: Vulnerability; label: string }[] = [
@@ -252,136 +252,7 @@ export default function RegistrationForm() {
         </span>
       </div>
 
-      {/* ── Location (Moved to Top) ────────── */}
-      <div style={{ marginBottom: 20 }}>
-        <h3 style={subHeaderStyle}>Location Details</h3>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-          <label style={{ ...labelStyle, marginBottom: 0 }}>LATITUDE & LONGITUDE</label>
-          {pinSource && (
-            <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? '#58a6ff' : '#238636', fontWeight: 600 }}>
-              {pinSource === 'map' ? '🗺 Pinned on map' : '📡 GPS captured'}
-            </span>
-          )}
-        </div>
-
-        {!addressReady && (
-          <div style={{
-            padding: '8px 12px',
-            background: '#161b22',
-            border: '1px dashed #30363d',
-            borderRadius: 4,
-            fontSize: '0.75rem',
-            color: '#8b949e',
-            marginBottom: 8,
-          }}>
-            Fill in City, Barangay, and Street Address below to enable location pinning.
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
-          <input
-            style={{
-              ...inputStyle,
-              opacity: addressReady ? 1 : 0.5,
-            }}
-            type="text"
-            value={coords}
-            onChange={(e) => { setCoords(e.target.value); setPinSource(null) }}
-            placeholder="LATITUDE, LONGITUDE — or use buttons →"
-            required
-            readOnly={locating || !addressReady}
-          />
-          <button
-            type="button"
-            onClick={getLocation}
-            disabled={locating || !addressReady}
-            title={addressReady ? 'Auto-detect GPS location' : 'Fill address first'}
-            style={{
-              flexShrink: 0,
-              padding: '0 10px',
-              background: addressReady ? '#238636' : '#21262d',
-              color: addressReady ? '#fff' : '#8b949e',
-              border: addressReady ? '1px solid #2ea043' : '1px solid #30363d',
-              borderRadius: 4,
-              cursor: addressReady ? 'pointer' : 'not-allowed',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              fontFamily: 'Inter, sans-serif',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            📡 GPS
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={() => { if (addressReady) setPickingLocation(true) }}
-          disabled={!addressReady}
-          title={addressReady ? 'Click to pin on map' : 'Fill address first'}
-          style={{
-            width: '100%',
-            padding: '8px',
-            background: addressReady ? '#161b22' : '#0d1117',
-            border: `1px solid ${addressReady ? '#58a6ff' : '#30363d'}`,
-            color: addressReady ? '#58a6ff' : '#8b949e',
-            borderRadius: 4,
-            cursor: addressReady ? 'pointer' : 'not-allowed',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            fontFamily: 'Inter, sans-serif',
-          }}
-        >
-          🗺 Pin Location on Map
-        </button>
-      </div>
-
-      {/* ── Vulnerabilities (Moved to Top) ──────────────────────── */}
-      <div style={{ marginBottom: 20 }}>
-        <h3 style={subHeaderStyle}>Vulnerability Profile</h3>
-        <label style={labelStyle}>Vulnerability Profile (select all that apply)</label>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 10,
-            background: '#21262d',
-            padding: 10,
-            borderRadius: 4,
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          {VULN_OPTIONS.map(({ value, label }) => (
-            <label
-              key={value}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                fontSize: '0.8rem', 
-                cursor: 'pointer',
-                background: vulnArr.includes(value) ? '#30363d' : 'transparent',
-                padding: '4px 8px',
-                borderRadius: '20px',
-                border: `1px solid ${vulnArr.includes(value) ? '#58a6ff' : '#30363d'}`,
-                color: (value === 'Bedridden' || value === 'Oxygen') && vulnArr.includes(value) ? '#ff4d4d' : '#c9d1d9'
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={vulnArr.includes(value)}
-                onChange={() => toggleVuln(value)}
-                style={{ width: 'auto', marginRight: 8, cursor: 'pointer' }}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-        <TriagePreview triage={triage} />
-      </div>
-
-      <div style={sectionDivider} />
-      <h3 style={subHeaderStyle}>Personal & Address Details</h3>
-
-      {/* ── Success banner (replaces alert) ───────────────────────── */}
+      {/* ── Success banner ───────────────────────── */}
       {saved && (
         <div
           style={{
@@ -418,6 +289,11 @@ export default function RegistrationForm() {
           ✕ {saveError}
         </div>
       )}
+
+      {/* ================================================================= */}
+      {/* 1. PERSONAL & ADDRESS DETAILS (MOVED TO TOP)                        */}
+      {/* ================================================================= */}
+      <h3 style={subHeaderStyle}>Personal & Address Details</h3>
 
       {/* ── Source Registry ──────────────────────────────────────── */}
       <div style={{ marginBottom: isSelfReported ? 10 : 15 }}>
@@ -472,6 +348,24 @@ export default function RegistrationForm() {
           />
         </div>
       )}
+
+      {/* ── Household Head ───────────────────────── */}
+      <div style={{ marginBottom: 15 }}>
+        <label style={labelStyle}>Household Head / Patient Name</label>
+        <input name="head" type="text" placeholder="Full Name" required style={inputStyle} />
+      </div>
+
+      {/* ── Contact + Occupants ──────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, margin: '15px 0' }}>
+        <div>
+          <label style={labelStyle}>Primary Contact</label>
+          <input name="contact" type="tel" placeholder="09XX-XXX-XXXX" required style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Total Occupants</label>
+          <input name="occupants" type="number" placeholder="Count" min="1" required style={inputStyle} />
+        </div>
+      </div>
 
       {/* ── City ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 15 }}>
@@ -562,22 +456,138 @@ export default function RegistrationForm() {
         </select>
       </div>
 
-      {/* ── Household Head (Moved to Bottom) ───────────────────────── */}
-      <div style={{ marginBottom: 15 }}>
-        <label style={labelStyle}>Household Head / Patient Name</label>
-        <input name="head" type="text" placeholder="Full Name" required style={inputStyle} />
+      <div style={sectionDivider} />
+
+      {/* ================================================================= */}
+      {/* 2. LOCATION DETAILS (DEPENDS ON ADDRESS)                            */}
+      {/* ================================================================= */}
+      <div style={{ marginBottom: 20 }}>
+        <h3 style={subHeaderStyle}>Location Details</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>LATITUDE & LONGITUDE</label>
+          {pinSource && (
+            <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? '#58a6ff' : '#238636', fontWeight: 600 }}>
+              {pinSource === 'map' ? '🗺 Pinned on map' : '📡 GPS captured'}
+            </span>
+          )}
+        </div>
+
+        {!addressReady && (
+          <div style={{
+            padding: '8px 12px',
+            background: '#161b22',
+            border: '1px dashed #30363d',
+            borderRadius: 4,
+            fontSize: '0.75rem',
+            color: '#8b949e',
+            marginBottom: 8,
+          }}>
+            Fill in City, Barangay, and Street Address above to enable location pinning.
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
+          <input
+            style={{
+              ...inputStyle,
+              opacity: addressReady ? 1 : 0.5,
+            }}
+            type="text"
+            value={coords}
+            onChange={(e) => { setCoords(e.target.value); setPinSource(null) }}
+            placeholder="LATITUDE, LONGITUDE — or use buttons →"
+            required
+            readOnly={locating || !addressReady}
+          />
+          <button
+            type="button"
+            onClick={getLocation}
+            disabled={locating || !addressReady}
+            title={addressReady ? 'Auto-detect GPS location' : 'Fill address first'}
+            style={{
+              flexShrink: 0,
+              padding: '0 10px',
+              background: addressReady ? '#238636' : '#21262d',
+              color: addressReady ? '#fff' : '#8b949e',
+              border: addressReady ? '1px solid #2ea043' : '1px solid #30363d',
+              borderRadius: 4,
+              cursor: addressReady ? 'pointer' : 'not-allowed',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              fontFamily: 'Inter, sans-serif',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            📡 GPS
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => { if (addressReady) setPickingLocation(true) }}
+          disabled={!addressReady}
+          title={addressReady ? 'Click to pin on map' : 'Fill address first'}
+          style={{
+            width: '100%',
+            padding: '8px',
+            background: addressReady ? '#161b22' : '#0d1117',
+            border: `1px solid ${addressReady ? '#58a6ff' : '#30363d'}`,
+            color: addressReady ? '#58a6ff' : '#8b949e',
+            borderRadius: 4,
+            cursor: addressReady ? 'pointer' : 'not-allowed',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          🗺 Pin Location on Map
+        </button>
       </div>
 
-      {/* ── Contact + Occupants (Moved to Bottom) ──────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, margin: '15px 0' }}>
-        <div>
-          <label style={labelStyle}>Primary Contact</label>
-          <input name="contact" type="tel" placeholder="09XX-XXX-XXXX" required style={inputStyle} />
+      <div style={sectionDivider} />
+
+      {/* ================================================================= */}
+      {/* 3. VULNERABILITY PROFILE & NOTES                                    */}
+      {/* ================================================================= */}
+      <div style={{ marginBottom: 20 }}>
+        <h3 style={subHeaderStyle}>Vulnerability Profile</h3>
+        <label style={labelStyle}>Vulnerability Profile (select all that apply)</label>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 10,
+            background: '#21262d',
+            padding: 10,
+            borderRadius: 4,
+            border: '1px solid var(--border-color)',
+          }}
+        >
+          {VULN_OPTIONS.map(({ value, label }) => (
+            <label
+              key={value}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                fontSize: '0.8rem', 
+                cursor: 'pointer',
+                background: vulnArr.includes(value) ? '#30363d' : 'transparent',
+                padding: '4px 8px',
+                borderRadius: '20px',
+                border: `1px solid ${vulnArr.includes(value) ? '#58a6ff' : '#30363d'}`,
+                color: (value === 'Bedridden' || value === 'Oxygen') && vulnArr.includes(value) ? '#ff4d4d' : '#c9d1d9'
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={vulnArr.includes(value)}
+                onChange={() => toggleVuln(value)}
+                style={{ width: 'auto', marginRight: 8, cursor: 'pointer' }}
+              />
+              {label}
+            </label>
+          ))}
         </div>
-        <div>
-          <label style={labelStyle}>Total Occupants</label>
-          <input name="occupants" type="number" placeholder="Count" min="1" required style={inputStyle} />
-        </div>
+        <TriagePreview triage={triage} />
       </div>
 
       {/* ── Notes ────────────────────────────────────────────────── */}

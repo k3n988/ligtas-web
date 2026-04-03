@@ -133,10 +133,10 @@ export default function AuthModal({ onClose }: Props) {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={labelStyle}>Household Contact Number</label>
+            <label style={labelStyle}>Username</label>
             <input
               type="tel"
-              placeholder="09XX-XXX-XXXX"
+              placeholder="juan@gmail.com or 09XX-XXX-XXXX"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               required
