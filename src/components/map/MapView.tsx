@@ -11,7 +11,7 @@ import {
 } from '@vis.gl/react-google-maps'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
-import { useAuthStore } from '@/store/authStore' // <-- ADDED AUTH STORE
+import { useAuthStore } from '@/store/authStore'
 import { haversineKm } from '@/lib/geo'
 import HouseholdMarker from './HouseholdMarker'
 import AssetMarker from './AssetMarker'
@@ -102,7 +102,7 @@ function RouteOverlay() {
   const households = useHouseholdStore((s) => s.households)
   const assets = useAssetStore((s) => s.assets)
   const selectedId = useHouseholdStore((s) => s.selectedId)
-  const user = useAuthStore((s) => s.user) // <-- CHECK IF ADMIN IS LOGGED IN
+  const user = useAuthStore((s) => s.user) 
 
   const [renderer, setRenderer] = useState<google.maps.DirectionsRenderer | null>(null)
 
@@ -174,10 +174,16 @@ function MapInner() {
   const pendingCoords = useHouseholdStore((s) => s.pendingCoords)
   const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
   const setPendingCoords = useHouseholdStore((s) => s.setPendingCoords)
-  const user = useAuthStore((s) => s.user) // <-- CHECK IF ADMIN IS LOGGED IN
+  const user = useAuthStore((s) => s.user) 
+
+  // <-- ADDED STATE TO TRACK OPEN ASSET -->
+  const [openAssetId, setOpenAssetId] = useState<string | null>(null)
 
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
+      // If user clicks the map, close the open asset popup
+      setOpenAssetId(null)
+        
       if (!pickingLocation) return
       const lat = e.detail.latLng?.lat
       const lng = e.detail.latLng?.lng
@@ -259,9 +265,15 @@ function MapInner() {
           <HouseholdMarker key={hh.id} household={hh} />
         ))}
 
-        {/* ONLY SHOW ASSETS IF ADMIN IS LOGGED IN */}
+        {/* ONLY SHOW ASSETS IF ADMIN IS LOGGED IN, AND PASS REQUIRED PROPS */}
         {user && assets.map((asset) => (
-          <AssetMarker key={asset.id} asset={asset} />
+          <AssetMarker 
+            key={asset.id} 
+            asset={asset} 
+            isOpen={openAssetId === asset.id}
+            onOpen={() => setOpenAssetId(asset.id)}
+            onClose={() => setOpenAssetId(null)}
+          />
         ))}
 
         {/* Preview pin for pending registration */}
