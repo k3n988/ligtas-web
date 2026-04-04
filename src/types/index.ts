@@ -4,10 +4,6 @@ export type TriageLevel = 'CRITICAL' | 'HIGH' | 'ELEVATED' | 'STABLE'
 
 export type ApprovalStatus = 'approved' | 'pending_review' | 'rejected'
 
-/**
- * Source of the household registration — aligns with the LGU-led
- * "Digitizing Existing Registries" approach in the LIGTAS solution.
- */
 export type RegistrySource =
   | 'Senior Citizen Registry'
   | 'PWD Registry'
@@ -27,49 +23,56 @@ export type Vulnerability =
   | 'Dialysis'
 
 export interface TriageResult {
-  level: TriageLevel
-  hex: string
+  level:     TriageLevel
+  hex:       string
   colorName: string
 }
 
 export interface Household {
-  id: string
-  lat: number
-  lng: number
-  city: string
-  barangay: string
-  purok: string
-  street: string
+  id:        string
+  lat:       number
+  lng:       number
+  city:      string
+  barangay:  string
+  purok:     string
+  street:    string
   structure: string
-  head: string
-  contact: string
+  head:      string
+  contact:   string
   occupants: number
-  vulnArr: Vulnerability[]
-  notes: string
-  status: 'Pending' | 'Rescued'
-  triage: TriageResult
-  /** Which LGU registry or method this record originated from. */
-  source?: RegistrySource
-  /** LGU-entered records are auto-approved. Self-Reported require admin review. */
-  approvalStatus: ApprovalStatus
-  /** URL of uploaded verification document (Senior/PWD ID, medical cert) */
-  documentUrl?: string
+  vulnArr:   Vulnerability[]
+  notes:     string
+  status:    'Pending' | 'Rescued'
+  triage:    TriageResult
+
+  source?:         RegistrySource
+  approvalStatus:  ApprovalStatus
+  documentUrl?:    string
+
   assignedAssetId?: string
-  dispatchedAt?: string
-  
-  // ---> Dinagdag natin 'to para sa Supabase timestamps! <---
-  created_at?: string
-  updated_at?: string
+  dispatchedAt?:    string
+  created_at?:      string
+  updated_at?:      string
+
+  citizenPasswordHash?: string
+
+  // ── Improvement fields ───────────────────────────────────────────────────
+  /** Pre-built display string: street + barangay + city + province (#9) */
+  fullAddress?: string
+  /** GPS fix accuracy in meters — undefined when pinned via map (#5) */
+  gpsAccuracy?: number
+  /** How the location was captured (#4) */
+  pinSource?: 'gps' | 'map'
 }
 
 export interface Asset {
-  id: string
-  name: string
-  type: string
-  unit: string
-  status: 'Active' | 'Dispatching' | 'Standby'
-  lat: number
-  lng: number
-  icon: string
+  id:      string
+  name:    string
+  type:    string
+  unit:    string
+  status:  'Active' | 'Dispatching' | 'Standby'
+  lat:     number
+  lng:     number
+  icon:    string
   address?: string
 }
