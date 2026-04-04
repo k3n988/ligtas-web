@@ -1,3 +1,4 @@
+/// <reference types="@types/google.maps" />
 'use client'
 // src/components/layout/Header.tsx
 
@@ -60,16 +61,16 @@ export default function Header() {
 
     debounceRef.current = setTimeout(() => {
       setLoading(true)
-      autocompleteService.current!.getPlacePredictions(
+      autocompleteService.current?.getPlacePredictions(
         { input: q, componentRestrictions: { country: 'ph' } },
-        (predictions, status) => {
+        (predictions: google.maps.places.AutocompletePrediction[] | null, status: google.maps.places.PlacesServiceStatus) => {
           setLoading(false)
           if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) {
             setSuggestions([])
             return
           }
           setSuggestions(
-            predictions.map((p) => ({
+            predictions.map((p: google.maps.places.AutocompletePrediction) => ({
               place_id: p.place_id,
               description: p.description,
               main_text: p.structured_formatting.main_text,
@@ -100,7 +101,7 @@ export default function Header() {
 
   function selectSuggestion(s: Suggestion) {
     if (!geocoder.current) return
-    geocoder.current.geocode({ placeId: s.place_id }, (results, status) => {
+    geocoder.current.geocode({ placeId: s.place_id }, (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
       if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
         const loc = results[0].geometry.location
         setPanToCoords({ lat: loc.lat(), lng: loc.lng() })
@@ -227,11 +228,11 @@ export default function Header() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
-              background: '#fff',
-              borderRadius: showDropdown ? '14px 14px 0 0' : 22,
-              padding: '5px 6px 5px 14px',
-              boxShadow: '0 1px 6px rgba(0,0,0,0.5)',
+              gap: 10,
+              background: '#161b22',
+              borderRadius: showDropdown ? '4px 4px 0 0' : 4,
+              padding: '8px 12px',
+              border: '1px solid #30363d',
               transition: 'border-radius 0.1s',
             }}
           >
@@ -248,8 +249,8 @@ export default function Header() {
                 border: 'none',
                 outline: 'none',
                 background: 'transparent',
-                fontSize: '0.8rem',
-                color: '#111',
+                fontSize: '0.85rem',
+                color: '#ffffff',
                 fontFamily: 'Inter, sans-serif',
                 minWidth: 0,
               }}
@@ -266,9 +267,9 @@ export default function Header() {
             <button
               type="submit"
               style={{
-                width: 30,
-                height: 30,
-                borderRadius: '50%',
+                width: 28,
+                height: 28,
+                borderRadius: 4,
                 background: loading ? '#8b949e' : '#1f6feb',
                 border: 'none',
                 color: '#fff',
@@ -294,10 +295,10 @@ export default function Header() {
               left: 14,
               right: 14,
               top: '100%',
-              marginTop: -10,
-              background: '#fff',
-              borderRadius: '0 0 14px 14px',
-              boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
+              marginTop: -1,
+              background: '#161b22',
+              borderRadius: '0 0 4px 4px',
+              border: '1px solid #30363d',
               overflow: 'hidden',
               zIndex: 300,
             }}
@@ -313,7 +314,7 @@ export default function Header() {
                 padding: '11px 16px',
                 background: 'transparent',
                 border: 'none',
-                borderBottom: '1px solid #eee',
+                borderBottom: '1px solid #30363d',
                 cursor: 'pointer',
                 textAlign: 'left',
               }}
@@ -337,18 +338,18 @@ export default function Header() {
                   padding: '10px 16px',
                   background: 'transparent',
                   border: 'none',
-                  borderBottom: i < suggestions.length - 1 ? '1px solid #f0f0f0' : 'none',
+                  borderBottom: i < suggestions.length - 1 ? '1px solid #21262d' : 'none',
                   cursor: 'pointer',
                   textAlign: 'left',
                 }}
               >
                 <span style={{ fontSize: '0.85rem', marginTop: 1, flexShrink: 0 }}>📍</span>
                 <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#111', lineHeight: 1.3 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f0f6fc', lineHeight: 1.3 }}>
                     {s.main_text}
                   </div>
                   {s.secondary_text && (
-                    <div style={{ fontSize: '0.7rem', color: '#888', marginTop: 1 }}>
+                    <div style={{ fontSize: '0.7rem', color: '#8b949e', marginTop: 1 }}>
                       {s.secondary_text}
                     </div>
                   )}
