@@ -31,7 +31,7 @@ export default function PasswordModal({ contact, password, onClose }: Props) {
           fontWeight: 700,
           color: '#fff',
         }}>
-          ✅ Household registered and pinned to map.
+          ✅ Asset registered and pinned to map.
         </div>
 
         <h3 style={{
@@ -44,10 +44,10 @@ export default function PasswordModal({ contact, password, onClose }: Props) {
           borderLeft: '4px solid #58a6ff',
           paddingLeft: 10,
         }}>
-          Citizen Login Credentials
+          RESCUERS Login Credentials
         </h3>
         <p style={{ color: '#8b949e', fontSize: '0.75rem', marginBottom: 20, paddingLeft: 14 }}>
-          Hand these to the household.{' '}
+          Hand these to the Rescuers.{' '}
           <strong style={{ color: '#f0883e' }}>Password will not be shown again.</strong>
         </p>
 

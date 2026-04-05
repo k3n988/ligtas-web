@@ -428,10 +428,6 @@ export default function RegistrationForm() {
               readOnly={locating}
             />
 
-            <button type="button" onClick={getLocation} disabled={locating} style={{ padding: '12px', background: '#238636', color: '#fff', border: 'none', borderRadius: 4, cursor: locating ? 'not-allowed' : 'pointer', fontSize: '0.9rem', fontWeight: 800, opacity: locating ? 0.7 : 1 }}>
-              {locating ? '⌛ CAPTURING…' : '📍 PIN CURRENT GPS LOCATION'}
-            </button>
-
             <button type="button" onClick={() => setPickingLocation(true)} style={{ width: '100%', padding: '10px', background: 'transparent', border: '1px solid var(--accent-blue)', color: 'var(--accent-blue)', borderRadius: 4, cursor: 'pointer', fontSize: '0.9rem', fontWeight: 800 }}>
               🗺 MANUALLY ADJUST PIN
             </button>
