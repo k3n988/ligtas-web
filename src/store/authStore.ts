@@ -13,6 +13,7 @@ async function hashPassword(password: string): Promise<string> {
 
 interface AuthUser {
   contact: string
+  role: 'admin' | 'citizen'
 }
 
 interface AuthStore {
@@ -68,7 +69,8 @@ export const useAuthStore = create<AuthStore>()(
             }
           }
 
-          set({ user: { contact }, loading: false })
+          const role = contact.includes('@') ? 'admin' : 'citizen'
+          set({ user: { contact, role }, loading: false })
           return null
         } catch {
           set({ loading: false })
@@ -96,10 +98,10 @@ export const useAuthStore = create<AuthStore>()(
             // LOGIN VIA CUSTOM TABLE (Household Member Login)
             const passwordHash = await hashPassword(password)
             const { data, error } = await supabase
-              .from('households') // <-- UPDATED TABLE
+              .from('households')
               .select('contact')
               .eq('contact', contact)
-              .eq('citizen_password_hash', passwordHash) // <-- UPDATED COLUMN
+              .eq('citizen_password_hash', passwordHash)
               .single()
 
             if (error || !data) {
@@ -108,8 +110,8 @@ export const useAuthStore = create<AuthStore>()(
             }
           }
 
-          // Kung walang error, success ang login!
-          set({ user: { contact }, loading: false })
+          const role = isEmail ? 'admin' : 'citizen'
+          set({ user: { contact, role }, loading: false })
           return null
         } catch {
           set({ loading: false })

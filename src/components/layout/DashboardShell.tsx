@@ -11,6 +11,7 @@ import { useAssetStore } from '@/store/assetStore'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import GuestPanel from '@/components/public/GuestPanel'
+import CitizenPanel from '@/components/public/CitizenPanel'
 
 const MapView = dynamic(() => import('@/components/map/MapView'), {
   ssr: false,
@@ -70,7 +71,12 @@ export default function DashboardShell({ children }: Props) {
       >
         <MapView />
         <Sidebar>
-          {user ? children : <GuestPanel />}
+          {!user
+            ? <GuestPanel />
+            : user.role === 'citizen'
+              ? <CitizenPanel />
+              : children
+          }
         </Sidebar>
       </div>
     </APIProvider>

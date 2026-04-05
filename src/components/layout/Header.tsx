@@ -11,11 +11,15 @@ import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import AuthModal from '@/components/auth/AuthModal'
 
-const NAV_TABS = [
+const ADMIN_TABS = [
   { href: '/register', label: '📝 REGISTER' },
   { href: '/queue',    label: '🚨 QUEUE'    },
   { href: '/assets',   label: '🚤 ASSETS'   },
   { href: '/admin',    label: '🗺️ DASHBOARD' },
+]
+
+const CITIZEN_TABS = [
+  { href: '/', label: '🗺 RISK MAP' },
 ]
 
 interface Suggestion {
@@ -380,7 +384,7 @@ export default function Header() {
           }}
           className="hide-scrollbar"
         >
-          {NAV_TABS.map(({ href, label }) => {
+          {(user.role === 'admin' ? ADMIN_TABS : CITIZEN_TABS).map(({ href, label }) => {
             const active = pathname === href
             return (
               <Link
