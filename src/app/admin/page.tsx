@@ -4,16 +4,23 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useHouseholdStore } from '@/store/householdStore'
+import { useAuthStore } from '@/store/authStore'
 import HouseholdTable from './HouseholdTable'
 import AssetTable from './AssetTable'
 // import PendingTable from './PendingTable' // <-- I-uncomment mo ito kapag may PendingTable component ka na!
 
 export default function AdminPage() {
   const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
+  const user = useAuthStore((s) => s.user)
   const router = useRouter()
   
   // State para sa tabs
   const [activeTab, setActiveTab] = useState<'registry' | 'pending' | 'assets'>('registry')
+
+  // Protect route: Redirect if not admin
+  useEffect(() => {
+    if (!user || user.role !== 'admin') router.replace('/')
+  }, [user, router])
 
   useEffect(() => { 
     void loadHouseholds() 
@@ -33,6 +40,8 @@ export default function AdminPage() {
     fontFamily: 'Inter, sans-serif',
     transition: 'all 0.2s ease',
   })
+
+  if (!user || user.role !== 'admin') return null
 
   return (
     <div style={{ padding: '24px' }}> {/* Inalis na natin yung maxWidth dito para full-width uli! */}
