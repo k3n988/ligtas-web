@@ -25,7 +25,12 @@ export const useAssetStore = create<AssetStore>((set, get) => ({
 
   addAsset: async (a) => {
     set((s) => ({ assets: [...s.assets, a] }))
-    const { error } = await supabase.from('assets').insert(a)
+    const { id, name, type, unit, status, lat, lng, icon, contact, assetPasswordHash } = a
+    const { error } = await supabase.from('assets').insert({
+      id, name, type, unit, status, lat, lng, icon,
+      contact:             contact             ?? null,
+      asset_password_hash: assetPasswordHash   ?? null,
+    })
     if (error) {
       console.error('[LIGTAS] addAsset:', error.message)
       // Rollback kung nag-error sa database
@@ -71,7 +76,11 @@ export const useAssetStore = create<AssetStore>((set, get) => ({
       assets: s.assets.map((a) => (a.id === id ? { ...a, ...data } : a)),
     }))
 
-    const { error } = await supabase.from('assets').update(data).eq('id', id)
+    const { name, type, unit, status, lat, lng, icon } = data
+    const patch = Object.fromEntries(
+      Object.entries({ name, type, unit, status, lat, lng, icon }).filter(([, v]) => v !== undefined)
+    )
+    const { error } = await supabase.from('assets').update(patch).eq('id', id)
     
     if (error) {
       console.error('[LIGTAS] updateAsset:', error.message)

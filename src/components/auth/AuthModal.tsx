@@ -9,31 +9,22 @@ interface Props {
 }
 
 export default function AuthModal({ onClose }: Props) {
-  const { authTab: tab, setAuthTab: setTab, signUp, login, loading } = useAuthStore()
+  const { login, loading } = useAuthStore()
 
   const [contact, setContact] = useState('')
   const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    if (tab === 'signup' && password !== confirm) {
-      setError('Passwords do not match.')
-      return
-    }
     if (password.length < 6) {
       setError('Password must be at least 6 characters.')
       return
     }
 
-    const err =
-      tab === 'signup'
-        ? await signUp(contact.trim(), password)
-        : await login(contact.trim(), password)
-
+    const err = await login(contact.trim(), password)
     if (err) {
       setError(err)
     } else {
@@ -94,40 +85,13 @@ export default function AuthModal({ onClose }: Props) {
             L.I.G.T.A.S. SYSTEM
           </p>
           <h2 style={{ margin: '4px 0 0', fontSize: '1rem', color: '#fff', letterSpacing: 1 }}>
-            {tab === 'login' ? 'Sign In' : 'Create Account'}
+            Sign In
           </h2>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid #30363d', paddingBottom: 0 }}>
-          {(['login', 'signup'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => { setTab(t); setError(null) }}
-              style={{
-                flex: 1,
-                padding: '8px 0',
-                background: 'transparent',
-                border: 'none',
-                borderBottom: tab === t ? '2px solid var(--accent-blue)' : '2px solid transparent',
-                color: tab === t ? 'var(--accent-blue)' : '#8b949e',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                letterSpacing: 1,
-                cursor: 'pointer',
-                textTransform: 'uppercase',
-              }}
-            >
-              {t === 'login' ? 'Log In' : 'Sign Up'}
-            </button>
-          ))}
         </div>
 
         {/* Info blurb */}
         <p style={{ fontSize: '0.72rem', color: '#8b949e', margin: '0 0 18px', lineHeight: 1.5 }}>
-          {tab === 'login'
-            ? 'Use your email or household contact number and password to sign in.'
-            : 'Register using your email or household contact number.'}
+          Use your email (LGU admin) or the contact number and password given by your Barangay Health Worker.
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -158,20 +122,6 @@ export default function AuthModal({ onClose }: Props) {
             />
           </div>
 
-          {tab === 'signup' && (
-            <div>
-              <label style={labelStyle}>Confirm Password</label>
-              <input
-                type="password"
-                placeholder="Re-enter password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                required
-                style={inputStyle}
-              />
-            </div>
-          )}
-
           {error && (
             <p style={{ fontSize: '0.75rem', color: '#f85149', margin: 0, padding: '8px 10px', background: '#2d1217', border: '1px solid #f8514933', borderRadius: 4 }}>
               {error}
@@ -194,7 +144,7 @@ export default function AuthModal({ onClose }: Props) {
               marginTop: 4,
             }}
           >
-            {loading ? 'Please wait…' : tab === 'login' ? 'LOG IN' : 'CREATE ACCOUNT'}
+            {loading ? 'Please wait…' : 'LOG IN'}
           </button>
         </form>
 

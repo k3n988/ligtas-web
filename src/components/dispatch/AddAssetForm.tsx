@@ -4,6 +4,22 @@
 import { useEffect, useState } from 'react'
 import { useAssetStore } from '@/store/assetStore'
 import { useHouseholdStore } from '@/store/householdStore'
+import PasswordModal from '@/components/registration/PasswordModal'
+
+function generatePassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const arr   = new Uint8Array(8)
+  crypto.getRandomValues(arr)
+  return Array.from(arr).map((n) => chars[n % chars.length]).join('')
+}
+
+async function hashPassword(plain: string): Promise<string> {
+  const encoded = new TextEncoder().encode(plain + 'LIGTAS_SALT_2025')
+  const buf     = await crypto.subtle.digest('SHA-256', encoded)
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
 
 const ASSET_TYPES = ['Boat', 'Truck', 'Ambulance', 'Helicopter', 'Motorcycle', 'Van']
 
@@ -47,12 +63,14 @@ export default function AddAssetForm({ onClose }: { onClose: () => void }) {
   const [type,      setType]      = useState('Boat')
   const [unit,      setUnit]      = useState('')
   const [icon,      setIcon]      = useState('🚤')
+  const [contact,   setContact]   = useState('')
   const [address,   setAddress]   = useState('')
   const [coords,    setCoords]    = useState('')
   const [pinSource, setPinSource] = useState<'gps' | 'map' | null>(null)
   const [locating,  setLocating]  = useState(false)
   const [saving,    setSaving]    = useState(false)
   const [error,     setError]     = useState<string | null>(null)
+  const [credModal, setCredModal] = useState<{ contact: string; password: string } | null>(null)
 
   // Sync when admin clicks the map
   useEffect(() => {
@@ -80,28 +98,34 @@ export default function AddAssetForm({ onClose }: { onClose: () => void }) {
     )
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!coords || coords === 'Locating…') { setError('Location is required.'); return }
     const [lat, lng] = coords.split(',').map((n) => parseFloat(n.trim()))
     if (isNaN(lat) || isNaN(lng)) { setError('Invalid coordinates.'); return }
+    if (!contact.trim()) { setError('Contact number is required.'); return }
 
     setSaving(true)
     setError(null)
     try {
+      const plainPassword = generatePassword()
+      const passwordHash  = await hashPassword(plainPassword)
+
       await addAsset({
-        id:      'A-' + Date.now().toString().slice(-6),
+        id:                'A-' + Date.now().toString().slice(-6),
         name,
         type,
         unit,
         icon,
-        address: address || undefined,
-        status:  'Active',
+        contact:           contact.trim(),
+        address:           address || undefined,
+        assetPasswordHash: passwordHash,
+        status:            'Active',
         lat,
         lng,
       })
       setPendingCoords(null)
-      onClose()
+      setCredModal({ contact: contact.trim(), password: plainPassword })
     } catch {
       setError('Failed to save. Check your connection and try again.')
     } finally {
@@ -208,6 +232,20 @@ export default function AddAssetForm({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
+        {/* Contact */}
+        <div style={{ marginBottom: 10 }}>
+          <label style={labelStyle}>Contact Number <span style={{ color: '#f0a500' }}>(used as login username)</span></label>
+          <input
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder="09xxxxxxxxx"
+            required
+            pattern="^(09|\+639)\d{9}$"
+            title="Enter a valid PH mobile number (e.g. 09171234567)"
+            style={inputStyle}
+          />
+        </div>
+
         {/* Address */}
         <div style={{ marginBottom: 10 }}>
           <label style={labelStyle}>Station Address <span style={{ color: '#6e7681' }}>(optional)</span></label>
@@ -294,6 +332,14 @@ export default function AddAssetForm({ onClose }: { onClose: () => void }) {
           {saving ? '⏳ Saving…' : '+ Add Asset'}
         </button>
       </form>
+
+      {credModal && (
+        <PasswordModal
+          contact={credModal.contact}
+          password={credModal.password}
+          onClose={() => { setCredModal(null); onClose() }}
+        />
+      )}
     </div>
   )
 }

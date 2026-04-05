@@ -75,4 +75,6 @@ export interface Asset {
   lng:     number
   icon:    string
   address?: string
+  contact?: string
+  assetPasswordHash?: string
 }

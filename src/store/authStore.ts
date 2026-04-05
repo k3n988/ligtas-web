@@ -4,9 +4,8 @@ import { persist } from 'zustand/middleware'
 import { supabase } from '@/lib/supabase'
 
 async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password)
-  const hash = await crypto.subtle.digest('SHA-256', data)
+  const encoded = new TextEncoder().encode(password + 'LIGTAS_SALT_2025')
+  const hash = await crypto.subtle.digest('SHA-256', encoded)
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
@@ -58,8 +57,8 @@ export const useAuthStore = create<AuthStore>()(
             // SIGN UP VIA CUSTOM TABLE (For Household Members)
             const passwordHash = await hashPassword(password)
             const { error } = await supabase
-              .from('household_users')
-              .insert({ contact, password_hash: passwordHash })
+              .from('households') // <-- UPDATED TABLE
+              .insert({ contact, citizen_password_hash: passwordHash }) // <-- UPDATED COLUMN
               
             if (error) {
               set({ loading: false })
@@ -97,10 +96,10 @@ export const useAuthStore = create<AuthStore>()(
             // LOGIN VIA CUSTOM TABLE (Household Member Login)
             const passwordHash = await hashPassword(password)
             const { data, error } = await supabase
-              .from('household_users')
+              .from('households') // <-- UPDATED TABLE
               .select('contact')
               .eq('contact', contact)
-              .eq('password_hash', passwordHash)
+              .eq('citizen_password_hash', passwordHash) // <-- UPDATED COLUMN
               .single()
 
             if (error || !data) {
