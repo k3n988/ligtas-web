@@ -21,6 +21,7 @@ const selectStyle: React.CSSProperties = {
 
 export default function TriageQueue() {
   const households = useHouseholdStore((s) => s.households)
+  const setSelectedId = useHouseholdStore((s) => s.setSelectedId)
 
   const [cityFilter, setCityFilter] = useState('')
   const [brgyFilter, setBrgyFilter] = useState('')
@@ -44,20 +45,23 @@ export default function TriageQueue() {
     setBrgyFilter('') // reset barangay when city changes
   }
 
-  const filtered = useMemo(() => {
-    return [...households]
+  const sortedHouseholds = useMemo(() => {
+    const filtered = households
       .filter((h) => h.approvalStatus === 'approved')
       .filter((h) => !cityFilter || h.city === cityFilter)
-      .filter((h) => !brgyFilter || h.barangay === brgyFilter)
-      .sort((a, b) => {
-        if (a.status === 'Rescued' && b.status !== 'Rescued') return 1
-        if (a.status !== 'Rescued' && b.status === 'Rescued') return -1
-        return TRIAGE_ORDER[a.triage.level] - TRIAGE_ORDER[b.triage.level]
-      })
+      .filter((h) => !brgyFilter || h.barangay === brgyFilter);
+
+    return filtered.sort((a, b) => {
+      // 1. Rescued always at the bottom
+      if (a.status === 'Rescued' && b.status !== 'Rescued') return 1
+      if (a.status !== 'Rescued' && b.status === 'Rescued') return -1
+      // 2. Sort by Triage Priority (Critical first)
+      return TRIAGE_ORDER[a.triage.level] - TRIAGE_ORDER[b.triage.level]
+    })
   }, [households, cityFilter, brgyFilter])
 
-  const pending = filtered.filter((h) => h.status === 'Pending')
-  const rescued = filtered.filter((h) => h.status === 'Rescued')
+  const pending = sortedHouseholds.filter((h) => h.status === 'Pending')
+  const rescued = sortedHouseholds.filter((h) => h.status === 'Rescued')
 
   const isFiltered = Boolean(cityFilter || brgyFilter)
 
@@ -104,18 +108,19 @@ export default function TriageQueue() {
               onClick={() => { setCityFilter(''); setBrgyFilter('') }}
               title="Clear filters"
               style={{
-                background: 'transparent',
+                background: '#0d1117',
                 border: '1px solid #30363d',
                 color: '#8b949e',
                 borderRadius: 4,
-                padding: '6px 10px',
+                padding: '0 10px',
                 cursor: 'pointer',
-                fontSize: '0.78rem',
-                fontFamily: 'Inter, sans-serif',
                 flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              ✕ Clear
+              <XIcon size={14} />
             </button>
           )}
         </div>
@@ -159,45 +164,75 @@ export default function TriageQueue() {
         </span>
       </div>
 
-      {filtered.length === 0 ? (
+      {sortedHouseholds.length === 0 ? (
         <div
           style={{
             textAlign: 'center',
-            padding: '40px 20px',
-            color: 'var(--text-muted)',
-            fontSize: '0.9rem',
+            padding: '60px 20px',
+            background: '#0d1117',
+            border: '1px dashed #30363d',
+            borderRadius: 8,
+            color: '#8b949e',
           }}
         >
-          No reports match this filter.
+          <SearchIcon size={32} />
+          <p style={{ margin: '12px 0 0', fontSize: '0.85rem', fontWeight: 500 }}>
+            No reports match this filter.
+          </p>
         </div>
       ) : (
         <>
           {pending.map((hh) => (
-            <HouseholdCard key={hh.id} household={hh} />
+            <div key={hh.id} onClick={() => setSelectedId(hh.id)}>
+              <HouseholdCard household={hh} />
+            </div>
           ))}
 
           {rescued.length > 0 && (
             <>
               <div
                 style={{
-                  borderTop: '1px solid var(--border-color)',
-                  margin: '16px 0 12px',
-                  paddingTop: 12,
-                  fontSize: '0.75rem',
-                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  margin: '24px 0 16px',
+                  fontSize: '0.65rem',
+                  color: '#8b949e',
                   textTransform: 'uppercase',
-                  letterSpacing: 1,
+                  letterSpacing: 1.5,
+                  fontWeight: 700
                 }}
               >
-                Completed Operations
+                <span style={{ flexShrink: 0 }}>Completed Operations</span>
+                <div style={{ flex: 1, height: 1, background: '#30363d' }} />
               </div>
               {rescued.map((hh) => (
-                <HouseholdCard key={hh.id} household={hh} />
+                <div key={hh.id} onClick={() => setSelectedId(hh.id)}>
+                  <HouseholdCard household={hh} />
+                </div>
               ))}
             </>
           )}
         </>
       )}
     </div>
+  )
+}
+
+function XIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
+
+function SearchIcon({ size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
   )
 }

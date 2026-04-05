@@ -47,9 +47,12 @@ export default function MapLegend() {
         Assets
       </div>
       {[
-        { icon: '🚤', label: 'Rescue Boat' },
-        { icon: '🛻', label: 'Transport Truck' },
-        { icon: '🚑', label: 'Ambulance Team' },
+        { icon: '🚤', label: 'Boat' },
+        { icon: '🛻', label: 'Truck' },
+        { icon: '🚑', label: 'Ambulance' },
+        { icon: '🚁', label: 'Helicopter' },
+        { icon: '🏍️', label: 'Motorcycle' },
+        { icon: '🚐', label: 'Van' },
       ].map(({ icon, label }) => (
         <div key={label} style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}>
           <span style={{ fontSize: 14, marginRight: 8, width: 14, textAlign: 'center' }}>{icon}</span>

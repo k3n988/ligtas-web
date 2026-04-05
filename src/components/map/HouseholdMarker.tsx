@@ -5,8 +5,9 @@ import { Marker, InfoWindow } from '@vis.gl/react-google-maps'
 import type { Household } from '@/types'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
-import { useAuthStore } from '@/store/authStore' // <-- ADDED AUTH STORE
+import { useAuthStore } from '@/store/authStore'
 import { haversineKm } from '@/lib/geo'
+import { useMemo } from 'react'
 
 interface Props {
   household: Household
@@ -40,14 +41,12 @@ export default function HouseholdMarker({ household: hh }: Props) {
     setSelectedId(null)// clears the route and closes InfoWindow
   }
 
-  // Find nearest asset name for the info panel
-  const nearest = assets.length
-    ? assets.reduce((prev, curr) =>
-        haversineKm(hh.lat, hh.lng, curr.lat, curr.lng) <
-        haversineKm(hh.lat, hh.lng, prev.lat, prev.lng)
-          ? curr : prev,
-      )
-    : null
+  // Find the specific assigned asset if it exists
+  const assignedAsset = useMemo(() => {
+    if (hh.assignedAssetId) {
+      return assets.find((a) => a.id === hh.assignedAssetId) || null
+    }
+  }, [hh.assignedAssetId, hh.lat, hh.lng, assets])
 
   // Dito natin chine-check. Kung walang admin, Guest View ang gagamitin.
   const isGuest = !user;
@@ -139,21 +138,58 @@ export default function HouseholdMarker({ household: hh }: Props) {
 
             </div>
 
-            {/* ── NEAREST ASSET ROUTING (ADMIN ONLY) ── */}
-            {!isGuest && nearest && hh.status !== 'Rescued' && (
+            {/* ── DISPATCH STATUS & ROUTING (ADMIN ONLY) ── */}
+            {!isGuest && hh.status !== 'Rescued' && (
               <div
                 style={{
                   marginBottom: 10,
-                  padding: '6px 10px',
+                  padding: '8px 10px',
                   background: '#0d1117',
                   borderRadius: 4,
-                  border: '1px solid #30363d',
+                  border: `1px solid ${!assignedAsset ? 'var(--high-orange)' : '#30363d'}`,
                   fontSize: '0.75rem',
-                  color: '#58a6ff',
                 }}
               >
-                🧭 Routing from: <b>{nearest.icon} {nearest.name}</b>
-                &nbsp;({(haversineKm(hh.lat, hh.lng, nearest.lat, nearest.lng) * 1000).toFixed(0)} m away)
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {!assignedAsset ? (
+                    <>
+                      <span style={{ color: 'var(--high-orange)' }}>🚨</span>
+                      <span style={{ color: 'var(--high-orange)', fontWeight: 700 }}>
+                        Status: Waiting for Responder
+                      </span>
+                    </>
+                  ) : assignedAsset.status === 'Dispatching' ? (
+                    <>
+                      <span style={{ color: '#58a6ff' }}>🧭</span>
+                      <span style={{ color: '#58a6ff' }}>
+                        Routing from: <b>{assignedAsset.name}</b>
+                        <br />
+                        <span style={{ color: '#8b949e', fontSize: '0.7rem' }}>
+                          {(
+                            haversineKm(
+                              hh.lat,
+                              hh.lng,
+                              assignedAsset.lat,
+                              assignedAsset.lng
+                            ) * 1000
+                          ).toFixed(0)}
+                          m away
+                        </span>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ color: '#8b949e' }}>⚓</span>
+                      <span style={{ color: '#c9d1d9' }}>
+                        Ready for Dispatch (<b>{assignedAsset.name}</b>)
+                        <br />
+                        <span style={{ color: '#8b949e', fontSize: '0.7rem' }}>
+                          Asset is currently {assignedAsset.status.toLowerCase()}
+                        </span>
+                      </span>
+                    </>
+                  )}
+                </span>
               </div>
             )}
 

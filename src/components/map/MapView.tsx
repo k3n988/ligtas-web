@@ -137,22 +137,24 @@ function RouteOverlay() {
     }
 
     const hh = households.find((h) => h.id === selectedId)
-    if (!hh) return
+    if (!hh || !hh.assignedAssetId || hh.status === 'Rescued') {
+      renderer.setMap(null)
+      return
+    }
 
-    // Find the geographically nearest asset
-    const nearest = assets.reduce((prev, curr) =>
-      haversineKm(hh.lat, hh.lng, curr.lat, curr.lng) <
-      haversineKm(hh.lat, hh.lng, prev.lat, prev.lng)
-        ? curr
-        : prev,
-    )
+    // Only route if the assigned asset is currently Dispatching
+    const assignedAsset = assets.find((a) => a.id === hh.assignedAssetId)
+    if (!assignedAsset || assignedAsset.status !== 'Dispatching') {
+      renderer.setMap(null)
+      return
+    }
 
     renderer.setMap(map)
 
     const service = new routesLib.DirectionsService()
     service.route(
       {
-        origin: { lat: nearest.lat, lng: nearest.lng },
+        origin: { lat: assignedAsset.lat, lng: assignedAsset.lng },
         destination: { lat: hh.lat, lng: hh.lng },
         travelMode: google.maps.TravelMode.DRIVING,
       },
