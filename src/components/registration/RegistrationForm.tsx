@@ -71,6 +71,39 @@ const CITY_BARANGAY_MAP: Record<string, string[]> = {
 
 const CITY_OPTIONS = Object.keys(CITY_BARANGAY_MAP).sort()
 
+/** Resolves cityVal to the exact key in CITY_BARANGAY_MAP.
+ *  Handles geocoder mismatches like "Bacolod" → "Bacolod City" */
+function resolveMapKey(cityVal: string): string | null {
+  if (!cityVal) return null
+  const normalized = cityVal.trim().toLowerCase()
+
+  // 1. Exact match
+  if (CITY_BARANGAY_MAP[cityVal]) return cityVal
+
+  // 2. Case-insensitive exact match
+  const exactCI = Object.keys(CITY_BARANGAY_MAP).find(
+    (k) => k.toLowerCase() === normalized
+  )
+  if (exactCI) return exactCI
+
+  // 3. Geocoder returns "Bacolod" → match "Bacolod City", etc.
+  //    Only allow "X" → "X City", not broad substring matching
+  const withCity = normalized.endsWith(' city') ? normalized : normalized + ' city'
+  const cityMatch = Object.keys(CITY_BARANGAY_MAP).find(
+    (k) => k.toLowerCase() === withCity
+  )
+  if (cityMatch) return cityMatch
+
+  // 4. Reverse: geocoder returns "Bago City" → strip " city" and try
+  const withoutCity = normalized.replace(/ city$/, '').trim()
+  const reverseMatch = Object.keys(CITY_BARANGAY_MAP).find(
+    (k) => k.toLowerCase().replace(/ city$/, '') === withoutCity
+  )
+  if (reverseMatch) return reverseMatch
+
+  return null
+}
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px',
@@ -145,25 +178,49 @@ export default function RegistrationForm() {
   }, [geocodingLib])
 
   // ── Reverse geocode — only extracts city ─────────────────────────────────
-  const detectCity = (pLat: number, pLng: number) => {
+  const detectCity = (pLat: number, pLng: number, fillStreet = false) => {
     if (!geocoderRef.current) return
     setGeocoding(true)
-
+  
     geocoderRef.current.geocode({ location: { lat: pLat, lng: pLng } }, (results, status) => {
       setGeocoding(false)
       if (status !== 'OK' || !results?.length) return
-
+  
       const comps = results[0].address_components
-
-      // City — multi-tier fallback for PH
+  
+      // Try each tier from most to least specific
       const cityComp =
         comps.find(c => c.types.includes('locality'))                    ||
+        comps.find(c => c.types.includes('administrative_area_level_3')) ||
         comps.find(c => c.types.includes('administrative_area_level_2')) ||
         comps.find(c => c.types.includes('administrative_area_level_1'))
-
-      const city = cityComp?.long_name?.trim() ?? ''
-      if (city) setCityVal(city)
-      // Barangay and street intentionally NOT touched — user fills manually
+  
+      const rawCity = cityComp?.long_name?.trim() ?? ''
+  
+      // Validate against our map — prevents province/region names being set as city
+      let resolved = resolveMapKey(rawCity)
+      if (!resolved) resolved = resolveMapKey(rawCity + ' City')
+  
+      if (resolved) {
+        setCityVal(resolved)
+        setBarangayVal('')
+      }
+  
+      // Street — PH geocoder returns street info with empty types[]
+      // so we extract from formatted_address directly instead
+      if (fillStreet) {
+        const formattedParts = results[0].formatted_address?.split(',') ?? []
+  
+        // formatted_address = "Door 2, Lot 8, Pueblo San Antonio, Talisay, Negros Occidental, Philippines"
+        // Strip last 3 segments (city, province, country) — keep everything before
+        const streetParts = formattedParts
+          .slice(0, -3)
+          .map(p => p.trim())
+          .filter(Boolean)
+  
+        const street = streetParts.join(', ')
+        if (street) setStreetVal(street)
+      }
     })
   }
 
@@ -179,6 +236,7 @@ export default function RegistrationForm() {
   }, [pendingCoords]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const triage = assessTriage(vulnArr)
+  const resolvedCityKey = resolveMapKey(cityVal)
   const toggleVuln = (v: Vulnerability) =>
     setVulnArr((p) => p.includes(v) ? p.filter((x) => x !== v) : [...p, v])
 
@@ -199,7 +257,8 @@ export default function RegistrationForm() {
         setPinSource('gps')
         setPendingCoords({ lat: c.latitude, lng: c.longitude })
         setLocating(false)
-        detectCity(c.latitude, c.longitude)
+        detectCity(c.latitude, c.longitude, true)
+
       },
       (err) => {
         setCoordsDisplay('')
@@ -429,17 +488,19 @@ export default function RegistrationForm() {
                 onChange={(e) => setBarangayVal(e.target.value)}
               >
                 <option value="" disabled>Select Barangay</option>
-                {CITY_BARANGAY_MAP[cityVal]
-                  // Exact city match → flat list for that city
-                  ? CITY_BARANGAY_MAP[cityVal].map(b => (
+                {resolvedCityKey
+                  // Exact/resolved city match → flat list for that city only
+                  ? CITY_BARANGAY_MAP[resolvedCityKey].map((b) => (
                       <option key={b} value={b}>{b}</option>
                     ))
-                  // No match or no city → all barangays grouped by city
+                  // No match or no city selected → all barangays grouped by city
                   : Object.entries(CITY_BARANGAY_MAP)
                       .sort(([a], [b]) => a.localeCompare(b))
                       .map(([city, bgs]) => (
                         <optgroup key={city} label={city}>
-                          {bgs.map(b => <option key={`${city}-${b}`} value={b}>{b}</option>)}
+                          {bgs.map((b) => (
+                            <option key={`${city}-${b}`} value={b}>{b}</option>
+                          ))}
                         </optgroup>
                       ))
                 }
