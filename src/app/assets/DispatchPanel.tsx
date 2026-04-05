@@ -4,7 +4,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAssetStore } from '@/store/assetStore'
 import { useHouseholdStore } from '@/store/householdStore'
-import { TRIAGE_ORDER } from '@/lib/triage'
 import AssetCard from '@/components/dispatch/AssetCard'
 import AddAssetForm from '@/components/dispatch/AddAssetForm'
 
@@ -12,33 +11,24 @@ export default function DispatchPanel() {
   const assets = useAssetStore((s) => s.assets)
   const households = useHouseholdStore((s) => s.households)
   const setPanTo = useHouseholdStore((s) => s.setPanTo)
+  const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
   const [showAddForm, setShowAddForm] = useState(false)
 
-  // Memoize the filtering logic so it only recalculates when 'households' change
   const { pending, critical } = useMemo(() => {
     const pendingList = households.filter((h) => h.status === 'Pending')
     const criticalList = pendingList.filter((h) => h.triage.level === 'CRITICAL')
     return { pending: pendingList, critical: criticalList }
   }, [households])
 
-  // TODO: Consider moving this event logic into Zustand instead of window events
   useEffect(() => {
     const handler = (e: Event) => {
       const { lat, lng } = (e as CustomEvent<{ lat: number; lng: number }>).detail
-      
-      if (pending.length === 0) return
-      
-      const sorted = [...pending].sort(
-        (a, b) => TRIAGE_ORDER[a.triage.level] - TRIAGE_ORDER[b.triage.level]
-      )
-      
-      // Temporary hack: ignoring lat/lng to pan to the first critical household
-      setPanTo(sorted[0].id)
+      setPanToCoords({ lat, lng, zoom: 16 })
     }
     
     window.addEventListener('ligtas:panToAsset', handler)
     return () => window.removeEventListener('ligtas:panToAsset', handler)
-  }, [pending, setPanTo])
+  }, [setPanToCoords])
 
   const activeAssetsCount = assets.filter((a) => a.status === 'Active').length
   const dispatchingAssetsCount = assets.filter((a) => a.status === 'Dispatching').length
