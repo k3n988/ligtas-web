@@ -9,7 +9,6 @@ import HouseholdCard from '@/components/triage/HouseholdCard'
 const selectStyle: React.CSSProperties = {
   background: '#0d1117',
   border: '1px solid #30363d',
-  color: '#c9d1d9',
   borderRadius: 4,
   padding: '6px 10px',
   fontSize: '0.78rem',
@@ -25,19 +24,20 @@ export default function TriageQueue() {
 
   const [cityFilter, setCityFilter] = useState('')
   const [brgyFilter, setBrgyFilter] = useState('')
+  const [vulnerabilityFilter, setVulnerabilityFilter] = useState('')
 
   // Unique city list derived from current data
   const cities = useMemo(
-    () => Array.from(new Set(households.map((h) => h.city))).sort(),
+    () => Array.from(new Set(households.map((h) => h.city))).filter(c => c.toLowerCase().endsWith('city')).sort((a, b) => a.localeCompare(b)),
     [households],
   )
 
   // Barangay list scoped to the selected city (or all if no city selected)
   const barangays = useMemo(() => {
-    const source = cityFilter
-      ? households.filter((h) => h.city === cityFilter)
-      : households
-    return Array.from(new Set(source.map((h) => h.barangay))).sort()
+    const source = (cityFilter)
+      ? households.filter((h) => h.city === cityFilter && h.city.toLowerCase().includes('city'))
+      : households.filter((h) => h.city.toLowerCase().includes('city'))
+    return Array.from(new Set(source.map((h) => h.barangay))).sort((a, b) => a.localeCompare(b))
   }, [households, cityFilter])
 
   const handleCityChange = (v: string) => {
@@ -48,22 +48,23 @@ export default function TriageQueue() {
   const sortedHouseholds = useMemo(() => {
     const filtered = households
       .filter((h) => h.approvalStatus === 'approved')
-      .filter((h) => !cityFilter || h.city === cityFilter)
-      .filter((h) => !brgyFilter || h.barangay === brgyFilter);
+      .filter((h) => (!cityFilter || h.city === cityFilter) && h.city.toLowerCase().endsWith('city'))
+      .filter((h) => !brgyFilter || h.barangay === brgyFilter)
+      .filter((h) => !vulnerabilityFilter || h.triage.level === vulnerabilityFilter);
 
     return filtered.sort((a, b) => {
       // 1. Rescued always at the bottom
       if (a.status === 'Rescued' && b.status !== 'Rescued') return 1
       if (a.status !== 'Rescued' && b.status === 'Rescued') return -1
-      // 2. Sort by Triage Priority (Critical first)
+      // 2. Sort by Triage Priority (Critical first) using TRIAGE_ORDER
       return TRIAGE_ORDER[a.triage.level] - TRIAGE_ORDER[b.triage.level]
     })
-  }, [households, cityFilter, brgyFilter])
+  }, [households, cityFilter, brgyFilter, vulnerabilityFilter])
 
   const pending = sortedHouseholds.filter((h) => h.status === 'Pending')
   const rescued = sortedHouseholds.filter((h) => h.status === 'Rescued')
 
-  const isFiltered = Boolean(cityFilter || brgyFilter)
+  const isFiltered = Boolean(cityFilter || brgyFilter || vulnerabilityFilter)
 
   return (
     <div>
@@ -84,9 +85,11 @@ export default function TriageQueue() {
           <select
             value={cityFilter}
             onChange={(e) => handleCityChange(e.target.value)}
-            style={selectStyle}
+            style={{ ...selectStyle, color: cityFilter ? '#c9d1d9' : '#8b949e' }}
           >
-            <option value="">All Cities</option>
+            <option value="" disabled hidden>
+              Select City
+            </option>
             {cities.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -95,17 +98,34 @@ export default function TriageQueue() {
           <select
             value={brgyFilter}
             onChange={(e) => setBrgyFilter(e.target.value)}
-            style={selectStyle}
+            style={{ ...selectStyle, color: brgyFilter ? '#c9d1d9' : '#8b949e' }}
           >
-            <option value="">All Barangays</option>
+            <option value="" disabled hidden>
+              Select Barangay
+            </option>
             {barangays.map((b) => (
               <option key={b} value={b}>{b}</option>
             ))}
           </select>
 
+          <select
+            value={vulnerabilityFilter}
+            onChange={(e) => setVulnerabilityFilter(e.target.value)}
+            style={{ ...selectStyle, color: vulnerabilityFilter ? '#c9d1d9' : '#8b949e' }}
+          >
+            <option value="" disabled hidden>
+              Select Priority
+            </option>
+            {Object.keys(TRIAGE_ORDER).map((level) => (
+              <option key={level} value={level}>
+                {level.charAt(0) + level.slice(1).toLowerCase()}
+              </option>
+            ))}
+          </select>
+
           {isFiltered && (
             <button
-              onClick={() => { setCityFilter(''); setBrgyFilter('') }}
+              onClick={() => { setCityFilter(''); setBrgyFilter(''); setVulnerabilityFilter('') }}
               title="Clear filters"
               style={{
                 background: '#0d1117',
@@ -182,11 +202,37 @@ export default function TriageQueue() {
         </div>
       ) : (
         <>
-          {pending.map((hh) => (
-            <div key={hh.id} onClick={() => setSelectedId(hh.id)}>
-              <HouseholdCard household={hh} />
-            </div>
-          ))}
+          {/* Grouped Pending Sections */}
+          {Object.keys(TRIAGE_ORDER).map((level) => {
+            const group = pending.filter((h) => h.triage.level === level)
+            if (group.length === 0) return null
+
+            return (
+              <div key={level} style={{ marginBottom: 20 }}>
+                <div
+                  style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    color: group[0].triage.hex,
+                    textTransform: 'uppercase',
+                    letterSpacing: 1.2,
+                    marginBottom: 10,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8
+                  }}
+                >
+                <span>{level.charAt(0) + level.slice(1).toLowerCase()} Priority</span>
+                  <div style={{ flex: 1, height: 1, background: '#30363d', opacity: 0.5 }} />
+                </div>
+                {group.map((hh) => (
+                  <div key={hh.id} onClick={() => setSelectedId(hh.id)}>
+                    <HouseholdCard household={hh} />
+                  </div>
+                ))}
+              </div>
+            )
+          })}
 
           {rescued.length > 0 && (
             <>
