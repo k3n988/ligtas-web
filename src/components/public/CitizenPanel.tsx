@@ -9,12 +9,12 @@ import type { Household } from '@/types'
 const STATUS_CONFIG = {
   Pending: {
     color: '#d29922', bg: '#1f1a0e', border: '#9e6a03',
-    icon: '⏳', label: 'Queued — Awaiting Rescue',
+    icon: <ClockIcon />, label: 'Queued — Awaiting Rescue',
     message: 'Your request has been received. Rescuers have been notified.',
   },
   Rescued: {
     color: '#3fb950', bg: '#0d2016', border: '#238636',
-    icon: '✅', label: 'Marked as Rescued',
+    icon: <CheckCircleIcon />, label: 'Marked as Rescued',
     message: 'You have been marked as rescued. Stay safe!',
   },
 }
@@ -90,15 +90,19 @@ export default function CitizenPanel() {
           <p style={{ margin: '0 0 4px', fontSize: '0.65rem', color: '#8b949e', letterSpacing: 2, textTransform: 'uppercase' }}>
             Rescue Status
           </p>
-          <p style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 700, color: statusCfg.color }}>
-            {statusCfg.icon} {statusCfg.label}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 4px' }}>
+            <span style={{ color: statusCfg.color, display: 'flex' }}>{statusCfg.icon}</span>
+            <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: statusCfg.color }}>
+              {statusCfg.label}
+            </p>
+          </div>
           <p style={{ margin: 0, fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
             {statusCfg.message}
           </p>
 
-          {/* Triage badge */}
-          <div style={{
+          {/* Triage badge - Only show when Pending */}
+          {household.status === 'Pending' && (
+            <div style={{
             marginTop: 12, display: 'inline-block',
             padding: '3px 10px', borderRadius: 20,
             background: household.triage.hex + '22',
@@ -108,6 +112,7 @@ export default function CitizenPanel() {
           }}>
             {household.triage.level} PRIORITY
           </div>
+          )}
         </div>
       )}
 
@@ -169,14 +174,14 @@ export default function CitizenPanel() {
             <button
               onClick={() => setConfirming('safe')}
               style={{
-                width: '100%', padding: '12px',
+                width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 background: '#238636', color: '#fff',
                 border: 'none', borderRadius: 4,
                 fontWeight: 800, fontSize: '0.9rem',
                 cursor: 'pointer', letterSpacing: 1,
               }}
             >
-              ✅ I AM SAFE — REMOVE ME FROM QUEUE
+              <CheckCircleIcon size={18} /> I AM SAFE — REMOVE ME FROM QUEUE
             </button>
           )}
         </div>
@@ -186,7 +191,7 @@ export default function CitizenPanel() {
       {household && household.status === 'Rescued' && (
         <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 16 }}>
           <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
-            If your situation has changed and you still need rescue, tap below to re-submit your request.
+            If your situation has changed and you still need rescue, tap below to re-submit your request to the active queue.
           </p>
 
           {confirming === 'cancel' ? (
@@ -228,14 +233,14 @@ export default function CitizenPanel() {
             <button
               onClick={() => setConfirming('cancel')}
               style={{
-                width: '100%', padding: '12px',
+                width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 background: 'transparent', color: '#f85149',
                 border: '1px solid #da3633', borderRadius: 4,
                 fontWeight: 700, fontSize: '0.85rem',
                 cursor: 'pointer', letterSpacing: 1,
               }}
             >
-              🆘 CANCEL — I STILL NEED RESCUE
+              <AlertTriangleIcon size={18} /> RE-SUBMIT RESCUE REQUEST
             </button>
           )}
         </div>
@@ -272,7 +277,7 @@ export default function CitizenPanel() {
         <a
           href="tel:911"
           style={{
-            display: 'block', textAlign: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
             padding: '10px', background: '#3d1a1a',
             border: '1px solid #da3633', borderRadius: 4,
             color: '#f85149', fontWeight: 800,
@@ -280,10 +285,44 @@ export default function CitizenPanel() {
             textDecoration: 'none',
           }}
         >
-          📞 CALL 911
+          <PhoneIcon size={20} /> CALL 911
         </a>
       </div>
 
     </div>
+  )
+}
+
+// ── Standard Inline SVGs ─────────────────────────────────────────────────────
+
+function ClockIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+  )
+}
+
+function CheckCircleIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+  )
+}
+
+function AlertTriangleIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  )
+}
+
+function PhoneIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+    </svg>
   )
 }
