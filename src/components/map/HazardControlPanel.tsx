@@ -41,7 +41,7 @@ export default function HazardControlPanel() {
   const {
     activeHazard, setActiveHazard,
     isSelectingCenter, setIsSelectingCenter,
-    draftCenter, setDraftCenter,
+    draftCenter,
   } = useHazardStore()
 
   const [open,        setOpen]        = useState(false)
@@ -56,7 +56,9 @@ export default function HazardControlPanel() {
     setOpen(false)
   }
 
-  function handleActivate() {
+  const clearHazard = useHazardStore((s) => s.clearHazard)
+
+  async function handleActivate() {
     if (!draftCenter) return
     const hazard: HazardEvent = {
       id:       'HZ-' + Date.now(),
@@ -70,13 +72,12 @@ export default function HazardControlPanel() {
       },
       isActive: true,
     }
-    setActiveHazard(hazard)
+    await setActiveHazard(hazard)
     setOpen(false)
   }
 
-  function handleClear() {
-    setActiveHazard(null)
-    setDraftCenter(null)
+  async function handleClear() {
+    await clearHazard()
     setOpen(false)
   }
 

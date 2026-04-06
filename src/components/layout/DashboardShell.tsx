@@ -9,6 +9,7 @@ import Sidebar from './Sidebar'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { useAuthStore } from '@/store/authStore'
+import { useHazardStore } from '@/store/hazardStore'
 import { supabase } from '@/lib/supabase'
 import GuestPanel from '@/components/public/GuestPanel'
 import CitizenPanel from '@/components/public/CitizenPanel'
@@ -38,13 +39,16 @@ interface Props {
 }
 
 export default function DashboardShell({ children }: Props) {
-  const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
-  const loadAssets     = useAssetStore((s) => s.loadAssets)
-  const user           = useAuthStore((s) => s.user)
+  const loadHouseholds  = useHouseholdStore((s) => s.loadHouseholds)
+  const loadAssets      = useAssetStore((s) => s.loadAssets)
+  const user            = useAuthStore((s) => s.user)
+  const loadActiveHazard = useHazardStore((s) => s.loadActiveHazard)
+  const setActiveHazard  = useHazardStore((s) => s.setActiveHazard)
 
   useEffect(() => {
     void loadHouseholds()
     void loadAssets()
+    void loadActiveHazard()
 
     const channel = supabase
       .channel('ligtas-realtime')
@@ -54,10 +58,14 @@ export default function DashboardShell({ children }: Props) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assets' },
         () => { void loadAssets() },
       )
+      // Real-time hazard sync — mobile and web both receive this
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'hazard_events' },
+        () => { void loadActiveHazard() },
+      )
       .subscribe()
 
     return () => { void supabase.removeChannel(channel) }
-  }, [loadHouseholds, loadAssets])
+  }, [loadHouseholds, loadAssets, loadActiveHazard]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
