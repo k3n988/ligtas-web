@@ -4,7 +4,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { useAuthStore } from '@/store/authStore'
@@ -12,10 +12,9 @@ import { useHouseholdStore } from '@/store/householdStore'
 import AuthModal from '@/components/auth/AuthModal'
 
 const ADMIN_TABS = [
-  { href: '/register', label: '📝 REGISTER' },
-  { href: '/queue',    label: '🚨 QUEUE'    },
-  { href: '/assets',   label: '🚤 ASSETS'   },
-  { href: '/admin',    label: '🗺️ DASHBOARD' },
+  { href: '/queue',  label: '🚨 QUEUE'    },
+  { href: '/assets', label: '🚤 ASSETS'   },
+  { href: '/admin',  label: '🗺️ DASHBOARD' },
 ]
 
 const RESCUER_TABS = [
@@ -35,18 +34,19 @@ interface Suggestion {
 
 export default function Header() {
   const pathname = usePathname()
+  const router   = useRouter()
   const { user, logout, showModal, setShowModal } = useAuthStore()
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
 
   const placesLib = useMapsLibrary('places')
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null)
-  const geocoder = useRef<google.maps.Geocoder | null>(null)
+  const geocoder            = useRef<google.maps.Geocoder | null>(null)
 
-  const [query, setQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [query,        setQuery]        = useState('')
+  const [suggestions,  setSuggestions]  = useState<Suggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [loading,      setLoading]      = useState(false)
+  const inputRef    = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -57,7 +57,7 @@ export default function Header() {
     geocoder.current = new google.maps.Geocoder()
   }, [placesLib])
 
-  // Fetch suggestions with 300ms debounce using Google Places
+  // Fetch suggestions with 300ms debounce
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     const q = query.trim()
@@ -71,7 +71,10 @@ export default function Header() {
       setLoading(true)
       autocompleteService.current?.getPlacePredictions(
         { input: q, componentRestrictions: { country: 'ph' } },
-        (predictions: google.maps.places.AutocompletePrediction[] | null, status: google.maps.places.PlacesServiceStatus) => {
+        (
+          predictions: google.maps.places.AutocompletePrediction[] | null,
+          status: google.maps.places.PlacesServiceStatus,
+        ) => {
           setLoading(false)
           if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) {
             setSuggestions([])
@@ -79,9 +82,9 @@ export default function Header() {
           }
           setSuggestions(
             predictions.map((p: google.maps.places.AutocompletePrediction) => ({
-              place_id: p.place_id,
-              description: p.description,
-              main_text: p.structured_formatting.main_text,
+              place_id:       p.place_id,
+              description:    p.description,
+              main_text:      p.structured_formatting.main_text,
               secondary_text: p.structured_formatting.secondary_text,
             })),
           )
@@ -98,7 +101,7 @@ export default function Header() {
     function handleClick(e: MouseEvent) {
       if (
         dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
-        inputRef.current && !inputRef.current.contains(e.target as Node)
+        inputRef.current   && !inputRef.current.contains(e.target as Node)
       ) {
         setShowDropdown(false)
       }
@@ -109,12 +112,15 @@ export default function Header() {
 
   function selectSuggestion(s: Suggestion) {
     if (!geocoder.current) return
-    geocoder.current.geocode({ placeId: s.place_id }, (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
-      if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
-        const loc = results[0].geometry.location
-        setPanToCoords({ lat: loc.lat(), lng: loc.lng() })
-      }
-    })
+    geocoder.current.geocode(
+      { placeId: s.place_id },
+      (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
+        if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+          const loc = results[0].geometry.location
+          setPanToCoords({ lat: loc.lat(), lng: loc.lng() })
+        }
+      },
+    )
     setQuery('')
     setSuggestions([])
     setShowDropdown(false)
@@ -136,14 +142,22 @@ export default function Header() {
     inputRef.current?.focus()
   }
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault()
-    if (suggestions.length > 0) selectSuggestion(suggestions[0])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suggestions])
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault()
+      if (suggestions.length > 0) selectSuggestion(suggestions[0])
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [suggestions],
+  )
+
+  async function handleLogout() {
+    await logout()
+    router.push('/')
+  }
 
   function getTabsForRole() {
-    if (user?.role === 'admin') return ADMIN_TABS
+    if (user?.role === 'admin')   return ADMIN_TABS
     if (user?.role === 'rescuer') return RESCUER_TABS
     return CITIZEN_TABS
   }
@@ -190,7 +204,7 @@ export default function Header() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <span style={{ fontSize: '0.62rem', color: '#8b949e' }}>{user.contact}</span>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               style={{
                 padding: '5px 10px',
                 background: 'transparent',
@@ -275,7 +289,11 @@ export default function Header() {
               <button
                 type="button"
                 onClick={clearQuery}
-                style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', padding: '0 4px', fontSize: '1rem', lineHeight: 1 }}
+                style={{
+                  background: 'transparent', border: 'none',
+                  color: '#888', cursor: 'pointer',
+                  padding: '0 4px', fontSize: '1rem', lineHeight: 1,
+                }}
               >
                 ×
               </button>
@@ -283,18 +301,12 @@ export default function Header() {
             <button
               type="submit"
               style={{
-                width: 28,
-                height: 28,
+                width: 28, height: 28,
                 borderRadius: 4,
                 background: loading ? '#8b949e' : '#1f6feb',
-                border: 'none',
-                color: '#fff',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                fontSize: '0.85rem',
+                border: 'none', color: '#fff', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, fontSize: '0.85rem',
               }}
             >
               {loading ? '…' : '🔍'}
@@ -308,10 +320,8 @@ export default function Header() {
             ref={dropdownRef}
             style={{
               position: 'absolute',
-              left: 14,
-              right: 14,
-              top: '100%',
-              marginTop: -1,
+              left: 14, right: 14,
+              top: '100%', marginTop: -1,
               background: '#161b22',
               borderRadius: '0 0 4px 4px',
               border: '1px solid #30363d',
@@ -323,16 +333,11 @@ export default function Header() {
             <button
               onClick={useCurrentLocation}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                width: '100%',
-                padding: '11px 16px',
-                background: 'transparent',
-                border: 'none',
+                display: 'flex', alignItems: 'center', gap: 10,
+                width: '100%', padding: '11px 16px',
+                background: 'transparent', border: 'none',
                 borderBottom: '1px solid #30363d',
-                cursor: 'pointer',
-                textAlign: 'left',
+                cursor: 'pointer', textAlign: 'left',
               }}
             >
               <span style={{ fontSize: '1rem', color: '#1f6feb' }}>🎯</span>
@@ -347,16 +352,11 @@ export default function Header() {
                 key={s.place_id}
                 onClick={() => selectSuggestion(s)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 10,
-                  width: '100%',
-                  padding: '10px 16px',
-                  background: 'transparent',
-                  border: 'none',
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                  width: '100%', padding: '10px 16px',
+                  background: 'transparent', border: 'none',
                   borderBottom: i < suggestions.length - 1 ? '1px solid #21262d' : 'none',
-                  cursor: 'pointer',
-                  textAlign: 'left',
+                  cursor: 'pointer', textAlign: 'left',
                 }}
               >
                 <span style={{ fontSize: '0.85rem', marginTop: 1, flexShrink: 0 }}>📍</span>
@@ -413,8 +413,8 @@ export default function Header() {
                   borderBottom: active
                     ? '2px solid var(--accent-blue)'
                     : '2px solid transparent',
-                  color: active ? 'var(--accent-blue)' : 'var(--text-muted)',
-                  background: active ? 'var(--panel-bg)' : 'transparent',
+                  color:      active ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  background: active ? 'var(--panel-bg)'    : 'transparent',
                   transition: 'color 0.15s, background 0.15s',
                 }}
               >

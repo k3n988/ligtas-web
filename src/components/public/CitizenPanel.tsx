@@ -1,6 +1,6 @@
 'use client'
 // src/components/public/CitizenPanel.tsx
-
+import { useHazardStore } from '@/store/hazardStore'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
@@ -25,7 +25,7 @@ export default function CitizenPanel() {
   const households     = useHouseholdStore((s) => s.households)
   const markRescued    = useHouseholdStore((s) => s.markRescued)
   const restorePending = useHouseholdStore((s) => s.restorePending)
-
+const activeHazard = useHazardStore((s) => s.activeHazard)
   const [confirming, setConfirming] = useState<'safe' | 'cancel' | null>(null)
   const [busy, setBusy]             = useState(false)
 
@@ -54,48 +54,40 @@ export default function CitizenPanel() {
 
   const statusCfg = household ? STATUS_CONFIG[household.status] : null
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      
-      {/* ── Greeting ── */}
-      {household && (
-        <p style={{ margin: '0', fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>
-          Hello, {household.head}
-        </p>
-      )}
+ return (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* ── Emergency hotline ─────────────────────────────────────────── */}
-      <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 14 }}>
-        <p style={{ margin: '0 0 8px', fontSize: '0.65rem', color: '#8b949e', letterSpacing: 2, textTransform: 'uppercase' }}>
-          Emergency
-        </p>
-        <a
-          href="tel:911"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '10px', background: '#3d1a1a',
-            border: '1px solid #da3633', borderRadius: 4,
-            color: '#f85149', fontWeight: 800,
-            fontSize: '1rem', letterSpacing: 2,
-            textDecoration: 'none',
-          }}
-        >
-          <PhoneIcon size={20} /> CALL 911
-        </a>
+    {/* ── Active Disaster Warning Banner ── */}
+    {activeHazard?.isActive && (
+      <div style={{
+        background: '#3d1a1a',
+        border: '1px solid #da3633',
+        borderRadius: 6,
+        padding: '12px 14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+      }}>
+        <span style={{
+          fontSize: '0.6rem', color: '#ff4d4d',
+          letterSpacing: 2, textTransform: 'uppercase', fontWeight: 800,
+        }}>
+          ⚠ Active Disaster Warning
+        </span>
+        <span style={{
+          fontSize: '1.1rem', fontWeight: 900,
+          color: '#ffffff', textTransform: 'uppercase', letterSpacing: 1,
+        }}>
+          {activeHazard.type}
+        </span>
+        <span style={{ fontSize: '0.75rem', color: '#c9d1d9', lineHeight: 1.5 }}>
+          A <b>{activeHazard.type.toLowerCase()}</b> hazard zone is currently being monitored on the
+          map. Please stay alert and follow local advisories.
+        </span>
       </div>
+    )}
 
-      {!household && (
-        <div style={{ background: '#1f1a0e', border: '1px solid #9e6a03', borderRadius: 6, padding: 16 }}>
-          <p style={{ margin: '0 0 6px', fontSize: '0.78rem', color: '#d29922', fontWeight: 700 }}>
-            ⚠ No household linked to your account
-          </p>
-          <p style={{ margin: 0, fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.6 }}>
-            Your contact number has not been registered in the system yet.
-            Please contact your Barangay Health Worker (BHW) or LGU to register your household.
-          </p>
-        </div>
-      )}
-
+    
       {/* ── Rescue status card ─────────────────────────────────────────── */}
       {household && (
         <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, overflow: 'hidden' }}>

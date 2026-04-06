@@ -1,7 +1,7 @@
 'use client'
 // src/components/map/HazardControlPanel.tsx
 // Floating admin panel on the map for configuring a hazard event.
-
+import { useMap } from '@vis.gl/react-google-maps'
 import { useState } from 'react'
 import { useHazardStore } from '@/store/hazardStore'
 import { useAuthStore } from '@/store/authStore'
@@ -46,7 +46,7 @@ export default function HazardControlPanel() {
   } = useHazardStore()
   const clearHazard = useHazardStore((s) => s.clearHazard)  // ← move here
   const user = useAuthStore((s) => s.user)
-
+const map = useMap()
   const [open,        setOpen]        = useState(false)
   const [hazardType,  setHazardType]  = useState('Flood')
   const [critical,    setCritical]    = useState('1')
@@ -92,31 +92,37 @@ export default function HazardControlPanel() {
   return (
     <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 20 }}>
 
-      {/* Toggle button */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        title="Hazard Layer Control"
-        style={{
-          height: 38,
-          padding: '0 14px',
-          borderRadius: 6,
-          background: activeHazard?.isActive ? '#3d1a1a' : (user?.role === 'admin' ? '#161b22' : 'transparent'),
-          border: `1.5px solid ${activeHazard?.isActive ? '#da3633' : '#58a6ff'}`,
-          color: activeHazard?.isActive ? '#ff4d4d' : '#58a6ff',
-          fontSize: '0.75rem',
-          fontWeight: 700,
-          letterSpacing: 0.5,
-          cursor: (activeHazard?.isActive || user?.role === 'admin') ? 'pointer' : 'default',
-          display: 'flex', alignItems: 'center', gap: 6,
-          boxShadow: '0 2px 8px rgba(0,0,0,.5)',
-          fontFamily: 'Inter, sans-serif',
-          whiteSpace: 'nowrap',
-          pointerEvents: (!activeHazard?.isActive && user?.role !== 'admin') ? 'none' : 'auto',
-          opacity: (!activeHazard?.isActive && user?.role !== 'admin') ? 0 : 1,
-        }}
-      >
-        ⚠ {activeHazard?.isActive ? `ACTIVE: ${activeHazard.type}` : 'HAZARD LAYER'}
-      </button>
+ {/* Toggle button */}
+<button
+  onClick={() => {
+    setOpen((o) => !o)
+    if (activeHazard?.isActive && map) {
+      map.panTo(activeHazard.center)
+      map.setZoom(12)
+    }
+  }}
+  title="Hazard Layer Control"
+  style={{
+    height: 38,
+    padding: '0 14px',
+    borderRadius: 6,
+    background: activeHazard?.isActive ? '#3d1a1a' : (user?.role === 'admin' ? '#161b22' : 'transparent'),
+    border: `1.5px solid ${activeHazard?.isActive ? '#da3633' : '#58a6ff'}`,
+    color: activeHazard?.isActive ? '#ff4d4d' : '#58a6ff',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    cursor: (activeHazard?.isActive || user?.role === 'admin') ? 'pointer' : 'default',
+    display: 'flex', alignItems: 'center', gap: 6,
+    boxShadow: '0 2px 8px rgba(0,0,0,.5)',
+    fontFamily: 'Inter, sans-serif',
+    whiteSpace: 'nowrap',
+    pointerEvents: (!activeHazard?.isActive && user?.role !== 'admin') ? 'none' : 'auto',
+    opacity: (!activeHazard?.isActive && user?.role !== 'admin') ? 0 : 1,
+  }}
+>
+  ⚠ {activeHazard?.isActive ? `ACTIVE: ${activeHazard.type}` : 'HAZARD LAYER'}
+</button>
 
       {open && (
         <div style={{
