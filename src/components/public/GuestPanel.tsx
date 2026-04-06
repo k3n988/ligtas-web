@@ -54,7 +54,7 @@ const BARANGAYS_BY_CITY: Record<string, string[]> = {
   'Batuan', 'Cubay', 'Haguimit',
   'La Granja', 'Nagasi', 'Roberto S. Benedicto',
   'San Miguel', 'Yubo',
-], 
+  ], 
   'Sagay City': [
     'Bato', 'Baviera', 'Bulanon', 'Campo Himoga-an', 'Campo Santiago', 'Colonia Divina', 'Fabrica', 'General Luna', 'Himoga-an Baybay', 'Lopez Jaena', 'Malubon', 'Molocaboc', 'Old Sagay', 'Plaridel', 'Poblacion I', 'Poblacion II', 'Rizal', 'Sewane', 'Taba-ao', 'Tadlong', 'Vito'
   ],
