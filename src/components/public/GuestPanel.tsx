@@ -125,6 +125,73 @@ const HOTLINES: Record<string, { label: string; number: string }[]> = {
   ],
 }
 
+// ── Haversine distance (returns km) ──────────────────────────────────────────
+
+function haversineKm(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number,
+): number {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// ── Hazard advisory text by type ─────────────────────────────────────────────
+
+function getHazardAdvisory(type: string): string {
+  switch (type.toLowerCase()) {
+    case 'volcano':
+      return 'Ashfall warning. Stay indoors, seal windows, wear an N95 mask when going outside, and prepare an emergency go-bag with essential documents, medicine, and 3-day supplies.'
+    case 'flood':
+      return 'Monitor water levels closely. If you live near riverbanks or low-lying areas, evacuate immediately to the nearest evacuation center. Do not cross flooded roads.'
+    case 'earthquake':
+      return 'Aftershocks may occur. Stay away from damaged structures. Inspect your home for gas leaks and structural damage before re-entering.'
+    case 'typhoon':
+      return 'Secure loose objects outdoors. Stay indoors away from windows. Follow the local DRRMO for evacuation orders. Keep flashlights and emergency kits ready.'
+    case 'landslide':
+      return 'Avoid slopes, hillsides, and drainage channels. Evacuate if you hear rumbling or notice tilting trees and cracking ground. Do not return until authorities declare it safe.'
+    case 'fire':
+      return 'Evacuate the area immediately. Stay low to avoid smoke inhalation. Do not use elevators. Call BFP and do not re-enter until cleared by responders.'
+    default:
+      return 'A hazard has been detected near your area. Stay alert, monitor official channels, and follow the instructions of your local DRRMO.'
+  }
+}
+
+// ── Dynamic alert level from hazard proximity ─────────────────────────────────
+
+type HazardZone = 'critical' | 'high' | 'elevated' | 'stable' | 'outside'
+
+function getHazardZone(
+  distKm: number,
+  radii: { critical: number; high: number; elevated: number; stable: number },
+): HazardZone {
+  if (distKm <= radii.critical) return 'critical'
+  if (distKm <= radii.high)     return 'high'
+  if (distKm <= radii.elevated) return 'elevated'
+  if (distKm <= radii.stable)   return 'stable'
+  return 'outside'
+}
+
+function zoneToAlertLevel(zone: HazardZone): AlertLevel | null {
+  if (zone === 'critical' || zone === 'high')     return 'Pre-emptive Evacuation'
+  if (zone === 'elevated' || zone === 'stable')   return 'Monitoring'
+  return null // outside — no override
+}
+
+const ZONE_LABEL: Record<HazardZone, string> = {
+  critical:  'Critical Zone',
+  high:      'High-Risk Zone',
+  elevated:  'Elevated Zone',
+  stable:    'Stable Zone',
+  outside:   'Outside Hazard Area',
+}
+
 // ── Alert level config ────────────────────────────────────────────────────────
 
 type AlertLevel = 'Normal' | 'Monitoring' | 'Pre-emptive Evacuation'
@@ -168,6 +235,7 @@ export default function GuestPanel() {
         if (status === 'OK' && results && results[0]) {
           const loc = results[0].geometry.location
           setPanToCoords({ lat: loc.lat(), lng: loc.lng(), zoom })
+          setSelectedCoords({ lat: loc.lat(), lng: loc.lng() })
         }
       }
     )
@@ -178,6 +246,7 @@ export default function GuestPanel() {
   const [status, setStatus] = useState<AreaStatus | null>(null)
   const [fetching, setFetching] = useState(false)
   const [noData, setNoData] = useState(false)
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   const barangays = city ? (BARANGAYS_BY_CITY[city] ?? []) : []
   const hotlines = city ? (HOTLINES[city] ?? [{ label: 'National Emergency', number: '911' }]) : []
@@ -223,7 +292,29 @@ export default function GuestPanel() {
     geocodeAndPan(`${b}, ${city}, Philippines`, 16)
   }
 
-  const alertCfg = status ? (ALERT_CONFIG[status.alert_level] ?? ALERT_CONFIG['Normal']) : null
+  // ── Hazard-aware computed values ──────────────────────────────────────────
+  const hazardInfo = (() => {
+    if (!activeHazard?.isActive || !selectedCoords) return null
+    const distKm = haversineKm(
+      selectedCoords.lat, selectedCoords.lng,
+      activeHazard.center.lat, activeHazard.center.lng,
+    )
+    const zone = getHazardZone(distKm, activeHazard.radii)
+    const overrideLevel = zoneToAlertLevel(zone)
+    const advisory = getHazardAdvisory(activeHazard.type)
+    return { distKm, zone, overrideLevel, advisory }
+  })()
+
+  const effectiveAlertLevel: AlertLevel =
+    hazardInfo?.overrideLevel ??
+    status?.alert_level ??
+    'Normal'
+
+  const alertCfg = (city && barangay)
+    ? (ALERT_CONFIG[effectiveAlertLevel] ?? ALERT_CONFIG['Normal'])
+    : status
+      ? (ALERT_CONFIG[status.alert_level] ?? ALERT_CONFIG['Normal'])
+      : null
 
   const selectStyle: React.CSSProperties = {
     width: '100%',
@@ -303,6 +394,33 @@ export default function GuestPanel() {
             </div>
           )}
 
+          {/* ── Hazard-Aware Advisory ──────────────────────────────────── */}
+          {hazardInfo && (
+            <div style={{
+              background: '#1e1409',
+              border: '1px solid #9e6a03',
+              borderRadius: 6,
+              padding: 16,
+              boxShadow: '0 4px 12px rgba(158, 106, 3, 0.15)',
+            }}>
+              <p style={{ margin: '0 0 4px', fontSize: '0.65rem', color: '#d29922', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700 }}>
+                ⚡ Hazard-Aware Advisory
+              </p>
+              <p style={{ margin: '0 0 8px', fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>
+                {activeHazard!.type} · {ZONE_LABEL[hazardInfo.zone]}
+              </p>
+              <p style={{ margin: '0 0 10px', fontSize: '0.75rem', color: '#8b949e' }}>
+                Your area is approximately <strong style={{ color: '#e6edf3' }}>{hazardInfo.distKm.toFixed(1)} km</strong> from the hazard center.
+                {hazardInfo.overrideLevel && (
+                  <> Alert level has been automatically elevated to <strong style={{ color: ALERT_CONFIG[hazardInfo.overrideLevel].color }}>{hazardInfo.overrideLevel}</strong>.</>
+                )}
+              </p>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: '#e6edf3', lineHeight: 1.6, borderTop: '1px solid #3d2b05', paddingTop: 10 }}>
+                {hazardInfo.advisory}
+              </p>
+            </div>
+          )}
+
           {status && alertCfg && (
             <>
               {/* Alert Level */}
@@ -318,18 +436,21 @@ export default function GuestPanel() {
                   Barangay Alert Level
                 </p>
                 <p style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: 700, color: alertCfg.color }}>
-                  {alertCfg.icon} {status.alert_level}
+                  {alertCfg.icon} {effectiveAlertLevel}
                 </p>
                 <p style={{ margin: 0, fontSize: '0.68rem', color: '#8b949e' }}>
                   {barangay}, {city} · Updated {new Date(status.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
+                  {hazardInfo?.overrideLevel && (
+                    <> · <span style={{ color: '#d29922' }}>Auto-elevated by hazard proximity</span></>
+                  )}
                 </p>
               </div>
 
-              {/* Advisory */}
+              {/* LGU Advisory */}
               {status.advisory && (
                 <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 16 }}>
                   <p style={{ margin: '0 0 8px', fontSize: '0.65rem', color: '#8b949e', letterSpacing: 2, textTransform: 'uppercase' }}>
-                    Active Advisory
+                    LGU Advisory
                   </p>
                   <p style={{ margin: 0, fontSize: '0.82rem', color: '#e6edf3', lineHeight: 1.6 }}>
                     {status.advisory}
