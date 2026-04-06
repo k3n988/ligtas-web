@@ -4,7 +4,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { supabase } from '@/lib/supabase'
-import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 
 // ── Location data ────────────────────────────────────────────────────────────
@@ -118,8 +117,6 @@ interface AreaStatus {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function GuestPanel() {
-  const setShowModal = useAuthStore((s) => s.setShowModal)
-  const setAuthTab = useAuthStore((s) => s.setAuthTab) // <-- ADDED: Destructure setAuthTab from store
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
   const geocodingLib = useMapsLibrary('geocoding')
   const geocoder = useRef<google.maps.Geocoder | null>(null)
@@ -282,37 +279,6 @@ export default function GuestPanel() {
       )}
 
       {/* ── 3. CTA Cards ────────────────────────────────────────────────── */}
-
-      {/* Register Card */}
-      <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 16 }}>
-        <p style={{ margin: '0 0 6px', fontSize: '0.65rem', color: '#58a6ff', letterSpacing: 2, textTransform: 'uppercase' }}>
-          Are you a vulnerable household?
-        </p>
-        <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: '#8b949e', lineHeight: 1.6 }}>
-          Make sure rescuers know you are there. Register seniors, PWDs, bedridden, and infants before a disaster strikes — so they are first on the priority list.
-        </p>
-        <button
-          // <-- UPDATED: First switch to 'signup' tab, then open the modal
-          onClick={() => {
-            setAuthTab('signup')
-            setShowModal(true)
-          }}
-          style={{
-            width: '100%',
-            padding: '10px',
-            background: '#1f6feb',
-            border: 'none',
-            color: '#fff',
-            borderRadius: 4,
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            letterSpacing: 1,
-            cursor: 'pointer',
-          }}
-        >
-          REGISTER NOW →
-        </button>
-      </div>
 
       {/* Hotlines Card */}
       {city && (

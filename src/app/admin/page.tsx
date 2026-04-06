@@ -7,6 +7,7 @@ import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import HouseholdTable from './HouseholdTable'
 import AssetTable from './AssetTable'
+import SummaryReportModal from '@/components/dashboard/SummaryReportModal'
 
 export default function AdminPage() {
   const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
@@ -14,7 +15,7 @@ export default function AdminPage() {
   const assets         = useAssetStore((s) => s.assets)
   const router         = useRouter()
 
-  const [activeTab, setActiveTab] = useState<'registry' | 'assets'>('registry')
+  const [activeTab, setActiveTab] = useState<'summary' | 'registry' | 'assets'>('summary')
 
   useEffect(() => {
     void loadHouseholds()
@@ -158,6 +159,12 @@ export default function AdminPage() {
       {/* --- TABS NAVIGATION --- */}
       <div style={{ display: 'flex', gap: 10, borderBottom: '1px solid #30363d', marginBottom: 20 }}>
         <button
+          style={getTabStyle(activeTab === 'summary')}
+          onClick={() => setActiveTab('summary')}
+        >
+          📊 Summary Report
+        </button>
+        <button
           style={getTabStyle(activeTab === 'registry')}
           onClick={() => setActiveTab('registry')}
         >
@@ -173,6 +180,13 @@ export default function AdminPage() {
 
       {/* --- CONTENT AREA --- */}
       <div style={{ minHeight: '500px' }}>
+        {activeTab === 'summary' && (
+          <SummaryReportModal
+            households={households}
+            assets={assets}
+            onClose={() => setActiveTab('registry')}
+          />
+        )}
         {activeTab === 'registry' && <HouseholdTable />}
         {activeTab === 'assets' && <AssetTable />}
       </div>
