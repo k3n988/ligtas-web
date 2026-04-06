@@ -267,8 +267,8 @@ function MapInner() {
           <HouseholdMarker key={hh.id} household={hh} />
         ))}
 
-        {/* ONLY SHOW ASSETS IF ADMIN IS LOGGED IN, AND PASS REQUIRED PROPS */}
-        {user && assets.map((asset) => (
+        {/* SHOW ASSETS FOR EVERYONE (GUEST OR ADMIN) */}
+        {assets.map((asset) => (
           <AssetMarker 
             key={asset.id} 
             asset={asset} 
