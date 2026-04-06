@@ -337,6 +337,7 @@ export default function AddAssetForm({ onClose }: { onClose: () => void }) {
         <PasswordModal
           contact={credModal.contact}
           password={credModal.password}
+          role="rescuer"  /* <--- FIXED HERE */
           onClose={() => { setCredModal(null); onClose() }}
         />
       )}
