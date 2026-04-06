@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import { useHazardStore } from '@/store/hazardStore'
+import { useAuthStore } from '@/store/authStore'
 import type { HazardEvent } from '@/types'
 
 const HAZARD_TYPES = ['Flood', 'Volcano', 'Earthquake', 'Typhoon', 'Landslide', 'Storm Surge']
@@ -43,6 +44,7 @@ export default function HazardControlPanel() {
     isSelectingCenter, setIsSelectingCenter,
     draftCenter, setDraftCenter,
   } = useHazardStore()
+  const user = useAuthStore((s) => s.user)
 
   const [open,        setOpen]        = useState(false)
   const [hazardType,  setHazardType]  = useState('Flood')
@@ -50,6 +52,9 @@ export default function HazardControlPanel() {
   const [high,        setHigh]        = useState('3')
   const [elevated,    setElevated]    = useState('5')
   const [stable,      setStable]      = useState('10')
+
+  // If no hazard is active and user is not admin, don't show the panel at all
+  if (!activeHazard?.isActive && user?.role !== 'admin') return null
 
   function handlePickCenter() {
     setIsSelectingCenter(true)
@@ -81,7 +86,7 @@ export default function HazardControlPanel() {
   }
 
   return (
-    <div style={{ position: 'absolute', bottom: 80, left: 12, zIndex: 20 }}>
+    <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 20 }}>
 
       {/* Toggle button */}
       <button
@@ -91,27 +96,28 @@ export default function HazardControlPanel() {
           height: 38,
           padding: '0 14px',
           borderRadius: 6,
-          background: activeHazard?.isActive ? '#3d1a1a' : '#161b22',
+          background: activeHazard?.isActive ? '#3d1a1a' : (user?.role === 'admin' ? '#161b22' : 'transparent'),
           border: `1.5px solid ${activeHazard?.isActive ? '#da3633' : '#58a6ff'}`,
           color: activeHazard?.isActive ? '#ff4d4d' : '#58a6ff',
           fontSize: '0.75rem',
           fontWeight: 700,
           letterSpacing: 0.5,
-          cursor: 'pointer',
+          cursor: (activeHazard?.isActive || user?.role === 'admin') ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', gap: 6,
           boxShadow: '0 2px 8px rgba(0,0,0,.5)',
           fontFamily: 'Inter, sans-serif',
           whiteSpace: 'nowrap',
+          pointerEvents: (!activeHazard?.isActive && user?.role !== 'admin') ? 'none' : 'auto',
+          opacity: (!activeHazard?.isActive && user?.role !== 'admin') ? 0 : 1,
         }}
       >
-        ⚠ {activeHazard?.isActive ? `HAZARD: ${activeHazard.type}` : 'HAZARD LAYER'}
+        ⚠ {activeHazard?.isActive ? `ACTIVE: ${activeHazard.type}` : 'HAZARD LAYER'}
       </button>
 
-      {/* Expanded panel */}
       {open && (
         <div style={{
           position: 'absolute',
-          bottom: 50, left: 0,
+          top: 50, left: '50%', transform: 'translateX(-50%)',
           width: 270,
           background: '#161b22',
           border: '1px solid #30363d',
@@ -127,19 +133,32 @@ export default function HazardControlPanel() {
             borderLeft: '3px solid #ff4d4d', paddingLeft: 8, marginBottom: 12,
           }}>
             ⚠ Hazard Layer
+            {user?.role !== 'admin' && (
+              <span style={{ 
+                float: 'right', 
+                fontSize: '0.6rem', 
+                color: '#8b949e', 
+                fontWeight: 400,
+                textTransform: 'none' 
+              }}>
+                Read-only
+              </span>
+            )}
           </div>
 
-          {/* Active hazard badge */}
+          {/* HAZARD badge */}
           {activeHazard?.isActive && (
             <div style={{
               background: '#3d1a1a', border: '1px solid #da3633',
               borderRadius: 4, padding: '6px 10px', marginBottom: 12,
               fontSize: '0.72rem', color: '#ff4d4d', fontWeight: 600,
             }}>
-              ACTIVE: {activeHazard.type} — {activeHazard.center.lat.toFixed(4)}, {activeHazard.center.lng.toFixed(4)}
+              HAZARD: {activeHazard.type} — {activeHazard.center.lat.toFixed(4)}, {activeHazard.center.lng.toFixed(4)}
             </div>
           )}
 
+          {user?.role === 'admin' ? (
+            <>
           {/* Disaster type */}
           <div style={{ marginBottom: 10 }}>
             <label style={labelStyle}>Disaster Type</label>
@@ -192,48 +211,65 @@ export default function HazardControlPanel() {
             )}
           </div>
 
-          {/* Buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <button
-              onClick={handlePickCenter}
-              disabled={isSelectingCenter}
-              style={{
-                padding: '8px', background: '#1f6feb',
-                color: '#fff', border: 'none', borderRadius: 4,
-                fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer',
-                fontFamily: 'Inter, sans-serif', opacity: isSelectingCenter ? 0.6 : 1,
-              }}
-            >
-              📍 Pick Center on Map
-            </button>
-            <button
-              onClick={handleActivate}
-              disabled={!draftCenter}
-              style={{
-                padding: '8px', background: draftCenter ? '#238636' : '#21262d',
-                color: draftCenter ? '#fff' : '#8b949e',
-                border: 'none', borderRadius: 4,
-                fontWeight: 700, fontSize: '0.78rem',
-                cursor: draftCenter ? 'pointer' : 'not-allowed',
-                fontFamily: 'Inter, sans-serif',
-              }}
-            >
-              ✅ Activate Hazard Layer
-            </button>
-            {activeHazard && (
-              <button
-                onClick={handleClear}
-                style={{
-                  padding: '8px', background: 'transparent',
-                  color: '#f85149', border: '1px solid #da3633',
-                  borderRadius: 4, fontWeight: 600, fontSize: '0.78rem',
-                  cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-                }}
-              >
-                🗑 Clear Hazard Layer
-              </button>
-            )}
-          </div>
+              {/* Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button
+                  onClick={handlePickCenter}
+                  disabled={isSelectingCenter}
+                  style={{
+                    padding: '8px', background: '#1f6feb',
+                    color: '#fff', border: 'none', borderRadius: 4,
+                    fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer',
+                    fontFamily: 'Inter, sans-serif', opacity: isSelectingCenter ? 0.6 : 1,
+                  }}
+                >
+                  📍 Pick Center on Map
+                </button>
+                <button
+                  onClick={handleActivate}
+                  disabled={!draftCenter}
+                  style={{
+                    padding: '8px', background: draftCenter ? '#238636' : '#21262d',
+                    color: draftCenter ? '#fff' : '#8b949e',
+                    border: 'none', borderRadius: 4,
+                    fontWeight: 700, fontSize: '0.78rem',
+                    cursor: draftCenter ? 'pointer' : 'not-allowed',
+                    fontFamily: 'Inter, sans-serif',
+                  }}
+                >
+                  ✅ Activate Hazard Layer
+                </button>
+                {activeHazard && (
+                  <button
+                    onClick={handleClear}
+                    style={{
+                      padding: '8px', background: 'transparent',
+                      color: '#f85149', border: '1px solid #da3633',
+                      borderRadius: 4, fontWeight: 600, fontSize: '0.78rem',
+                      cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                    }}
+                  >
+                    🗑 Clear Hazard Layer
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            /* READ-ONLY VIEW FOR GUESTS/CITIZENS */
+            <div style={{ fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
+              <p style={{ margin: '0 0 8px' }}>
+                An active <b>{activeHazard?.type}</b> hazard zone is being monitored. 
+                Triage levels for households within these radii are dynamically adjusted.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ color: RING_COLORS.critical }}>• Critical: {activeHazard?.radii.critical}km</div>
+                <div style={{ color: RING_COLORS.high }}>• High: {activeHazard?.radii.high}km</div>
+                <div style={{ color: RING_COLORS.elevated }}>• Elevated: {activeHazard?.radii.elevated}km</div>
+                <div style={{ color: RING_COLORS.stable }}>• Stable: {activeHazard?.radii.stable}km</div>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
     </div>
