@@ -9,8 +9,8 @@ import { useHouseholdStore } from '@/store/householdStore'
 // ── Location data ────────────────────────────────────────────────────────────
 
 const CITIES = [
-  'Bacolod City', 'Bago City', 'Cadiz City', 'Escalante City',
-  'Himamaylan City', 'Kabankalan City', 'La Carlota City',
+  'Bacolod City', 'Bago City', 'Cadiz City', 'Canlaon City', 'Escalante City',
+  'Himamaylan City', 'Kabankalan City', 'La Carlota City', 'Murcia',
   'Sagay City', 'San Carlos City', 'Silay City', 'Talisay City', 'Victorias City',
 ]
 
@@ -28,20 +28,25 @@ const BARANGAYS_BY_CITY: Record<string, string[]> = {
     'Abejuvela', 'Amaya', 'Anahaw', 'Buenavista', 'Caliban', 'Canlandog', 'Cansilayan', 'Damsite', 'Iglau-an', 'Lopez Jaena', 'Minoyan', 'Pandanon', 'Salvacion', 'San Miguel', 'Santa Cruz', 'Santa Rosa', 'Talotog', 'Zone I', 'Zone II', 'Zone III', 'Zone IV', 'Zone V'
   ],
   'Canlaon City': [
-  'Bayog', 'Binalbagan', 'Bucalan',
-  'Budlasan', 'Linothangan', 'Lumapao',
-  'Mabigo', 'Malaiba', 'Masulog',
-  'Ninoy Aquino', 'Panubigan', 'Pula',
-],
+    'Bayog', 'Binalbagan', 'Bucalan', 'Budlasan', 'Linothangan', 'Lumapao', 'Mabigo', 'Malaiba', 'Masulog', 'Ninoy Aquino', 'Panubigan', 'Pula',
+  ],
+  'Escalante City': [
+    'Alimango', 'Balintawak', 'Binaguiohan', 'Buenavista', 'Cervantes', 'Dian-ay', 'Haba', 'Japitan', 'Jonobjonob', 'Langub', 'Libertad', 'Mabini', 'Magsaysay', 'Malasibog', 'Old Poblacion', 'Paitan', 'Pinapugasan', 'Rizal', 'Tamlang', 'Udtongan', 'Washington'
+  ],
+  'Himamaylan City': [
+    'Aguisan', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV', 'Buenavista', 'Cabadiangan', 'Cabanbanan', 'Carabalan', 'Libacao', 'Mahalang', 'Nabali-an', 'San Antonio', 'Saraet', 'Su-ay', 'Talaban', 'To-oy'
+  ],
+  'Kabankalan City': [
+    'Bantayan', 'Barangay 1', 'Barangay 2', 'Barangay 3', 'Barangay 4', 'Barangay 5', 'Barangay 6', 'Barangay 7', 'Barangay 8', 'Barangay 9', 'Binicuil', 'Camansi', 'Camingawan', 'Camugao', 'Carol-an', 'Daan Banua', 'Hilamonan', 'Inapoy', 'Linao', 'Locotan', 'Magballo', 'Oringao', 'Orong', 'Pinaguinpinan', 'Salong', 'Tabugon', 'Tagoc', 'Tagukon', 'Tampalon', 'Tan-Awan', 'Tayum'
+  ],
   'La Carlota City': [
-  'Ara-al', 'Ayungon', 'Balabag',
-  'Barangay I', 'Barangay II', 'Barangay III',
-  'Batuan', 'Cubay', 'Haguimit',
-  'La Granja', 'Nagasi', 'Roberto S. Benedicto',
-  'San Miguel', 'Yubo',
-], 
+    'Ara-al', 'Ayungon', 'Balabag', 'Barangay I', 'Barangay II', 'Barangay III', 'Batuan', 'Cubay', 'Haguimit', 'La Granja', 'Nagasi', 'Roberto S. Benedicto', 'San Miguel', 'Yubo',
+  ],
   'Sagay City': [
     'Bato', 'Baviera', 'Bulanon', 'Campo Himoga-an', 'Campo Santiago', 'Colonia Divina', 'Fabrica', 'General Luna', 'Himoga-an Baybay', 'Lopez Jaena', 'Malubon', 'Molocaboc', 'Old Sagay', 'Plaridel', 'Poblacion I', 'Poblacion II', 'Rizal', 'Sewane', 'Taba-ao', 'Tadlong', 'Vito'
+  ],
+  'San Carlos City': [
+    'Bagonbon', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV', 'Barangay V', 'Barangay VI', 'Buluangan', 'Codcod', 'Ermita', 'Guadalupe', 'Nataban', 'Palampas', 'Prinza', 'Prosperidad', 'Punao', 'Quezon', 'Rizal', 'San Juan'
   ],
   'Silay City': [
     'Bagtic', 'Balaring', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV', 'Barangay V', 'Guimbala-on', 'Guinhalaran', 'Kapitan Ramon', 'Lantad', 'Mambulac', 'Patag', 'Rizal'
@@ -109,6 +114,14 @@ const HOTLINES: Record<string, { label: string; number: string }[]> = {
     { label: 'MDRRMO Victorias',   number: '(034) 399-2100' },
     { label: 'National Emergency', number: '911' },
   ],
+  'Murcia': [
+    { label: 'MDRRMO Murcia',      number: '(034) 399-2101' }, // Default/Placeholder
+    { label: 'National Emergency', number: '911' },
+  ],
+  'Canlaon City': [
+    { label: 'CDRRMO Canlaon',     number: '(035) 400-0000' }, // Default/Placeholder
+    { label: 'National Emergency', number: '911' },
+  ],
 }
 
 // ── Alert level config ────────────────────────────────────────────────────────
@@ -132,22 +145,27 @@ interface AreaStatus {
 export default function GuestPanel() {
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
   const geocodingLib = useMapsLibrary('geocoding')
-  const geocoder = useRef<google.maps.Geocoder | null>(null)
+  
+  // Using `any` here prevents Next.js production build crashes if @types/google.maps isn't globally accessible
+  const geocoder = useRef<any>(null) 
 
   useEffect(() => {
-    if (geocodingLib) geocoder.current = new geocodingLib.Geocoder()
+    if (geocodingLib) {
+      geocoder.current = new geocodingLib.Geocoder()
+    }
   }, [geocodingLib])
 
   function geocodeAndPan(q: string, zoom: number) {
     if (!geocoder.current) return
     geocoder.current.geocode(
       { address: q, componentRestrictions: { country: 'ph' } },
-      (results, status) => {
-        if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+      (results: any, status: string) => {
+        // Changed from google.maps.GeocoderStatus.OK to 'OK' to prevent namespace errors
+        if (status === 'OK' && results && results[0]) {
           const loc = results[0].geometry.location
           setPanToCoords({ lat: loc.lat(), lng: loc.lng(), zoom })
         }
-      },
+      }
     )
   }
 
@@ -162,7 +180,11 @@ export default function GuestPanel() {
 
   // Fetch area status when barangay is selected
   useEffect(() => {
-    if (!city || !barangay) { setStatus(null); setNoData(false); return }
+    if (!city || !barangay) { 
+      setStatus(null)
+      setNoData(false)
+      return 
+    }
 
     setFetching(true)
     setNoData(false)
@@ -174,7 +196,10 @@ export default function GuestPanel() {
       .single()
       .then(({ data, error }) => {
         setFetching(false)
-        if (error || !data) { setNoData(true); return }
+        if (error || !data) { 
+          setNoData(true)
+          return 
+        }
         setStatus(data as AreaStatus)
       })
   }, [city, barangay])
