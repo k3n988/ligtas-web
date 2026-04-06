@@ -18,9 +18,7 @@ const ADMIN_TABS = [
   { href: '/admin',    label: '🗺️ DASHBOARD' },
 ]
 
-const CITIZEN_TABS = [
-  { href: '/', label: '🗺 RISK MAP' },
-]
+const CITIZEN_TABS: { href: string; label: string }[] = []
 
 interface Suggestion {
   place_id: string
@@ -371,7 +369,7 @@ export default function Header() {
       </div>
 
       {/* ── Nav tabs (logged in only) ────────────────────────────────────── */}
-      {user && (
+      {user && (user.role === 'admin' || CITIZEN_TABS.length > 0) && (
         <div
           style={{
             display: 'flex',

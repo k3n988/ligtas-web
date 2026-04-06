@@ -55,23 +55,34 @@ export default function CitizenPanel() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      
+      {/* ── Greeting ── */}
+      {household && (
+        <p style={{ margin: '0', fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>
+          Hello, {household.head}
+        </p>
+      )}
 
-      {/* ── Greeting ───────────────────────────────────────────────────── */}
-      <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 16 }}>
-        <p style={{ margin: '0 0 2px', fontSize: '0.65rem', color: '#58a6ff', letterSpacing: 2, textTransform: 'uppercase' }}>
-          Citizen Portal
+      {/* ── Emergency hotline ─────────────────────────────────────────── */}
+      <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 14 }}>
+        <p style={{ margin: '0 0 8px', fontSize: '0.65rem', color: '#8b949e', letterSpacing: 2, textTransform: 'uppercase' }}>
+          Emergency
         </p>
-        <p style={{ margin: 0, fontSize: '0.82rem', color: '#e6edf3', fontWeight: 600 }}>
-          Welcome, {household?.head ?? user?.contact}
-        </p>
-        {household && (
-          <p style={{ margin: '4px 0 0', fontSize: '0.72rem', color: '#8b949e' }}>
-            {household.barangay}, {household.city}
-          </p>
-        )}
+        <a
+          href="tel:911"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            padding: '10px', background: '#3d1a1a',
+            border: '1px solid #da3633', borderRadius: 4,
+            color: '#f85149', fontWeight: 800,
+            fontSize: '1rem', letterSpacing: 2,
+            textDecoration: 'none',
+          }}
+        >
+          <PhoneIcon size={20} /> CALL 911
+        </a>
       </div>
 
-      {/* ── Not registered yet ─────────────────────────────────────────── */}
       {!household && (
         <div style={{ background: '#1f1a0e', border: '1px solid #9e6a03', borderRadius: 6, padding: 16 }}>
           <p style={{ margin: '0 0 6px', fontSize: '0.78rem', color: '#d29922', fontWeight: 700 }}>
@@ -85,115 +96,38 @@ export default function CitizenPanel() {
       )}
 
       {/* ── Rescue status card ─────────────────────────────────────────── */}
-      {household && statusCfg && (
-        <div style={{ background: statusCfg.bg, border: `1px solid ${statusCfg.border}`, borderRadius: 6, padding: 16 }}>
+      {household && (
+        <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, overflow: 'hidden' }}>
+          <div style={{ padding: 16, background: statusCfg?.bg, borderBottom: '1px solid #30363d' }}>
           <p style={{ margin: '0 0 4px', fontSize: '0.65rem', color: '#8b949e', letterSpacing: 2, textTransform: 'uppercase' }}>
             Rescue Status
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 4px' }}>
-            <span style={{ color: statusCfg.color, display: 'flex' }}>{statusCfg.icon}</span>
-            <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: statusCfg.color }}>
-              {statusCfg.label}
+            <span style={{ color: statusCfg?.color, display: 'flex' }}>{statusCfg?.icon}</span>
+            <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: statusCfg?.color }}>
+              {statusCfg?.label}
             </p>
           </div>
           <p style={{ margin: 0, fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
-            {statusCfg.message}
+            {statusCfg?.message}
           </p>
 
-          {/* Triage badge - Only show when Pending */}
           {household.status === 'Pending' && (
             <div style={{
-            marginTop: 12, display: 'inline-block',
-            padding: '3px 10px', borderRadius: 20,
-            background: household.triage.hex + '22',
-            border: `1px solid ${household.triage.hex}`,
-            fontSize: '0.7rem', fontWeight: 700,
-            color: household.triage.hex, letterSpacing: 1,
-          }}>
-            {household.triage.level} PRIORITY
-          </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Notification banners ───────────────────────────────────────── */}
-      {household?.status === 'Pending' && household.assignedAssetId && (
-        <div style={{ background: '#0d2016', border: '1px solid #238636', borderRadius: 6, padding: 14 }}>
-          <p style={{ margin: 0, fontSize: '0.82rem', color: '#3fb950', fontWeight: 700 }}>
-            🚨 Responders are on the way!
-          </p>
-          <p style={{ margin: '4px 0 0', fontSize: '0.72rem', color: '#8b949e' }}>
-            A rescue team has been dispatched to your location. Please stay put and keep your phone on.
-          </p>
-        </div>
-      )}
-
-      {/* ── "I Am Safe" button ─────────────────────────────────────────── */}
-      {household && household.status === 'Pending' && (
-        <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 16 }}>
-          <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
-            If you have already evacuated safely on your own, tap below to remove yourself from the active rescue queue so rescuers can focus on others.
-          </p>
-
-          {confirming === 'safe' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: '#f0a500', fontWeight: 600 }}>
-                Confirm you are safe and no longer need rescue?
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={handleSafe}
-                  disabled={busy}
-                  style={{
-                    flex: 1, padding: '10px',
-                    background: '#238636', color: '#fff',
-                    border: 'none', borderRadius: 4,
-                    fontWeight: 700, fontSize: '0.8rem',
-                    cursor: busy ? 'not-allowed' : 'pointer',
-                    opacity: busy ? 0.7 : 1,
-                  }}
-                >
-                  {busy ? 'Saving…' : 'Yes, I Am Safe'}
-                </button>
-                <button
-                  onClick={() => setConfirming(null)}
-                  disabled={busy}
-                  style={{
-                    flex: 1, padding: '10px',
-                    background: 'transparent', color: '#8b949e',
-                    border: '1px solid #30363d', borderRadius: 4,
-                    fontWeight: 600, fontSize: '0.8rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Go Back
-                </button>
-              </div>
+              marginTop: 12, display: 'inline-block',
+              padding: '3px 10px', borderRadius: 20,
+              background: household.triage.hex + '22',
+              border: `1px solid ${household.triage.hex}`,
+              fontSize: '0.7rem', fontWeight: 700,
+              color: household.triage.hex, letterSpacing: 1,
+            }}>
+              {household.triage.level} PRIORITY
             </div>
-          ) : (
-            <button
-              onClick={() => setConfirming('safe')}
-              style={{
-                width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                background: '#238636', color: '#fff',
-                border: 'none', borderRadius: 4,
-                fontWeight: 800, fontSize: '0.9rem',
-                cursor: 'pointer', letterSpacing: 1,
-              }}
-            >
-              <CheckCircleIcon size={18} /> I AM SAFE — REMOVE ME FROM QUEUE
-            </button>
           )}
-        </div>
-      )}
-
-      {/* ── Cancel Request button ──────────────────────────────────────── */}
-      {household && household.status === 'Rescued' && (
-        <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 16 }}>
-          <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
-            If your situation has changed and you still need rescue, tap below to re-submit your request to the active queue.
-          </p>
-
+          </div>
+          
+          {household.status === 'Rescued' && (
+            <div style={{ padding: 16 }}>
           {confirming === 'cancel' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <p style={{ margin: 0, fontSize: '0.75rem', color: '#f85149', fontWeight: 600 }}>
@@ -230,18 +164,25 @@ export default function CitizenPanel() {
               </div>
             </div>
           ) : (
-            <button
-              onClick={() => setConfirming('cancel')}
-              style={{
-                width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                background: 'transparent', color: '#f85149',
-                border: '1px solid #da3633', borderRadius: 4,
-                fontWeight: 700, fontSize: '0.85rem',
-                cursor: 'pointer', letterSpacing: 1,
-              }}
-            >
-              <AlertTriangleIcon size={18} /> RE-SUBMIT RESCUE REQUEST
-            </button>
+            <>
+              <p style={{ margin: '0 0 12px', fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
+                If your situation has changed and you still need rescue, tap below to re-submit your request.
+              </p>
+              <button
+                onClick={() => setConfirming('cancel')}
+                style={{
+                  width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  background: 'transparent', color: '#a3b408',
+                  border: '1px solid #a3b408', borderRadius: 4,
+                  fontWeight: 700, fontSize: '0.85rem',
+                  cursor: 'pointer', letterSpacing: 1,
+                }}
+              >
+                <AlertTriangleIcon size={18} /> RE-SUBMIT REQUEST
+              </button>
+            </>
+          )}
+            </div>
           )}
         </div>
       )}
@@ -268,26 +209,6 @@ export default function CitizenPanel() {
           </div>
         </div>
       )}
-
-      {/* ── Emergency hotline ─────────────────────────────────────────── */}
-      <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 14 }}>
-        <p style={{ margin: '0 0 8px', fontSize: '0.65rem', color: '#8b949e', letterSpacing: 2, textTransform: 'uppercase' }}>
-          Emergency
-        </p>
-        <a
-          href="tel:911"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '10px', background: '#3d1a1a',
-            border: '1px solid #da3633', borderRadius: 4,
-            color: '#f85149', fontWeight: 800,
-            fontSize: '1rem', letterSpacing: 2,
-            textDecoration: 'none',
-          }}
-        >
-          <PhoneIcon size={20} /> CALL 911
-        </a>
-      </div>
 
     </div>
   )
