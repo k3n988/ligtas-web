@@ -29,10 +29,6 @@ export interface TriageResult {
 }
 
 export interface Household {
-  headName: string
-  address: string
-  memberCount: string
-  createdAt: any
   id:        string
   lat:       number
   lng:       number

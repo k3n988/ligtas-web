@@ -364,10 +364,6 @@ export default function RegistrationForm() {
         citizenPasswordHash: passwordHash,
         gpsAccuracy: gpsAccuracy ?? undefined,
         pinSource: pinSource ?? undefined,
-        headName: '',
-        address: '',
-        memberCount: '',
-        createdAt: undefined
       })
 
       resetForm()
