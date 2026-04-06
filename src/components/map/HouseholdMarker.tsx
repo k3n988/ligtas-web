@@ -98,14 +98,14 @@ export default function HouseholdMarker({ household: hh }: Props) {
                 marginBottom: 8,
               }}
             >
-              {isGuest ? 'Priority Household' : hh.head}
+              {user?.role === 'admin' ? hh.head : 'Priority Household'}
             </div>
 
             {/* ── BODY DETAILS ── */}
             <div style={{ fontSize: '0.8rem', lineHeight: 1.6, marginBottom: 10 }}>
               
               {/* ADMIN VIEW: Sees everything */}
-              {!isGuest && (
+              {user?.role === 'admin' && (
                 <>
                   <b>ID:</b> {hh.id}
                   <br />
@@ -125,23 +125,23 @@ export default function HouseholdMarker({ household: hh }: Props) {
                 </>
               )}
 
-              {/* GUEST VIEW: Sees limited info only */}
-              {isGuest && (
+              {/* CITIZEN & GUEST VIEW: Restricted access */}
+              {user?.role !== 'admin' && (
                 <>
                   <b>Brgy:</b> {hh.barangay}
                   <br />
                   <b>Triage Level:</b> <span style={{color: hh.triage.hex, fontWeight: 'bold'}}>{hh.triage.level}</span>
                   <br />
-                  <em style={{ color: '#8b949e', fontSize: '0.7rem' }}>Personal details hidden for privacy.</em>
+                  <em style={{ color: '#8b949e', fontSize: '0.7rem' }}>Personally Identifiable Information (PII) is hidden.</em>
                 </>
               )}
 
             </div>
 
             {/* ── DISPATCH STATUS & ROUTING (ADMIN ONLY) ── */}
-            {!isGuest && hh.status !== 'Rescued' && (
+            {user?.role === 'admin' && hh.status !== 'Rescued' && (
               <div
-                style={{
+                style={{ 
                   marginBottom: 10,
                   padding: '8px 10px',
                   background: '#0d1117',
@@ -215,7 +215,7 @@ export default function HouseholdMarker({ household: hh }: Props) {
             </div>
 
             {/* ── ACTION BUTTONS (ADMIN ONLY) ── */}
-            {!isGuest && (
+            {user?.role === 'admin' && (
               hh.status === 'Rescued' ? (
                 <div style={{ display: 'flex', gap: 6 }}>
                   <div
