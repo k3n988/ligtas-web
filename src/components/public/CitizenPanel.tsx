@@ -126,6 +126,61 @@ export default function CitizenPanel() {
             </div>
           )}
           </div>
+
+                {household.status === 'Pending' && (
+        <div style={{ marginTop: 16 }}>
+          {confirming === 'safe' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#3fb950', fontWeight: 600 }}>
+                Confirm you are safe?
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={handleSafe}
+                  disabled={busy}
+                  style={{
+                    flex: 1, padding: '10px',
+                    background: '#238636', color: '#fff',
+                    border: 'none', borderRadius: 4,
+                    fontWeight: 700, fontSize: '0.8rem',
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                    opacity: busy ? 0.7 : 1,
+                  }}
+                >
+                  {busy ? 'Saving…' : 'Yes, I am Safe'}
+                </button>
+                <button
+                  onClick={() => setConfirming(null)}
+                  disabled={busy}
+                  style={{
+                    flex: 1, padding: '10px',
+                    background: 'transparent', color: '#8b949e',
+                    border: '1px solid #30363d', borderRadius: 4,
+                    fontWeight: 600, fontSize: '0.8rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirming('safe')}
+              style={{
+                width: '100%', padding: '12px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                background: '#0d2016', color: '#3fb950',
+                border: '1px solid #238636', borderRadius: 4,
+                fontWeight: 700, fontSize: '0.85rem',
+                cursor: 'pointer', letterSpacing: 1,
+              }}
+            >
+              <CheckCircleIcon size={18} /> I AM SAFE
+            </button>
+          )}
+        </div>
+      )}
           
           {household.status === 'Rescued' && (
             <div style={{ padding: 16 }}>

@@ -89,24 +89,25 @@ export default function AuthModal({ onClose }: Props) {
           </h2>
         </div>
 
-        {/* Info blurb */}
-        <p style={{ fontSize: '0.72rem', color: '#8b949e', margin: '0 0 18px', lineHeight: 1.5 }}>
-          Use your email (LGU admin) or the contact number and password given by LGU.
+        {/* Info blurb — updated to mention all 3 roles */}
+        <p style={{ fontSize: '0.72rem', color: '#8b949e', margin: '0 0 18px', lineHeight: 1.6 }}>
+          Use your <strong style={{ color: '#c9d1d9' }}>email</strong> if you are an LGU admin.
+          Use your <strong style={{ color: '#c9d1d9' }}>contact number</strong> and the password
+          provided by LGU if you are a registered household member or a rescuer.
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            {/* UPDATED: Changed Label to include Email */}
-            <label style={labelStyle}>Username</label>
+            <label style={labelStyle}>Email or Contact Number</label>
             <input
-              type="text" /* <--- CRITICAL FIX: Changed from "tel" to "text" para gumana sa mobile */
-              placeholder="Email or 09XX-XXX-XXXX"
+              type="text"
+              placeholder="admin@lgu.gov or 09XX-XXX-XXXX"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               required
               style={inputStyle}
-              autoCapitalize="none" /* <--- ADDED: Prevents mobile from capitalizing the first letter of an email */
-              autoCorrect="off"     /* <--- ADDED: Prevents mobile autocorrect from changing the email */
+              autoCapitalize="none"
+              autoCorrect="off"
             />
           </div>
 
@@ -123,7 +124,17 @@ export default function AuthModal({ onClose }: Props) {
           </div>
 
           {error && (
-            <p style={{ fontSize: '0.75rem', color: '#f85149', margin: 0, padding: '8px 10px', background: '#2d1217', border: '1px solid #f8514933', borderRadius: 4 }}>
+            <p
+              style={{
+                fontSize: '0.75rem',
+                color: '#f85149',
+                margin: 0,
+                padding: '8px 10px',
+                background: '#2d1217',
+                border: '1px solid #f8514933',
+                borderRadius: 4,
+              }}
+            >
               {error}
             </p>
           )}

@@ -13,7 +13,9 @@ async function hashPassword(password: string): Promise<string> {
 
 interface AuthUser {
   contact: string
-  role: 'admin' | 'citizen'
+  role: 'admin' | 'citizen' | 'rescuer'
+  // For rescuers: the asset id they belong to
+  assetId?: string
 }
 
 interface AuthStore {
@@ -35,7 +37,7 @@ export const useAuthStore = create<AuthStore>()(
       loading: false,
       showModal: false,
       authTab: 'login',
-      
+
       setShowModal: (v) => set({ showModal: v }),
       setAuthTab: (tab) => set({ authTab: tab }),
 
@@ -55,12 +57,13 @@ export const useAuthStore = create<AuthStore>()(
               return error.message
             }
           } else {
-            // SIGN UP VIA CUSTOM TABLE (For Household Members)
+            // SIGN UP VIA CUSTOM TABLE (For Household Members / Citizens only)
+            // Note: Rescuers are registered via AddAssetForm by the admin, not here.
             const passwordHash = await hashPassword(password)
             const { error } = await supabase
-              .from('households') // <-- UPDATED TABLE
-              .insert({ contact, citizen_password_hash: passwordHash }) // <-- UPDATED COLUMN
-              
+              .from('households')
+              .insert({ contact, citizen_password_hash: passwordHash })
+
             if (error) {
               set({ loading: false })
               if (error.code === '23505')
@@ -84,7 +87,7 @@ export const useAuthStore = create<AuthStore>()(
           const isEmail = contact.includes('@')
 
           if (isEmail) {
-            // LOGIN VIA SUPABASE AUTH (Admin Login)
+            // ── ADMIN LOGIN via Supabase Auth ────────────────────────────
             const { data, error } = await supabase.auth.signInWithPassword({
               email: contact,
               password: password,
@@ -94,25 +97,48 @@ export const useAuthStore = create<AuthStore>()(
               set({ loading: false })
               return 'Invalid admin email or password.'
             }
-          } else {
-            // LOGIN VIA CUSTOM TABLE (Household Member Login)
-            const passwordHash = await hashPassword(password)
-            const { data, error } = await supabase
-              .from('households')
-              .select('contact')
-              .eq('contact', contact)
-              .eq('citizen_password_hash', passwordHash)
-              .single()
 
-            if (error || !data) {
-              set({ loading: false })
-              return 'Invalid contact number or password.'
-            }
+            set({ user: { contact, role: 'admin' }, loading: false })
+            return null
           }
 
-          const role = isEmail ? 'admin' : 'citizen'
-          set({ user: { contact, role }, loading: false })
-          return null
+          // ── PHONE-BASED LOGIN ─────────────────────────────────────────
+          const passwordHash = await hashPassword(password)
+
+          // 1. Check assets table first (Rescuer)
+          const { data: assetData, error: assetError } = await supabase
+            .from('assets')
+            .select('id, contact')
+            .eq('contact', contact)
+            .eq('asset_password_hash', passwordHash)
+            .single()
+
+          if (!assetError && assetData) {
+            // ✅ Found in assets → Rescuer
+            set({
+              user: { contact, role: 'rescuer', assetId: assetData.id },
+              loading: false,
+            })
+            return null
+          }
+
+          // 2. Fall back to households table (Citizen)
+          const { data: householdData, error: householdError } = await supabase
+            .from('households')
+            .select('contact')
+            .eq('contact', contact)
+            .eq('citizen_password_hash', passwordHash)
+            .single()
+
+          if (!householdError && householdData) {
+            // ✅ Found in households → Citizen
+            set({ user: { contact, role: 'citizen' }, loading: false })
+            return null
+          }
+
+          // ❌ Not found in either table
+          set({ loading: false })
+          return 'Invalid contact number or password.'
         } catch {
           set({ loading: false })
           return 'Login failed. Please try again.'
@@ -120,7 +146,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: async () => {
-        // I-sign out din sa Supabase Auth para malinis ang session ng Admin
+        // Sign out from Supabase Auth (cleans up admin session)
         await supabase.auth.signOut()
         set({ user: null })
       },
