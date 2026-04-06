@@ -115,11 +115,11 @@ const HOTLINES: Record<string, { label: string; number: string }[]> = {
     { label: 'National Emergency', number: '911' },
   ],
   'Murcia': [
-    { label: 'MDRRMO Murcia',      number: '(034) 399-2101' }, // Default/Placeholder
+    { label: 'MDRRMO Murcia',      number: '(034) 399-2101' },
     { label: 'National Emergency', number: '911' },
   ],
   'Canlaon City': [
-    { label: 'CDRRMO Canlaon',     number: '(035) 400-0000' }, // Default/Placeholder
+    { label: 'CDRRMO Canlaon',     number: '(035) 400-0000' },
     { label: 'National Emergency', number: '911' },
   ],
 }
@@ -146,7 +146,6 @@ export default function GuestPanel() {
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
   const geocodingLib = useMapsLibrary('geocoding')
   
-  // Using `any` here prevents Next.js production build crashes if @types/google.maps isn't globally accessible
   const geocoder = useRef<any>(null) 
 
   useEffect(() => {
@@ -160,7 +159,6 @@ export default function GuestPanel() {
     geocoder.current.geocode(
       { address: q, componentRestrictions: { country: 'ph' } },
       (results: any, status: string) => {
-        // Changed from google.maps.GeocoderStatus.OK to 'OK' to prevent namespace errors
         if (status === 'OK' && results && results[0]) {
           const loc = results[0].geometry.location
           setPanToCoords({ lat: loc.lat(), lng: loc.lng(), zoom })
@@ -178,7 +176,6 @@ export default function GuestPanel() {
   const barangays = city ? (BARANGAYS_BY_CITY[city] ?? []) : []
   const hotlines = city ? (HOTLINES[city] ?? [{ label: 'National Emergency', number: '911' }]) : []
 
-  // Fetch area status when barangay is selected
   useEffect(() => {
     if (!city || !barangay) { 
       setStatus(null)
