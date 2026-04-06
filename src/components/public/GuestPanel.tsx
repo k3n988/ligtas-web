@@ -42,6 +42,19 @@ const BARANGAYS_BY_CITY: Record<string, string[]> = {
   'Murcia': [
     'Abejuvela', 'Amaya', 'Anahaw', 'Buenavista', 'Caliban', 'Canlandog', 'Cansilayan', 'Damsite', 'Iglau-an', 'Lopez Jaena', 'Minoyan', 'Pandanon', 'Salvacion', 'San Miguel', 'Santa Cruz', 'Santa Rosa', 'Talotog', 'Zone I', 'Zone II', 'Zone III', 'Zone IV', 'Zone V'
   ],
+  'La Carlota City': [
+  'Ara-al', 'Ayungon', 'Balabag',
+  'Barangay I', 'Barangay II', 'Barangay III',
+  'Batuan', 'Cubay', 'Haguimit',
+  'La Granja', 'Nagasi', 'Roberto S. Benedicto',
+  'San Miguel', 'Yubo',
+], 
+'Canlaon City': [
+  'Bayog', 'Binalbagan', 'Bucalan',
+  'Budlasan', 'Linothangan', 'Lumapao',
+  'Mabigo', 'Malaiba', 'Masulog',
+  'Ninoy Aquino', 'Panubigan', 'Pula',
+],
   'Sagay City': [
     'Bato', 'Baviera', 'Bulanon', 'Campo Himoga-an', 'Campo Santiago', 'Colonia Divina', 'Fabrica', 'General Luna', 'Himoga-an Baybay', 'Lopez Jaena', 'Malubon', 'Molocaboc', 'Old Sagay', 'Plaridel', 'Poblacion I', 'Poblacion II', 'Rizal', 'Sewane', 'Taba-ao', 'Tadlong', 'Vito'
   ],

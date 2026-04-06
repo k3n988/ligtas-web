@@ -65,6 +65,28 @@ export interface Household {
   pinSource?: 'gps' | 'map'
 }
 
+export interface HazardRadii {
+  critical: number  // km
+  high:     number
+  elevated: number
+  stable:   number  // outermost boundary
+}
+
+export interface HazardEvent {
+  id:       string
+  type:     string  // e.g. 'Flood', 'Volcano', 'Earthquake'
+  center:   { lat: number; lng: number }
+  radii:    HazardRadii
+  isActive: boolean
+}
+
+// Fields set at runtime by the hazard engine — not stored in DB
+export interface HazardOverlay {
+  dynamicTriage:        TriageLevel
+  isPriorityOverridden: boolean
+  distanceKm:           number
+}
+
 export interface Asset {
   id:      string
   name:    string
