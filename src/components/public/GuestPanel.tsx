@@ -146,7 +146,8 @@ export default function GuestPanel() {
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
   const geocodingLib = useMapsLibrary('geocoding')
   
-  const geocoder = useRef<any>(null) 
+  // FIXED: Replaced 'any' with 'google.maps.Geocoder | null'
+  const geocoder = useRef<google.maps.Geocoder | null>(null) 
 
   useEffect(() => {
     if (geocodingLib) {
@@ -156,9 +157,15 @@ export default function GuestPanel() {
 
   function geocodeAndPan(q: string, zoom: number) {
     if (!geocoder.current) return
+    
     geocoder.current.geocode(
       { address: q, componentRestrictions: { country: 'ph' } },
-      (results: any, status: string) => {
+      // FIXED: Typed 'results' and 'status' properly
+      (
+        results: google.maps.GeocoderResult[] | null, 
+        status: google.maps.GeocoderStatus
+      ) => {
+        // Safe check using standard string mapping for status (or enum if preferred)
         if (status === 'OK' && results && results[0]) {
           const loc = results[0].geometry.location
           setPanToCoords({ lat: loc.lat(), lng: loc.lng(), zoom })
@@ -185,6 +192,7 @@ export default function GuestPanel() {
 
     setFetching(true)
     setNoData(false)
+    
     supabase
       .from('area_status')
       .select('alert_level, advisory, updated_at')
