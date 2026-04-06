@@ -3,10 +3,26 @@
 interface Props {
   contact: string
   password: string
+  role: 'citizen' | 'rescuer'
   onClose: () => void
 }
 
-export default function PasswordModal({ contact, password, onClose }: Props) {
+export default function PasswordModal({ contact, password, role, onClose }: Props) {
+  const isCitizen = role === 'citizen'
+
+ const config = {
+  accent: isCitizen ? '#58a6ff' : '#58a6ff',
+    label: isCitizen ? 'CITIZEN Login Credentials' : 'RESCUER Login Credentials',
+    subtitle: isCitizen
+      ? 'Give these credentials to the Citizen.'
+      : 'Hand these to the Rescuers.',
+    successMsg: isCitizen
+      ? '✅ Citizen registered and pinned to map.'
+      : '✅ Asset registered and pinned to map.',
+    usernameLabel: isCitizen ? 'Username (Contact Number)' : 'Username (Contact Number)',
+    passwordColor: isCitizen ? '#58a6ff' : '#58a6ff',
+  }
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
@@ -31,7 +47,7 @@ export default function PasswordModal({ contact, password, onClose }: Props) {
           fontWeight: 700,
           color: '#fff',
         }}>
-          ✅ Asset registered and pinned to map.
+          {config.successMsg}
         </div>
 
         <h3 style={{
@@ -41,13 +57,13 @@ export default function PasswordModal({ contact, password, onClose }: Props) {
           marginBottom: 6,
           letterSpacing: '0.04em',
           textTransform: 'uppercase',
-          borderLeft: '4px solid #58a6ff',
+          borderLeft: `4px solid ${config.accent}`,
           paddingLeft: 10,
         }}>
-          RESCUERS Login Credentials
+          {config.label}
         </h3>
         <p style={{ color: '#8b949e', fontSize: '0.75rem', marginBottom: 20, paddingLeft: 14 }}>
-          Hand these to the Rescuers.{' '}
+          {config.subtitle}{' '}
           <strong style={{ color: '#f0883e' }}>Password will not be shown again.</strong>
         </p>
 
@@ -61,9 +77,9 @@ export default function PasswordModal({ contact, password, onClose }: Props) {
         }}>
           <div style={{ marginBottom: 14 }}>
             <span style={{ color: '#8b949e', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
-              Username (Contact Number)
+              {config.usernameLabel}
             </span>
-            <span style={{ color: '#58a6ff', fontSize: '1.05rem', fontWeight: 700 }}>
+            <span style={{ color: config.accent, fontSize: '1.05rem', fontWeight: 700 }}>
               {contact}
             </span>
           </div>
@@ -71,7 +87,7 @@ export default function PasswordModal({ contact, password, onClose }: Props) {
             <span style={{ color: '#8b949e', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
               Password (one-time display)
             </span>
-            <span style={{ color: '#3fb950', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.15em' }}>
+            <span style={{ color: config.passwordColor, fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.15em' }}>
               {password}
             </span>
           </div>
@@ -82,7 +98,7 @@ export default function PasswordModal({ contact, password, onClose }: Props) {
           style={{
             width: '100%',
             padding: 13,
-            background: '#58a6ff',
+            background: config.accent,
             color: '#fff',
             border: 'none',
             borderRadius: 6,
