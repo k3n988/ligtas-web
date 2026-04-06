@@ -44,6 +44,7 @@ export default function HazardControlPanel() {
     isSelectingCenter, setIsSelectingCenter,
     draftCenter,
   } = useHazardStore()
+  const clearHazard = useHazardStore((s) => s.clearHazard)  // ← move here
   const user = useAuthStore((s) => s.user)
 
   const [open,        setOpen]        = useState(false)
@@ -53,15 +54,17 @@ export default function HazardControlPanel() {
   const [elevated,    setElevated]    = useState('5')
   const [stable,      setStable]      = useState('10')
 
-  // If no hazard is active and user is not admin, don't show the panel at all
+  // Early return AFTER all hooks
   if (!activeHazard?.isActive && user?.role !== 'admin') return null
+
+  // ... rest of component
 
   function handlePickCenter() {
     setIsSelectingCenter(true)
     setOpen(false)
   }
 
-  const clearHazard = useHazardStore((s) => s.clearHazard)
+  
 
   async function handleActivate() {
     if (!draftCenter) return

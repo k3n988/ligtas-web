@@ -22,7 +22,6 @@ import type { HazardEvent } from '@/types'
 
 const DEFAULT_CENTER = { lat: 10.6765, lng: 122.9509 }
 
-// Default Google Maps style — only POIs and transit pins are hidden.
 const CLEAN_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'poi',                  stylers: [{ visibility: 'off' }] },
   { featureType: 'poi.attraction',       stylers: [{ visibility: 'off' }] },
@@ -36,7 +35,6 @@ const CLEAN_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'transit',              stylers: [{ visibility: 'off' }] },
 ]
 
-/** SVG crosshair pin used as the "pending / not yet saved" location marker. */
 function pendingPinIcon() {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
     <circle cx="16" cy="16" r="12" fill="#0d1117" stroke="#58a6ff" stroke-width="3" stroke-dasharray="5 3"/>
@@ -45,7 +43,6 @@ function pendingPinIcon() {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
 }
 
-/** Pans the map whenever panToId changes in the Zustand store. */
 function PanController() {
   const map = useMap()
   const panToId = useHouseholdStore((s) => s.panToId)
@@ -65,7 +62,6 @@ function PanController() {
   return null
 }
 
-/** Pans the map to arbitrary coordinates (used by the search bar). */
 function PanCoordsController() {
   const map = useMap()
   const panToCoords = useHouseholdStore((s) => s.panToCoords)
@@ -81,7 +77,6 @@ function PanCoordsController() {
   return null
 }
 
-/** Changes the map cursor to a crosshair while location-picking is active. */
 function PickCursorController() {
   const map = useMap()
   const pickingLocation    = useHouseholdStore((s) => s.pickingLocation)
@@ -94,6 +89,20 @@ function PickCursorController() {
 
   return null
 }
+/** Pans the map to the hazard center once when a new hazard is activated. */
+function HazardPanController() {
+  const map          = useMap()
+  const activeHazard = useHazardStore((s) => s.activeHazard)
+
+  useEffect(() => {
+    if (!map || !activeHazard?.isActive) return
+    map.panTo(activeHazard.center)
+    map.setZoom(12)
+  }, [map, activeHazard?.id]) // ← depend on id only, not the whole object
+                               //   so it fires once per new hazard, not on every re-render
+
+  return null
+}
 
 const HAZARD_RING_STYLE: Record<string, { stroke: string; fill: string }> = {
   critical: { stroke: '#ff4d4d', fill: '#ff4d4d' },
@@ -102,7 +111,6 @@ const HAZARD_RING_STYLE: Record<string, { stroke: string; fill: string }> = {
   stable:   { stroke: '#58a6ff', fill: '#58a6ff' },
 }
 
-/** Renders concentric hazard circles on the map via the raw Maps API. */
 function HazardCircles({ hazard }: { hazard: HazardEvent }) {
   const map = useMap()
 
@@ -110,7 +118,6 @@ function HazardCircles({ hazard }: { hazard: HazardEvent }) {
     if (!map) return
     const circles: google.maps.Circle[] = []
 
-    // Draw outermost → innermost so inner rings appear on top
     const rings = [
       { key: 'stable',   km: hazard.radii.stable   },
       { key: 'elevated', km: hazard.radii.elevated  },
@@ -122,8 +129,8 @@ function HazardCircles({ hazard }: { hazard: HazardEvent }) {
       const style = HAZARD_RING_STYLE[key]
       const c = new google.maps.Circle({
         map,
-        center:      hazard.center,
-        radius:      km * 1000,
+        center:        hazard.center,
+        radius:        km * 1000,
         strokeColor:   style.stroke,
         strokeOpacity: 0.9,
         strokeWeight:  2,
@@ -134,13 +141,12 @@ function HazardCircles({ hazard }: { hazard: HazardEvent }) {
       circles.push(c)
     })
 
-    // Hazard center marker
     const pin = new google.maps.Marker({
       map,
       position: hazard.center,
       title:    `${hazard.type} epicenter`,
       icon: {
-        path: google.maps.SymbolPath.CIRCLE,
+        path:          google.maps.SymbolPath.CIRCLE,
         scale:         10,
         fillColor:     '#ff4d4d',
         fillOpacity:   1,
@@ -159,71 +165,56 @@ function HazardCircles({ hazard }: { hazard: HazardEvent }) {
   return null
 }
 
-/**
- * When a household is selected, finds the nearest asset and draws a
- * driving route from that asset to the household using the Directions API.
- */
 function RouteOverlay() {
-  const map = useMap()
-  const routesLib = useMapsLibrary('routes')
+  const map        = useMap()
+  const routesLib  = useMapsLibrary('routes')
   const households = useHouseholdStore((s) => s.households)
-  const assets = useAssetStore((s) => s.assets)
+  const assets     = useAssetStore((s) => s.assets)
   const selectedId = useHouseholdStore((s) => s.selectedId)
-  const user = useAuthStore((s) => s.user) 
+  const user       = useAuthStore((s) => s.user)
 
   const [renderer, setRenderer] = useState<google.maps.DirectionsRenderer | null>(null)
 
-  // Create the renderer once
   useEffect(() => {
     if (!routesLib || !map) return
     const r = new routesLib.DirectionsRenderer({
       suppressMarkers: true,
       polylineOptions: {
-        strokeColor: '#58a6ff',
-        strokeWeight: 5,
+        strokeColor:   '#58a6ff',
+        strokeWeight:  5,
         strokeOpacity: 0.85,
       },
     })
     setRenderer(r)
-    return () => {
-      r.setMap(null)
-    }
+    return () => { r.setMap(null) }
   }, [routesLib, map])
 
-  // Request route whenever selectedId changes
   useEffect(() => {
-    // If no renderer, no map, OR NO USER LOGGED IN, do not draw routes.
     if (!renderer || !routesLib || !map || !user) {
       renderer?.setMap(null)
       return
     }
-
     if (!selectedId) {
       renderer.setMap(null)
       return
     }
-
     const hh = households.find((h) => h.id === selectedId)
     if (!hh || !hh.assignedAssetId || hh.status === 'Rescued') {
       renderer.setMap(null)
       return
     }
-
-    // Only route if the assigned asset is currently Dispatching
     const assignedAsset = assets.find((a) => a.id === hh.assignedAssetId)
     if (!assignedAsset || assignedAsset.status !== 'Dispatching') {
       renderer.setMap(null)
       return
     }
-
     renderer.setMap(map)
-
     const service = new routesLib.DirectionsService()
     service.route(
       {
-        origin: { lat: assignedAsset.lat, lng: assignedAsset.lng },
+        origin:      { lat: assignedAsset.lat, lng: assignedAsset.lng },
         destination: { lat: hh.lat, lng: hh.lng },
-        travelMode: google.maps.TravelMode.DRIVING,
+        travelMode:  google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
         if (status === google.maps.DirectionsStatus.OK && result) {
@@ -243,30 +234,26 @@ function MapInner() {
   const pendingCoords      = useHouseholdStore((s) => s.pendingCoords)
   const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
   const setPendingCoords   = useHouseholdStore((s) => s.setPendingCoords)
-  const user               = useAuthStore((s) => s.user)
 
-  const activeHazard          = useHazardStore((s) => s.activeHazard)
-  const isSelectingCenter     = useHazardStore((s) => s.isSelectingCenter)
-  const setIsSelectingCenter  = useHazardStore((s) => s.setIsSelectingCenter)
-  const setDraftCenter        = useHazardStore((s) => s.setDraftCenter)
+  const activeHazard         = useHazardStore((s) => s.activeHazard)
+  const isSelectingCenter    = useHazardStore((s) => s.isSelectingCenter)
+  const setIsSelectingCenter = useHazardStore((s) => s.setIsSelectingCenter)
+  const setDraftCenter       = useHazardStore((s) => s.setDraftCenter)
 
   const [openAssetId, setOpenAssetId] = useState<string | null>(null)
 
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
       setOpenAssetId(null)
-
       const lat = e.detail.latLng?.lat
       const lng = e.detail.latLng?.lng
       if (lat == null || lng == null) return
 
-      // Hazard center picking takes priority over household pin
       if (isSelectingCenter) {
         setDraftCenter({ lat, lng })
         setIsSelectingCenter(false)
         return
       }
-
       if (!pickingLocation) return
       setPendingCoords({ lat, lng })
       setPickingLocation(false)
@@ -276,6 +263,7 @@ function MapInner() {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+
       {/* Banner shown while picking hazard center */}
       {isSelectingCenter && (
         <div style={{
@@ -293,25 +281,15 @@ function MapInner() {
 
       {/* Banner shown while admin is picking a location */}
       {pickingLocation && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 12,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 20,
-            background: '#58a6ff',
-            color: '#0d1117',
-            padding: '8px 18px',
-            borderRadius: 20,
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            boxShadow: '0 4px 12px rgba(0,0,0,.5)',
-            pointerEvents: 'none',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <div style={{
+          position: 'absolute', top: 12, left: '50%',
+          transform: 'translateX(-50%)', zIndex: 20,
+          background: '#58a6ff', color: '#0d1117',
+          padding: '8px 18px', borderRadius: 20,
+          fontFamily: 'Inter, sans-serif', fontSize: '0.82rem',
+          fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,.5)',
+          pointerEvents: 'none', whiteSpace: 'nowrap',
+        }}>
           📍 Click on the map to pin the household location
         </div>
       )}
@@ -321,19 +299,11 @@ function MapInner() {
         <button
           onClick={() => setPickingLocation(false)}
           style={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            zIndex: 20,
-            background: '#161b22',
-            border: '1px solid #30363d',
-            color: '#c9d1d9',
-            padding: '7px 14px',
-            borderRadius: 6,
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '0.78rem',
-            fontWeight: 600,
-            cursor: 'pointer',
+            position: 'absolute', top: 12, right: 12, zIndex: 20,
+            background: '#161b22', border: '1px solid #30363d',
+            color: '#c9d1d9', padding: '7px 14px', borderRadius: 6,
+            fontFamily: 'Inter, sans-serif', fontSize: '0.78rem',
+            fontWeight: 600, cursor: 'pointer',
           }}
         >
           ✕ Cancel
@@ -353,28 +323,25 @@ function MapInner() {
         <PanController />
         <PanCoordsController />
         <PickCursorController />
+        <HazardPanController />   {/* ← add this */}
         <RouteOverlay />
 
-        {/* Hazard rings — rendered whenever an active hazard exists */}
         {activeHazard?.isActive && <HazardCircles hazard={activeHazard} />}
 
-        {/* ALWAYS SHOW APPROVED HOUSEHOLDS (Guest or Admin) */}
         {households.filter((hh) => hh.approvalStatus === 'approved').map((hh) => (
           <HouseholdMarker key={hh.id} household={hh} />
         ))}
 
-        {/* SHOW ASSETS FOR EVERYONE (GUEST OR ADMIN) */}
         {assets.map((asset) => (
-          <AssetMarker 
-            key={asset.id} 
-            asset={asset} 
+          <AssetMarker
+            key={asset.id}
+            asset={asset}
             isOpen={openAssetId === asset.id}
             onOpen={() => setOpenAssetId(asset.id)}
             onClose={() => setOpenAssetId(null)}
           />
         ))}
 
-        {/* Preview pin for pending registration */}
         {pendingCoords && (
           <Marker
             position={pendingCoords}
@@ -387,12 +354,11 @@ function MapInner() {
         <MapLegend />
       </Map>
 
-      {/* Hazard control panel — admins only */}
-      {user?.role === 'admin' && <HazardControlPanel />}
+      {/* ✅ HazardControlPanel is OUTSIDE <Map> so it renders as a proper DOM overlay */}
+      <HazardControlPanel />
+
     </div>
   )
 }
 
-export default function MapView() {
-  return <MapInner />
-}
+export default MapInner

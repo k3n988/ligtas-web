@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { supabase } from '@/lib/supabase'
 import { useHouseholdStore } from '@/store/householdStore'
+import { useHazardStore } from '@/store/hazardStore'
 
 // ── Location data ────────────────────────────────────────────────────────────
 
@@ -144,9 +145,9 @@ interface AreaStatus {
 
 export default function GuestPanel() {
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
+  const activeHazard = useHazardStore((s) => s.activeHazard)
   const geocodingLib = useMapsLibrary('geocoding')
   
-  // FIXED: Replaced 'any' with 'google.maps.Geocoder | null'
   const geocoder = useRef<google.maps.Geocoder | null>(null) 
 
   useEffect(() => {
@@ -160,12 +161,10 @@ export default function GuestPanel() {
     
     geocoder.current.geocode(
       { address: q, componentRestrictions: { country: 'ph' } },
-      // FIXED: Typed 'results' and 'status' properly
       (
         results: google.maps.GeocoderResult[] | null, 
         status: google.maps.GeocoderStatus
       ) => {
-        // Safe check using standard string mapping for status (or enum if preferred)
         if (status === 'OK' && results && results[0]) {
           const loc = results[0].geometry.location
           setPanToCoords({ lat: loc.lat(), lng: loc.lng(), zoom })
@@ -240,6 +239,27 @@ export default function GuestPanel() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* ── 0. Active Disaster Banner ──────────────────────────────────────── */}
+      {activeHazard?.isActive && (
+        <div style={{
+          background: '#3d1a1a', 
+          border: '1px solid #da3633', 
+          borderRadius: 6, 
+          padding: 16,
+          boxShadow: '0 4px 12px rgba(218, 54, 51, 0.15)'
+        }}>
+          <p style={{ margin: '0 0 4px', fontSize: '0.65rem', color: '#ff4d4d', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700 }}>
+            ⚠️ Active Disaster Warning
+          </p>
+          <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase' }}>
+            {activeHazard.type}
+          </p>
+          <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#e6edf3', lineHeight: 1.5 }}>
+            A <strong>{activeHazard.type.toLowerCase()}</strong> hazard zone is currently being monitored on the map. Please stay alert and follow local advisories.
+          </p>
+        </div>
+      )}
 
       {/* ── 1. Location Selector ─────────────────────────────────────────── */}
       <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 16 }}>
