@@ -71,6 +71,6 @@ export function householdToRow(h: Household) {
     dispatched_at:     h.dispatchedAt     ?? null,
     updated_at:        h.updated_at       ?? null,
     citizen_password_hash: h.citizenPasswordHash ?? null,
-
+//s
   }
 }

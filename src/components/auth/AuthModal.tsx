@@ -91,7 +91,7 @@ export default function AuthModal({ onClose }: Props) {
 
         {/* Info blurb */}
         <p style={{ fontSize: '0.72rem', color: '#8b949e', margin: '0 0 18px', lineHeight: 1.5 }}>
-          Use your email (LGU admin) or the contact number and password given by your Barangay Health Worker.
+          Use your email (LGU admin) or the contact number and password given by LGU.
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
