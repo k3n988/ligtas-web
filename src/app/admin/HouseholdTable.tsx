@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { useHouseholdStore } from '@/store/householdStore'
 import { assessTriage } from '@/lib/triage'
-import type { Household, RegistrySource, Vulnerability } from '@/types'
+import type { Household, RegistrySource, TriageLevel, Vulnerability } from '@/types'
 
 const TRIAGE_COLOR: Record<string, string> = {
   CRITICAL: '#ff4d4d',
@@ -330,7 +330,13 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
 
 // Nag-add tayo ng "view" prop para pwede mong i-control kung aling view ang lalabas 
 // mula sa labas (sa mismong page.tsx)
-export default function HouseholdTable({ view = 'registry' }: { view?: 'registry' | 'pending' }) {
+export default function HouseholdTable({
+  view = 'registry',
+  triageOverrides = new Map(),
+}: {
+  view?: 'registry' | 'pending'
+  triageOverrides?: Map<string, TriageLevel>
+}) {
   const households       = useHouseholdStore((s) => s.households)
   const deleteHousehold  = useHouseholdStore((s) => s.deleteHousehold)
   const approveHousehold = useHouseholdStore((s) => s.approveHousehold)
@@ -581,12 +587,27 @@ export default function HouseholdTable({ view = 'registry' }: { view?: 'registry
                       <div style={{ fontSize: '0.72rem', color: '#8b949e' }}>{hh.city}</div>
                     </td>
                     <td style={{ padding: '12px 14px' }}>
-                      <span style={{
-                        color: TRIAGE_COLOR[hh.triage.level],
-                        fontWeight: 700, fontSize: '0.75rem',
-                      }}>
-                        {hh.triage.level}
-                      </span>
+                      {(() => {
+                        const override = triageOverrides.get(hh.id)
+                        const level    = override ?? hh.triage.level
+                        return (
+                          <>
+                            <span style={{ color: TRIAGE_COLOR[level], fontWeight: 700, fontSize: '0.75rem' }}>
+                              {level}
+                            </span>
+                            {override && override !== hh.triage.level && (
+                              <span title={`Original: ${hh.triage.level}`} style={{
+                                marginLeft: 5, fontSize: '0.6rem', fontWeight: 700,
+                                color: '#f39c12', background: '#2d1f0a',
+                                border: '1px solid #9e6a03', borderRadius: 3,
+                                padding: '1px 4px', verticalAlign: 'middle',
+                              }}>
+                                ⚠ HAZARD
+                              </span>
+                            )}
+                          </>
+                        )
+                      })()}
                       {hh.vulnArr.length > 0 && (
                         <div style={{ fontSize: '0.68rem', color: '#8b949e', marginTop: 2 }}>
                           {hh.vulnArr.join(', ')}

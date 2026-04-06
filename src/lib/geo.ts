@@ -1,4 +1,25 @@
 // src/lib/geo.ts
+import type { HazardEvent, TriageLevel } from '@/types'
+
+/**
+ * Dynamically overrides a household's triage level based on its distance
+ * from an active hazard center. Returns the original level if no hazard is active
+ * or the household is outside all radii.
+ */
+export function getDynamicTriage(
+  lat: number,
+  lng: number,
+  originalLevel: TriageLevel,
+  hazard: HazardEvent | null,
+): TriageLevel {
+  if (!hazard?.isActive) return originalLevel
+  const d = haversineKm(lat, lng, hazard.center.lat, hazard.center.lng)
+  if (d <= hazard.radii.critical) return 'CRITICAL'
+  if (d <= hazard.radii.high)     return 'HIGH'
+  if (d <= hazard.radii.elevated) return 'ELEVATED'
+  if (d <= hazard.radii.stable)   return 'STABLE'
+  return originalLevel
+}
 
 /** Haversine distance between two lat/lng pairs in kilometers. */
 export function haversineKm(

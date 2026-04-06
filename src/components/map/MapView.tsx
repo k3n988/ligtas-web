@@ -12,11 +12,13 @@ import {
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { useAuthStore } from '@/store/authStore'
-import { haversineKm } from '@/lib/geo'
+import { useHazardStore } from '@/store/hazardStore'
 import HouseholdMarker from './HouseholdMarker'
 import AssetMarker from './AssetMarker'
 import MapLegend from './MapLegend'
+import HazardControlPanel from './HazardControlPanel'
 import { Marker } from '@vis.gl/react-google-maps'
+import type { HazardEvent } from '@/types'
 
 const DEFAULT_CENTER = { lat: 10.6765, lng: 122.9509 }
 
@@ -82,12 +84,77 @@ function PanCoordsController() {
 /** Changes the map cursor to a crosshair while location-picking is active. */
 function PickCursorController() {
   const map = useMap()
-  const pickingLocation = useHouseholdStore((s) => s.pickingLocation)
+  const pickingLocation    = useHouseholdStore((s) => s.pickingLocation)
+  const isSelectingCenter  = useHazardStore((s) => s.isSelectingCenter)
 
   useEffect(() => {
     if (!map) return
-    map.setOptions({ draggableCursor: pickingLocation ? 'crosshair' : '' })
-  }, [map, pickingLocation])
+    map.setOptions({ draggableCursor: (pickingLocation || isSelectingCenter) ? 'crosshair' : '' })
+  }, [map, pickingLocation, isSelectingCenter])
+
+  return null
+}
+
+const HAZARD_RING_STYLE: Record<string, { stroke: string; fill: string }> = {
+  critical: { stroke: '#ff4d4d', fill: '#ff4d4d' },
+  high:     { stroke: '#f39c12', fill: '#f39c12' },
+  elevated: { stroke: '#f1c40f', fill: '#f1c40f' },
+  stable:   { stroke: '#58a6ff', fill: '#58a6ff' },
+}
+
+/** Renders concentric hazard circles on the map via the raw Maps API. */
+function HazardCircles({ hazard }: { hazard: HazardEvent }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!map) return
+    const circles: google.maps.Circle[] = []
+
+    // Draw outermost → innermost so inner rings appear on top
+    const rings = [
+      { key: 'stable',   km: hazard.radii.stable   },
+      { key: 'elevated', km: hazard.radii.elevated  },
+      { key: 'high',     km: hazard.radii.high      },
+      { key: 'critical', km: hazard.radii.critical  },
+    ] as const
+
+    rings.forEach(({ key, km }) => {
+      const style = HAZARD_RING_STYLE[key]
+      const c = new google.maps.Circle({
+        map,
+        center:      hazard.center,
+        radius:      km * 1000,
+        strokeColor:   style.stroke,
+        strokeOpacity: 0.9,
+        strokeWeight:  2,
+        fillColor:     style.fill,
+        fillOpacity:   0.08,
+        clickable:     false,
+      })
+      circles.push(c)
+    })
+
+    // Hazard center marker
+    const pin = new google.maps.Marker({
+      map,
+      position: hazard.center,
+      title:    `${hazard.type} epicenter`,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale:         10,
+        fillColor:     '#ff4d4d',
+        fillOpacity:   1,
+        strokeColor:   '#fff',
+        strokeWeight:  2,
+      },
+      zIndex: 500,
+    })
+
+    return () => {
+      circles.forEach((c) => c.setMap(null))
+      pin.setMap(null)
+    }
+  }, [map, hazard])
 
   return null
 }
@@ -170,34 +237,60 @@ function RouteOverlay() {
 }
 
 function MapInner() {
-  const households = useHouseholdStore((s) => s.households)
-  const assets = useAssetStore((s) => s.assets)
-  const pickingLocation = useHouseholdStore((s) => s.pickingLocation)
-  const pendingCoords = useHouseholdStore((s) => s.pendingCoords)
+  const households         = useHouseholdStore((s) => s.households)
+  const assets             = useAssetStore((s) => s.assets)
+  const pickingLocation    = useHouseholdStore((s) => s.pickingLocation)
+  const pendingCoords      = useHouseholdStore((s) => s.pendingCoords)
   const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
-  const setPendingCoords = useHouseholdStore((s) => s.setPendingCoords)
-  const user = useAuthStore((s) => s.user) 
+  const setPendingCoords   = useHouseholdStore((s) => s.setPendingCoords)
+  const user               = useAuthStore((s) => s.user)
 
-  // <-- ADDED STATE TO TRACK OPEN ASSET -->
+  const activeHazard          = useHazardStore((s) => s.activeHazard)
+  const isSelectingCenter     = useHazardStore((s) => s.isSelectingCenter)
+  const setIsSelectingCenter  = useHazardStore((s) => s.setIsSelectingCenter)
+  const setDraftCenter        = useHazardStore((s) => s.setDraftCenter)
+
   const [openAssetId, setOpenAssetId] = useState<string | null>(null)
 
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
-      // If user clicks the map, close the open asset popup
       setOpenAssetId(null)
-        
-      if (!pickingLocation) return
+
       const lat = e.detail.latLng?.lat
       const lng = e.detail.latLng?.lng
       if (lat == null || lng == null) return
+
+      // Hazard center picking takes priority over household pin
+      if (isSelectingCenter) {
+        setDraftCenter({ lat, lng })
+        setIsSelectingCenter(false)
+        return
+      }
+
+      if (!pickingLocation) return
       setPendingCoords({ lat, lng })
       setPickingLocation(false)
     },
-    [pickingLocation, setPendingCoords, setPickingLocation],
+    [isSelectingCenter, pickingLocation, setDraftCenter, setIsSelectingCenter, setPendingCoords, setPickingLocation],
   )
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {/* Banner shown while picking hazard center */}
+      {isSelectingCenter && (
+        <div style={{
+          position: 'absolute', top: 12, left: '50%',
+          transform: 'translateX(-50%)', zIndex: 20,
+          background: '#ff4d4d', color: '#fff',
+          padding: '8px 18px', borderRadius: 20,
+          fontFamily: 'Inter, sans-serif', fontSize: '0.82rem',
+          fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,.5)',
+          pointerEvents: 'none', whiteSpace: 'nowrap',
+        }}>
+          ⚠ Click on the map to set the hazard epicenter
+        </div>
+      )}
+
       {/* Banner shown while admin is picking a location */}
       {pickingLocation && (
         <div
@@ -262,6 +355,9 @@ function MapInner() {
         <PickCursorController />
         <RouteOverlay />
 
+        {/* Hazard rings — rendered whenever an active hazard exists */}
+        {activeHazard?.isActive && <HazardCircles hazard={activeHazard} />}
+
         {/* ALWAYS SHOW APPROVED HOUSEHOLDS (Guest or Admin) */}
         {households.filter((hh) => hh.approvalStatus === 'approved').map((hh) => (
           <HouseholdMarker key={hh.id} household={hh} />
@@ -290,6 +386,9 @@ function MapInner() {
 
         <MapLegend />
       </Map>
+
+      {/* Hazard control panel — admins only */}
+      {user?.role === 'admin' && <HazardControlPanel />}
     </div>
   )
 }

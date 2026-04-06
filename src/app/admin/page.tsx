@@ -1,19 +1,36 @@
 'use client'
 // src/app/admin/page.tsx
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
+import { useHazardStore } from '@/store/hazardStore'
+import { haversineKm, getDynamicTriage } from '@/lib/geo'
 import HouseholdTable from './HouseholdTable'
 import AssetTable from './AssetTable'
 import SummaryReportModal from '@/components/dashboard/SummaryReportModal'
+import type { TriageLevel } from '@/types'
 
 export default function AdminPage() {
   const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
   const households     = useHouseholdStore((s) => s.households)
   const assets         = useAssetStore((s) => s.assets)
+  const activeHazard   = useHazardStore((s) => s.activeHazard)
   const router         = useRouter()
+
+  // Build a map of id → dynamicTriage for households inside the hazard zone
+  const triageOverrides = useMemo<Map<string, TriageLevel>>(() => {
+    const map = new Map<string, TriageLevel>()
+    if (!activeHazard?.isActive) return map
+    for (const hh of households) {
+      const dist = haversineKm(hh.lat, hh.lng, activeHazard.center.lat, activeHazard.center.lng)
+      if (dist <= activeHazard.radii.stable) {
+        map.set(hh.id, getDynamicTriage(hh.lat, hh.lng, hh.triage.level, activeHazard))
+      }
+    }
+    return map
+  }, [households, activeHazard])
 
   const [activeTab, setActiveTab] = useState<'summary' | 'registry' | 'assets'>('summary')
 
@@ -187,7 +204,25 @@ export default function AdminPage() {
             onClose={() => setActiveTab('registry')}
           />
         )}
-        {activeTab === 'registry' && <HouseholdTable />}
+        {activeTab === 'registry' && (
+          <>
+            {activeHazard?.isActive && (
+              <div style={{
+                background: '#3d1a1a', border: '1px solid #da3633',
+                borderRadius: 6, padding: '10px 16px', marginBottom: 14,
+                display: 'flex', alignItems: 'center', gap: 10,
+                fontSize: '0.8rem', fontWeight: 600, color: '#ff4d4d',
+              }}>
+                ⚠ Hazard Layer Active — <span style={{ color: '#f39c12' }}>{activeHazard.type}</span>
+                <span style={{ color: '#8b949e', fontWeight: 400 }}>
+                  · {triageOverrides.size} households with overridden triage
+                  · Critical ≤{activeHazard.radii.critical}km / High ≤{activeHazard.radii.high}km / Elevated ≤{activeHazard.radii.elevated}km / Stable ≤{activeHazard.radii.stable}km
+                </span>
+              </div>
+            )}
+            <HouseholdTable triageOverrides={triageOverrides} />
+          </>
+        )}
         {activeTab === 'assets' && <AssetTable />}
       </div>
 
