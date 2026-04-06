@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import type { Household } from '@/types'
 
+
 const STATUS_CONFIG = {
   Pending: {
     color: '#d29922', bg: '#1f1a0e', border: '#9e6a03',
