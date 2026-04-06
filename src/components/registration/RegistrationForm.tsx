@@ -593,9 +593,9 @@ export default function RegistrationForm() {
         </button>
       </form>
 
-      {credModal && (
-        <PasswordModal contact={credModal.contact} password={credModal.password} onClose={() => setCredModal(null)} />
-      )}
+          {credModal && (
+      <PasswordModal contact={credModal.contact} password={credModal.password} role="citizen" onClose={() => setCredModal(null)} />
+    )}
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </>
