@@ -18,6 +18,12 @@ const ADMIN_TABS = [
   { href: '/admin',    label: '🗺️ DASHBOARD' },
 ]
 
+const RESCUER_TABS = [
+  { href: '/queue',  label: '🚨 QUEUE'    },
+  { href: '/assets', label: '🚤 ASSETS'   },
+  { href: '/admin',  label: '🗺️ DASHBOARD' },
+]
+
 const CITIZEN_TABS: { href: string; label: string }[] = []
 
 interface Suggestion {
@@ -135,6 +141,14 @@ export default function Header() {
     if (suggestions.length > 0) selectSuggestion(suggestions[0])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggestions])
+
+  function getTabsForRole() {
+    if (user?.role === 'admin') return ADMIN_TABS
+    if (user?.role === 'rescuer') return RESCUER_TABS
+    return CITIZEN_TABS
+  }
+
+  const tabs = getTabsForRole()
 
   return (
     <div style={{ flexShrink: 0 }}>
@@ -368,8 +382,8 @@ export default function Header() {
         )}
       </div>
 
-      {/* ── Nav tabs (logged in only) ────────────────────────────────────── */}
-      {user && (user.role === 'admin' || CITIZEN_TABS.length > 0) && (
+      {/* ── Nav tabs (admin + rescuer only) ─────────────────────────────── */}
+      {user && tabs.length > 0 && (
         <div
           style={{
             display: 'flex',
@@ -382,11 +396,10 @@ export default function Header() {
           }}
           className="hide-scrollbar"
         >
-          {(user.role === 'admin' ? ADMIN_TABS : CITIZEN_TABS).map(({ href, label }) => {
+          {tabs.map(({ href, label }) => {
             const active = pathname === href
             return (
               <Link
-              //d
                 key={href}
                 href={href}
                 style={{
