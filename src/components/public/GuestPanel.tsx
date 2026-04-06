@@ -10,7 +10,7 @@ import { useHouseholdStore } from '@/store/householdStore'
 
 const CITIES = [
   'Bacolod City', 'Bago City', 'Cadiz City', 'Escalante City',
-  'Himamaylan City', 'Kabankalan City', 'La Carlota City',
+  'Himamaylan City', 'Kabankalan City','Canlaon City', 'La Carlota City',
   'Sagay City', 'San Carlos City', 'Silay City', 'Talisay City', 'Victorias City',
 ]
 
@@ -42,6 +42,12 @@ const BARANGAYS_BY_CITY: Record<string, string[]> = {
   'Murcia': [
     'Abejuvela', 'Amaya', 'Anahaw', 'Buenavista', 'Caliban', 'Canlandog', 'Cansilayan', 'Damsite', 'Iglau-an', 'Lopez Jaena', 'Minoyan', 'Pandanon', 'Salvacion', 'San Miguel', 'Santa Cruz', 'Santa Rosa', 'Talotog', 'Zone I', 'Zone II', 'Zone III', 'Zone IV', 'Zone V'
   ],
+  'Canlaon City': [
+  'Bayog', 'Binalbagan', 'Bucalan',
+  'Budlasan', 'Linothangan', 'Lumapao',
+  'Mabigo', 'Malaiba', 'Masulog',
+  'Ninoy Aquino', 'Panubigan', 'Pula',
+],
   'La Carlota City': [
   'Ara-al', 'Ayungon', 'Balabag',
   'Barangay I', 'Barangay II', 'Barangay III',
@@ -49,12 +55,6 @@ const BARANGAYS_BY_CITY: Record<string, string[]> = {
   'La Granja', 'Nagasi', 'Roberto S. Benedicto',
   'San Miguel', 'Yubo',
 ], 
-'Canlaon City': [
-  'Bayog', 'Binalbagan', 'Bucalan',
-  'Budlasan', 'Linothangan', 'Lumapao',
-  'Mabigo', 'Malaiba', 'Masulog',
-  'Ninoy Aquino', 'Panubigan', 'Pula',
-],
   'Sagay City': [
     'Bato', 'Baviera', 'Bulanon', 'Campo Himoga-an', 'Campo Santiago', 'Colonia Divina', 'Fabrica', 'General Luna', 'Himoga-an Baybay', 'Lopez Jaena', 'Malubon', 'Molocaboc', 'Old Sagay', 'Plaridel', 'Poblacion I', 'Poblacion II', 'Rizal', 'Sewane', 'Taba-ao', 'Tadlong', 'Vito'
   ],
