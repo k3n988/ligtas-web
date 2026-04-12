@@ -9,7 +9,6 @@ import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import AuthModal from '@/components/auth/AuthModal'
-import WeatherStrip from './WeatherStrip'
 import ThemeToggle from './ThemeToggle'
 
 const ADMIN_TABS = [
@@ -180,7 +179,7 @@ export default function Header() {
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
           <Image
             src="/logo2.png"
             alt="LIGTAS Logo"
@@ -190,10 +189,10 @@ export default function Header() {
             style={{ objectFit: 'contain' }}
           />
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h1 style={{ margin: 0, fontSize: '1.12rem', color: 'var(--fg-on-dark)', letterSpacing: 1.6, lineHeight: 1.05 }}>
+            <h1 style={{ margin: 0, fontSize: '1.12rem', color: 'var(--topbar-text)', letterSpacing: 1.6, lineHeight: 1.05 }}>
               L.I.G.T.A.S.
             </h1>
-            <p style={{ margin: '2px 0 0', fontSize: '0.54rem', color: 'rgba(255,255,255,0.72)', letterSpacing: 0.28, lineHeight: 1.35 }}>
+            <p style={{ margin: '2px 0 0', fontSize: '0.54rem', color: 'var(--topbar-muted-text)', letterSpacing: 0.28, lineHeight: 1.35 }}>
               Location Intelligence &amp; Geospatial Triage
               <br />
               for Accelerated Support
@@ -201,21 +200,20 @@ export default function Header() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', rowGap: 6 }}>
-          <ThemeToggle />
-          {user ? (
-            <>
-              <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.76)', padding: '0 2px' }}>{user.contact}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', rowGap: 6 }}>
+            <ThemeToggle />
+            {user ? (
               <button
                 onClick={handleLogout}
                 style={{
-                  padding: '5px 10px',
-                  background: 'transparent',
-                  border: '1px solid rgba(255,255,255,0.22)',
-                  color: 'rgba(255,255,255,0.86)',
-                  borderRadius: 4,
+                  padding: '6px 12px',
+                  background: 'var(--topbar-control-bg)',
+                  border: '1px solid var(--topbar-control-border)',
+                  color: 'var(--topbar-text)',
+                  borderRadius: 8,
                   fontSize: '0.62rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   letterSpacing: 1,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
@@ -223,30 +221,33 @@ export default function Header() {
               >
                 LOG OUT
               </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setShowModal(true)}
-              style={{
-                padding: '6px 12px',
-                background: 'var(--accent-blue)',
-                border: 'none',
-                color: '#fff',
-                borderRadius: 4,
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                letterSpacing: 1,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              LOG IN
-            </button>
+            ) : (
+              <button
+                onClick={() => setShowModal(true)}
+                style={{
+                  padding: '7px 12px',
+                  background: '#0a67d0',
+                  border: '1px solid #0a67d0',
+                  color: '#fff',
+                  borderRadius: 8,
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                LOG IN
+              </button>
+            )}
+          </div>
+          {user && (
+            <span style={{ fontSize: '0.62rem', color: 'var(--topbar-muted-text)', padding: '0 2px', textAlign: 'right', maxWidth: 180, overflowWrap: 'anywhere' }}>
+              {user.contact}
+            </span>
           )}
         </div>
       </div>
-
-      <WeatherStrip />
 
       <div
         style={{

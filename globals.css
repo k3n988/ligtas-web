@@ -20,8 +20,12 @@
   --bg-accent-soft:       #eaf3ff;
 
   /* Top-bar stays dark in both themes — emergency branding + field readability */
-  --topbar-bg:            #09111c;
+  --topbar-bg:            #ffffff;
   --topbar-border:        #da3633;
+  --topbar-text:          #0f172a;
+  --topbar-muted-text:    #5b6776;
+  --topbar-control-bg:    #ffffff;
+  --topbar-control-border:#cfd8e3;
 
   /* Text */
   --fg-default:           #14202b;
@@ -77,6 +81,10 @@
 
   --topbar-bg:            #05090f;
   --topbar-border:        #da3633;
+  --topbar-text:          #e6edf3;
+  --topbar-muted-text:    rgba(255,255,255,0.72);
+  --topbar-control-bg:    transparent;
+  --topbar-control-border:rgba(255,255,255,0.22);
 
   /* Text */
   --fg-default:           #ecf3fb;
@@ -227,13 +235,13 @@ input:focus, select:focus, textarea:focus {
   display:         flex;
   align-items:     center;
   gap:             6px;
-  padding:         5px 10px;
-  background:      transparent;
-  border:          1px solid rgba(255,255,255,0.2);
+  padding:         6px 12px;
+  background:      var(--topbar-control-bg);
+  border:          1px solid var(--topbar-control-border);
   border-radius:   20px;
-  color:           rgba(255,255,255,0.8);
+  color:           var(--topbar-text);
   font-size:       0.72rem;
-  font-weight:     600;
+  font-weight:     700;
   font-family:     Inter, sans-serif;
   cursor:          pointer;
   white-space:     nowrap;
@@ -241,8 +249,8 @@ input:focus, select:focus, textarea:focus {
   transition:      background 0.15s, border-color 0.15s;
 }
 .theme-toggle:hover {
-  background:      rgba(255,255,255,0.1);
-  border-color:    rgba(255,255,255,0.4);
+  background:      color-mix(in srgb, var(--topbar-control-bg) 82%, var(--bg-elevated) 18%);
+  border-color:    color-mix(in srgb, var(--accent-blue) 34%, var(--topbar-control-border));
 }
 .theme-toggle:focus-visible {
   outline:         2px solid var(--accent-blue);
