@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { assessTriage } from '@/lib/triage'
+import { buildEvacuationNote } from '@/lib/ai/advisories'
 import { useHouseholdStore } from '@/store/householdStore'
+import { useHazardStore } from '@/store/hazardStore'
 import type { Household, RegistrySource, TriageLevel, Vulnerability } from '@/types'
 
 const TRIAGE_COLOR: Record<string, string> = {
@@ -105,6 +107,8 @@ function statusBadge(status: 'Pending' | 'Rescued'): React.CSSProperties {
 
 function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
   const updateHousehold = useHouseholdStore((s) => s.updateHousehold)
+  const activeHazard = useHazardStore((s) => s.activeHazard)
+  const floodZones = useHazardStore((s) => s.floodZones)
   const [head, setHead] = useState(hh.head)
   const [contact, setContact] = useState(hh.contact)
   const [occupants, setOccupants] = useState(hh.occupants)
@@ -136,6 +140,12 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
     setSaving(false)
     onClose()
   }
+
+  const aiNote = buildEvacuationNote({
+    household: { ...hh, head, contact, occupants, notes, status, vulnArr },
+    hazard: activeHazard,
+    floodZones,
+  })
 
   return (
     <>
@@ -252,6 +262,37 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--fg-muted)', marginBottom: 4, textTransform: 'uppercase' }}>Notes</label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
+            <div style={{ marginTop: 8, padding: 10, borderRadius: 12, background: 'var(--bg-warning-subtle)', border: '1px solid var(--warning-border)' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--warning-strong)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+                AI Evacuation Note
+              </div>
+              <div style={{ fontSize: '0.76rem', color: 'var(--fg-default)', lineHeight: 1.5 }}>
+                {aiNote.note}
+              </div>
+              {aiNote.equipment.length > 0 && (
+                <div style={{ fontSize: '0.7rem', color: 'var(--fg-muted)', marginTop: 6 }}>
+                  Equipment: {aiNote.equipment.join(', ')}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setNotes(aiNote.note)}
+                style={{
+                  marginTop: 8,
+                  padding: '7px 12px',
+                  background: 'var(--warning-strong)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 999,
+                  fontWeight: 700,
+                  fontSize: '0.72rem',
+                  cursor: 'pointer',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
+                Use AI Note
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>

@@ -5,6 +5,7 @@ import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { supabase } from '@/lib/supabase'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useHazardStore } from '@/store/hazardStore'
+import type { PublicAdvisoryResult } from '@/lib/ai/advisories'
 
 const CITIES = [
   'Bacolod City', 'Bago City', 'Cadiz City', 'Canlaon City', 'Escalante City',
@@ -298,6 +299,8 @@ export default function GuestPanel() {
   const [fetching, setFetching] = useState(false)
   const [noData, setNoData] = useState(false)
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [aiAdvisory, setAiAdvisory] = useState<PublicAdvisoryResult | null>(null)
+  const [loadingAiAdvisory, setLoadingAiAdvisory] = useState(false)
 
   const barangays = city ? (BARANGAYS_BY_CITY[city] ?? []) : []
   const hotlines = city ? (HOTLINES[city] ?? [{ label: 'National Emergency', number: '911' }]) : []
@@ -375,6 +378,44 @@ export default function GuestPanel() {
     const advisory = getHazardAdvisory(activeHazard.type)
     return { distKm, zone, overrideLevel, advisory }
   })()
+
+  useEffect(() => {
+    if (!activeHazard?.isActive || !city || !barangay) {
+      setAiAdvisory(null)
+      return
+    }
+
+    const controller = new AbortController()
+
+    async function loadAdvisory() {
+      setLoadingAiAdvisory(true)
+      try {
+        const response = await fetch('/api/ai/public-advisory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            city,
+            barangay,
+            coords: selectedCoords,
+            hazard: activeHazard,
+          }),
+          signal: controller.signal,
+        })
+
+        if (!response.ok) throw new Error('Advisory request failed')
+        const data = (await response.json()) as PublicAdvisoryResult
+        setAiAdvisory(data)
+      } catch {
+        if (!controller.signal.aborted) setAiAdvisory(null)
+      } finally {
+        if (!controller.signal.aborted) setLoadingAiAdvisory(false)
+      }
+    }
+
+    void loadAdvisory()
+
+    return () => controller.abort()
+  }, [activeHazard, barangay, city, selectedCoords])
 
   const effectiveAlertLevel: AlertLevel =
     hazardInfo?.overrideLevel ??
@@ -559,6 +600,38 @@ export default function GuestPanel() {
               <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--fg-default)', lineHeight: 1.6, borderTop: '1px solid var(--high-orange)', paddingTop: 10 }}>
                 {hazardInfo.advisory}
               </p>
+            </div>
+          )}
+
+          {(aiAdvisory || loadingAiAdvisory) && (
+            <div style={cardStyle}>
+              <p style={{ margin: '0 0 8px', fontSize: '0.65rem', color: 'var(--accent-blue)', letterSpacing: 2, textTransform: 'uppercase' }}>
+                AI Local Advisory
+              </p>
+              {loadingAiAdvisory && !aiAdvisory ? (
+                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
+                  Drafting localized safety guidance...
+                </p>
+              ) : aiAdvisory ? (
+                <>
+                  <p style={{ margin: '0 0 6px', fontSize: '0.95rem', fontWeight: 700, color: 'var(--fg-default)' }}>
+                    {aiAdvisory.title}
+                  </p>
+                  <p style={{ margin: '0 0 10px', fontSize: '0.78rem', color: 'var(--fg-muted)', lineHeight: 1.6 }}>
+                    {aiAdvisory.summary}
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {aiAdvisory.actions.map((action) => (
+                      <div key={action} style={innerRowStyle}>
+                        <span style={{ fontSize: '0.76rem', color: 'var(--fg-default)' }}>{action}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ margin: '10px 0 0', fontSize: '0.66rem', color: 'var(--fg-muted)' }}>
+                    Source: {aiAdvisory.source === 'gemini' ? 'Gemini' : 'Rule-based fallback'}
+                  </p>
+                </>
+              ) : null}
             </div>
           )}
 

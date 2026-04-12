@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Household } from '@/types'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
+import { useHazardStore } from '@/store/hazardStore'
+import { buildAssetRecommendation } from '@/lib/ai/advisories'
 import TriageBadge from './TriageBadge'
 
 interface Props {
@@ -34,6 +36,8 @@ export default function HouseholdCard({ household: hh }: Props) {
   const dispatchRescue = useHouseholdStore((s) => s.dispatchRescue)
   const assets = useAssetStore((s) => s.assets)
   const setAssetStatus = useAssetStore((s) => s.setAssetStatus)
+  const activeHazard = useHazardStore((s) => s.activeHazard)
+  const floodZones = useHazardStore((s) => s.floodZones)
 
   const [showPicker, setShowPicker] = useState(false)
   const [selectedAssetId, setSelectedAssetId] = useState('')
@@ -42,10 +46,24 @@ export default function HouseholdCard({ household: hh }: Props) {
   const borderColor = isRescued ? 'var(--resolved-green)' : BORDER_COLOR[hh.triage.colorName]
   const assignedAsset = hh.assignedAssetId ? assets.find((a) => a.id === hh.assignedAssetId) : null
 
+  const recommendation = useMemo(
+    () =>
+      buildAssetRecommendation({
+        household: hh,
+        assets,
+        hazard: activeHazard,
+        floodZones,
+      }),
+    [activeHazard, assets, floodZones, hh],
+  )
+
+  const recommendedIds = new Set(recommendation.recommendedAssetIds)
+  const blockedIds = new Set(recommendation.blockedAssetIds)
+
   const handleConfirmDispatch = () => {
-    if (!selectedAssetId) return
-    dispatchRescue(hh.id, selectedAssetId)
-    setAssetStatus(selectedAssetId, 'Dispatching')
+    if (!selectedAssetId || blockedIds.has(selectedAssetId)) return
+    void dispatchRescue(hh.id, selectedAssetId)
+    void setAssetStatus(selectedAssetId, 'Dispatching')
     setShowPicker(false)
     setSelectedAssetId('')
   }
@@ -111,6 +129,28 @@ export default function HouseholdCard({ household: hh }: Props) {
           </span>
         ))}
       </div>
+
+      {!isRescued && showPicker && (
+        <div
+          style={{
+            background: 'var(--bg-warning-subtle)',
+            border: '1px solid var(--warning-border)',
+            borderRadius: 8,
+            padding: 10,
+            marginBottom: 10,
+          }}
+        >
+          <div style={{ fontSize: '0.7rem', color: 'var(--warning-strong)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
+            AI Dispatch Advisory
+          </div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--fg-default)', fontWeight: 700, marginBottom: 4 }}>
+            {recommendation.summary}
+          </div>
+          <div style={{ fontSize: '0.74rem', color: 'var(--fg-muted)', lineHeight: 1.5 }}>
+            {recommendation.rationale}
+          </div>
+        </div>
+      )}
 
       {isRescued ? (
         <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -201,22 +241,27 @@ export default function HouseholdCard({ household: hh }: Props) {
                   <option value="" disabled>
                     Choose asset...
                   </option>
-                  {assets.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.icon} {a.name} ({a.status})
-                    </option>
-                  ))}
+                  {assets.map((a) => {
+                    const isRecommended = recommendedIds.has(a.id)
+                    const isBlocked = blockedIds.has(a.id)
+                    const badge = isBlocked ? ' [LOCKED]' : isRecommended ? ' [RECOMMENDED]' : ''
+                    return (
+                      <option key={a.id} value={a.id} disabled={isBlocked}>
+                        {a.icon} {a.name} ({a.status}){badge}
+                      </option>
+                    )
+                  })}
                 </select>
                 <button
                   onClick={handleConfirmDispatch}
-                  disabled={!selectedAssetId}
+                  disabled={!selectedAssetId || blockedIds.has(selectedAssetId)}
                   style={{
-                    background: selectedAssetId ? 'var(--resolved-green)' : 'var(--bg-elevated)',
-                    color: selectedAssetId ? '#fff' : 'var(--fg-subtle)',
+                    background: selectedAssetId && !blockedIds.has(selectedAssetId) ? 'var(--resolved-green)' : 'var(--bg-elevated)',
+                    color: selectedAssetId && !blockedIds.has(selectedAssetId) ? '#fff' : 'var(--fg-subtle)',
                     border: 'none',
                     borderRadius: 4,
                     padding: '6px 12px',
-                    cursor: selectedAssetId ? 'pointer' : 'default',
+                    cursor: selectedAssetId && !blockedIds.has(selectedAssetId) ? 'pointer' : 'default',
                     fontSize: '0.75rem',
                     fontWeight: 700,
                   }}
@@ -241,6 +286,11 @@ export default function HouseholdCard({ household: hh }: Props) {
                   Close
                 </button>
               </div>
+              {recommendation.recommendedAssetIds.length > 0 && (
+                <div style={{ marginTop: 8, fontSize: '0.7rem', color: 'var(--resolved-green)' }}>
+                  Recommended first: {assets.filter((asset) => recommendedIds.has(asset.id)).map((asset) => asset.name).join(', ')}
+                </div>
+              )}
             </div>
           )}
 
