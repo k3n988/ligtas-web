@@ -8,6 +8,7 @@ interface Props {
 }
 
 const MOBILE_SHEET_COLLAPSED_OFFSET = 180
+const MOBILE_SHEET_SNAP_THRESHOLD = 36
 
 export default function Sidebar({ children }: Props) {
   const [sheetOffset, setSheetOffset] = useState(0)
@@ -15,6 +16,7 @@ export default function Sidebar({ children }: Props) {
   const [isDragging, setIsDragging] = useState(false)
   const dragStartY = useRef<number | null>(null)
   const dragStartOffset = useRef(0)
+  const dragDelta = useRef(0)
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -40,21 +42,31 @@ export default function Sidebar({ children }: Props) {
     setIsDragging(true)
     dragStartY.current = clientY
     dragStartOffset.current = sheetOffset
+    dragDelta.current = 0
   }
 
   function moveDrag(clientY: number) {
     if (!isMobile || dragStartY.current == null) return
     const delta = clientY - dragStartY.current
+    dragDelta.current = delta
     setSheetOffset(clampOffset(dragStartOffset.current + delta))
   }
 
   function endDrag() {
     if (!isMobile || dragStartY.current == null) return
-    const nextOffset = sheetOffset > MOBILE_SHEET_COLLAPSED_OFFSET / 2
+    let nextOffset = sheetOffset > MOBILE_SHEET_COLLAPSED_OFFSET / 2
       ? MOBILE_SHEET_COLLAPSED_OFFSET
       : 0
+
+    if (dragDelta.current > MOBILE_SHEET_SNAP_THRESHOLD) {
+      nextOffset = MOBILE_SHEET_COLLAPSED_OFFSET
+    } else if (dragDelta.current < -MOBILE_SHEET_SNAP_THRESHOLD) {
+      nextOffset = 0
+    }
+
     setSheetOffset(nextOffset)
     dragStartY.current = null
+    dragDelta.current = 0
     setIsDragging(false)
   }
 
