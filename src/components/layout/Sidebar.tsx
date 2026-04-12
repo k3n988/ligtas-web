@@ -1,12 +1,63 @@
-// src/components/layout/Sidebar.tsx
+'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import Header from './Header'
 
 interface Props {
   children: React.ReactNode
 }
 
+const MOBILE_SHEET_COLLAPSED_OFFSET = 180
+
 export default function Sidebar({ children }: Props) {
+  const [sheetOffset, setSheetOffset] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStartY = useRef<number | null>(null)
+  const dragStartOffset = useRef(0)
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const sync = () => {
+      const mobile = media.matches
+      setIsMobile(mobile)
+      if (!mobile) {
+        setSheetOffset(0)
+      }
+    }
+
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [])
+
+  function clampOffset(value: number) {
+    return Math.max(0, Math.min(MOBILE_SHEET_COLLAPSED_OFFSET, value))
+  }
+
+  function startDrag(clientY: number) {
+    if (!isMobile) return
+    setIsDragging(true)
+    dragStartY.current = clientY
+    dragStartOffset.current = sheetOffset
+  }
+
+  function moveDrag(clientY: number) {
+    if (!isMobile || dragStartY.current == null) return
+    const delta = clientY - dragStartY.current
+    setSheetOffset(clampOffset(dragStartOffset.current + delta))
+  }
+
+  function endDrag() {
+    if (!isMobile || dragStartY.current == null) return
+    const nextOffset = sheetOffset > MOBILE_SHEET_COLLAPSED_OFFSET / 2
+      ? MOBILE_SHEET_COLLAPSED_OFFSET
+      : 0
+    setSheetOffset(nextOffset)
+    dragStartY.current = null
+    setIsDragging(false)
+  }
+
   return (
     <aside
       className="sidebar-panel"
@@ -16,18 +67,29 @@ export default function Sidebar({ children }: Props) {
         height: '100%',
         zIndex: 10,
         overflowY: 'hidden',
+        transform: isMobile ? `translateY(${sheetOffset}px)` : undefined,
+        transition: isDragging ? 'none' : 'transform 0.22s ease',
       }}
     >
       <div className="sidebar-header">
         <div
           className="mobile-sheet-handle"
           aria-hidden="true"
+          onMouseDown={(e) => startDrag(e.clientY)}
+          onMouseMove={(e) => moveDrag(e.clientY)}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+          onTouchStart={(e) => startDrag(e.touches[0].clientY)}
+          onTouchMove={(e) => moveDrag(e.touches[0].clientY)}
+          onTouchEnd={endDrag}
           style={{
             display: 'none',
             justifyContent: 'center',
             paddingTop: 8,
             paddingBottom: 2,
             background: 'var(--bg-surface)',
+            touchAction: 'none',
+            cursor: isMobile ? 'grab' : 'default',
           }}
         >
           <span
