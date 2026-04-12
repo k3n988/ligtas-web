@@ -18,8 +18,11 @@ export default function Sidebar({ children }: Props) {
         overflowY: 'hidden',
       }}
     >
-      <Header />
+      <div className="sidebar-header">
+        <Header />
+      </div>
       <div
+        className="mobile-panel-pad"
         style={{
           overflowY: 'auto',
           flexGrow: 1,

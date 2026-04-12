@@ -4,6 +4,7 @@
 export default function MapLegend() {
   return (
     <div
+      className="map-legend-overlay"
       style={{
         position: 'absolute',
         bottom: 30,

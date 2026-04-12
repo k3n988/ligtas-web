@@ -168,6 +168,7 @@ export default function Header() {
   return (
     <div style={{ flexShrink: 0 }}>
       <div
+        className="header-topbar"
         style={{
           padding: '12px 14px',
           background: 'var(--topbar-bg)',
@@ -179,7 +180,7 @@ export default function Header() {
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+        <div className="header-brand" style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
           <Image
             src="/logo2.png"
             alt="LIGTAS Logo"
@@ -188,11 +189,11 @@ export default function Header() {
             priority
             style={{ objectFit: 'contain' }}
           />
-          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h1 style={{ margin: 0, fontSize: '1.12rem', color: 'var(--topbar-text)', letterSpacing: 1.6, lineHeight: 1.05 }}>
+          <div className="header-brand-copy" style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <h1 className="header-brand-title" style={{ margin: 0, fontSize: '1.12rem', color: 'var(--topbar-text)', letterSpacing: 1.6, lineHeight: 1.05 }}>
               L.I.G.T.A.S.
             </h1>
-            <p style={{ margin: '2px 0 0', fontSize: '0.54rem', color: 'var(--topbar-muted-text)', letterSpacing: 0.28, lineHeight: 1.35 }}>
+            <p className="header-brand-subtitle" style={{ margin: '2px 0 0', fontSize: '0.54rem', color: 'var(--topbar-muted-text)', letterSpacing: 0.28, lineHeight: 1.35 }}>
               Location Intelligence &amp; Geospatial Triage
               <br />
               for Accelerated Support
@@ -200,8 +201,8 @@ export default function Header() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', rowGap: 6 }}>
+        <div className="header-controls" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+          <div className="header-controls-row" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', rowGap: 6 }}>
             <ThemeToggle />
             {user ? (
               <button
@@ -242,7 +243,7 @@ export default function Header() {
             )}
           </div>
           {user && (
-            <span style={{ fontSize: '0.62rem', color: 'var(--topbar-muted-text)', padding: '0 2px', textAlign: 'right', maxWidth: 180, overflowWrap: 'anywhere' }}>
+            <span className="header-user-meta" style={{ fontSize: '0.62rem', color: 'var(--topbar-muted-text)', padding: '0 2px', textAlign: 'right', maxWidth: 180, overflowWrap: 'anywhere' }}>
               {user.contact}
             </span>
           )}
@@ -250,6 +251,7 @@ export default function Header() {
       </div>
 
       <div
+        className="header-search-shell"
         style={{
           padding: '12px 14px',
           background: 'var(--bg-base)',
@@ -260,6 +262,7 @@ export default function Header() {
       >
         <form onSubmit={handleSubmit}>
           <div
+            className="header-search-bar"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -414,6 +417,7 @@ export default function Header() {
 
       {user && tabs.length > 0 && (
         <div
+          className="header-tabs-bar hide-scrollbar"
           style={{
             display: 'flex',
             overflowX: 'auto',
@@ -423,7 +427,6 @@ export default function Header() {
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
           }}
-          className="hide-scrollbar"
         >
           {tabs.map(({ href, label }) => {
             const active = pathname === href
