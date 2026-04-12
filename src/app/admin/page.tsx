@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { useHazardStore } from '@/store/hazardStore'
-import { haversineKm, getDynamicTriage } from '@/lib/geo'
+import { haversineKm, getDynamicTriage, getFloodTriage } from '@/lib/geo'
 import HouseholdTable from './HouseholdTable'
 import AssetTable from './AssetTable'
 import SummaryReportModal from '@/components/dashboard/SummaryReportModal'
@@ -17,20 +17,30 @@ export default function AdminPage() {
   const households     = useHouseholdStore((s) => s.households)
   const assets         = useAssetStore((s) => s.assets)
   const activeHazard   = useHazardStore((s) => s.activeHazard)
+  const floodZones     = useHazardStore((s) => s.floodZones)
   const router         = useRouter()
 
   // Build a map of id → dynamicTriage for households inside the hazard zone
   const triageOverrides = useMemo<Map<string, TriageLevel>>(() => {
     const map = new Map<string, TriageLevel>()
     if (!activeHazard?.isActive) return map
-    for (const hh of households) {
-      const dist = haversineKm(hh.lat, hh.lng, activeHazard.center.lat, activeHazard.center.lng)
-      if (dist <= activeHazard.radii.stable) {
-        map.set(hh.id, getDynamicTriage(hh.lat, hh.lng, hh.triage.level, activeHazard))
+
+    if (activeHazard.type === 'Flood') {
+      for (const hh of households) {
+        if (hh.status === 'Rescued') continue
+        const level = getFloodTriage({ lat: hh.lat, lng: hh.lng }, floodZones, hh.triage.level)
+        if (level !== hh.triage.level) map.set(hh.id, level)
+      }
+    } else {
+      for (const hh of households) {
+        const dist = haversineKm(hh.lat, hh.lng, activeHazard.center.lat, activeHazard.center.lng)
+        if (dist <= activeHazard.radii.stable) {
+          map.set(hh.id, getDynamicTriage(hh.lat, hh.lng, hh.triage.level, activeHazard))
+        }
       }
     }
     return map
-  }, [households, activeHazard])
+  }, [households, activeHazard, floodZones])
 
   const [activeTab, setActiveTab] = useState<'summary' | 'registry' | 'assets'>('summary')
 
@@ -216,7 +226,12 @@ export default function AdminPage() {
                 ⚠ Hazard Layer Active — <span style={{ color: '#f39c12' }}>{activeHazard.type}</span>
                 <span style={{ color: '#8b949e', fontWeight: 400 }}>
                   · {triageOverrides.size} households with overridden triage
-                  · Critical ≤{activeHazard.radii.critical}km / High ≤{activeHazard.radii.high}km / Elevated ≤{activeHazard.radii.elevated}km / Stable ≤{activeHazard.radii.stable}km
+                  {activeHazard.type !== 'Flood' && (
+                    <> · Critical ≤{activeHazard.radii.critical}km / High ≤{activeHazard.radii.high}km / Elevated ≤{activeHazard.radii.elevated}km / Stable ≤{activeHazard.radii.stable}km</>
+                  )}
+                  {activeHazard.type === 'Flood' && (
+                    <> · {floodZones.length} polygon zone{floodZones.length !== 1 ? 's' : ''} active</>
+                  )}
                 </span>
               </div>
             )}

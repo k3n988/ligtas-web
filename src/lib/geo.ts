@@ -1,5 +1,5 @@
 // src/lib/geo.ts
-import type { HazardEvent, TriageLevel } from '@/types'
+import type { FloodZone, HazardEvent, TriageLevel } from '@/types'
 import type { Household } from '@/types'
 
 // ─── EXISTING CODE (unchanged) ───────────────────────────────────────────────
@@ -90,6 +90,41 @@ export function sortHouseholdsByHazardProximity(
     if (ringDiff !== 0) return ringDiff
     return distA - distB  // same ring → closer first
   })
+}
+
+// ─── Flood polygon triage ─────────────────────────────────────────────────────
+
+const FLOOD_SEVERITY_TO_TRIAGE: Record<string, TriageLevel> = {
+  critical: 'CRITICAL',
+  high:     'HIGH',
+  elevated: 'ELEVATED',
+  stable:   'STABLE',
+}
+
+const TRIAGE_PRIORITY: Record<TriageLevel, number> = {
+  CRITICAL: 0,
+  HIGH:     1,
+  ELEVATED: 2,
+  STABLE:   3,
+}
+
+/**
+ * Returns the highest-severity triage level for a point based on which
+ * flood zone polygons contain it. Rescued households are never downgraded.
+ * If the point is inside no zone, returns `originalLevel` unchanged.
+ */
+export function getFloodTriage(
+  point: { lat: number; lng: number },
+  floodZones: FloodZone[],
+  originalLevel: TriageLevel,
+): TriageLevel {
+  let best = originalLevel
+  for (const zone of floodZones) {
+    if (!pointInPolygon(point, zone.polygon)) continue
+    const candidate = FLOOD_SEVERITY_TO_TRIAGE[zone.severity]
+    if (TRIAGE_PRIORITY[candidate] < TRIAGE_PRIORITY[best]) best = candidate
+  }
+  return best
 }
 
 /**

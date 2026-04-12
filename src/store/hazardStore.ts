@@ -1,7 +1,7 @@
 // src/store/hazardStore.ts
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
-import type { HazardEvent } from '@/types'
+import type { FloodZone, HazardEvent } from '@/types'
 
 // ── Row ↔ HazardEvent mappers ──────────────────────────────────────────────
 
@@ -10,18 +10,19 @@ function rowToHazard(row: any): HazardEvent {
   return {
     id:       row.id,
     type:     row.type,
-    center:   { lat: row.center_lat, lng: row.center_lng },
+    center:   { lat: row.center_lat ?? 0, lng: row.center_lng ?? 0 },
     radii: {
-      critical: row.radius_critical,
-      high:     row.radius_high,
-      elevated: row.radius_elevated,
-      stable:   row.radius_stable,
+      critical: row.radius_critical ?? 0,
+      high:     row.radius_high     ?? 0,
+      elevated: row.radius_elevated ?? 0,
+      stable:   row.radius_stable   ?? 0,
     },
     isActive: row.is_active,
   }
 }
 
 function hazardToRow(h: HazardEvent) {
+  // Flood hazards use center {0,0} and radii {0} as placeholders — columns are NOT NULL
   return {
     id:               h.id,
     type:             h.type,
@@ -35,6 +36,17 @@ function hazardToRow(h: HazardEvent) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToFloodZone(row: any): FloodZone {
+  return {
+    id:       row.id,
+    severity: row.severity,
+    depth:    row.depth    ?? undefined,
+    notes:    row.notes    ?? undefined,
+    polygon:  row.polygon,
+  }
+}
+
 // ── Store ──────────────────────────────────────────────────────────────────
 
 interface HazardStore {
@@ -42,17 +54,34 @@ interface HazardStore {
   isSelectingCenter:    boolean
   draftCenter:          { lat: number; lng: number } | null
 
+  // ── Flood zone state ─────────────────────────────────────────────────────
+  floodZones:           FloodZone[]   // persisted zones for activeHazard
+  draftFloodZones:      FloodZone[]   // unsaved zones during editing session
+
+  // ── Hazard event actions ─────────────────────────────────────────────────
   loadActiveHazard:     () => Promise<void>
-  setActiveHazard:      (hazard: HazardEvent | null) => Promise<void>
+  setActiveHazard:      (hazard: HazardEvent) => Promise<void>
   clearHazard:          () => Promise<void>
   setIsSelectingCenter: (v: boolean) => void
   setDraftCenter:       (c: { lat: number; lng: number } | null) => void
+
+  // ── Flood zone actions ───────────────────────────────────────────────────
+  loadFloodZones:        (hazardEventId: string) => Promise<void>
+  addDraftFloodZone:     (zone: FloodZone) => void
+  removeDraftFloodZone:  (id: string) => void
+  updateFloodZone:       (id: string, updates: Partial<Pick<FloodZone, 'severity' | 'depth' | 'notes' | 'polygon'>>) => Promise<void>
+  deleteFloodZone:       (id: string) => Promise<void>
+  saveFloodZones:        (hazardEventId: string) => Promise<void>
+  cancelDraftFloodZones: () => void
+  clearFloodZones:       () => Promise<void>
 }
 
-export const useHazardStore = create<HazardStore>((set) => ({
-  activeHazard:         null,
-  isSelectingCenter:    false,
-  draftCenter:          null,
+export const useHazardStore = create<HazardStore>((set, get) => ({
+  activeHazard:      null,
+  isSelectingCenter: false,
+  draftCenter:       null,
+  floodZones:        [],
+  draftFloodZones:   [],
 
   // ── Load the single active hazard from Supabase ────────────────────────
   loadActiveHazard: async () => {
@@ -65,13 +94,16 @@ export const useHazardStore = create<HazardStore>((set) => ({
       .maybeSingle()
 
     if (error) { console.error('[LIGTAS] loadActiveHazard:', error.message); return }
-    set({ activeHazard: data ? rowToHazard(data) : null })
+    const hazard = data ? rowToHazard(data) : null
+    set({ activeHazard: hazard })
+
+    if (hazard?.type === 'Flood') {
+      await get().loadFloodZones(hazard.id)
+    }
   },
 
-  // ── Upsert a new active hazard (deactivates any previous one first) ───
+  // ── Activate a new hazard (deactivates any previous one first) ────────
   setActiveHazard: async (hazard) => {
-    if (!hazard) return
-
     // Optimistic UI
     set({ activeHazard: hazard })
 
@@ -81,20 +113,31 @@ export const useHazardStore = create<HazardStore>((set) => ({
       .update({ is_active: false })
       .eq('is_active', true)
 
-    // Insert the new one
-    const { error } = await supabase
+    // Insert the new hazard row
+    const { data, error } = await supabase
       .from('hazard_events')
       .insert(hazardToRow(hazard))
+      .select('id')
+      .single()
 
     if (error) {
       console.error('[LIGTAS] setActiveHazard:', error.message)
       set({ activeHazard: null })
+      return
+    }
+
+    // For Flood: use the DB-returned id to save zones with correct FK
+    if (hazard.type === 'Flood' && data?.id) {
+      const insertedId = data.id as string
+      set((s) => ({ activeHazard: s.activeHazard ? { ...s.activeHazard, id: insertedId } : null }))
+      await get().saveFloodZones(insertedId)
     }
   },
 
   // ── Deactivate — marks is_active = false in Supabase ──────────────────
   clearHazard: async () => {
-    set({ activeHazard: null, draftCenter: null })
+    await get().clearFloodZones()
+    set({ activeHazard: null, draftCenter: null, floodZones: [], draftFloodZones: [] })
 
     const { error } = await supabase
       .from('hazard_events')
@@ -106,4 +149,95 @@ export const useHazardStore = create<HazardStore>((set) => ({
 
   setIsSelectingCenter: (v) => set({ isSelectingCenter: v }),
   setDraftCenter:       (c) => set({ draftCenter: c }),
+
+  // ── Flood zone: load from DB ───────────────────────────────────────────
+  loadFloodZones: async (hazardEventId) => {
+    const { data, error } = await supabase
+      .from('flood_zones')
+      .select('*')
+      .eq('hazard_event_id', hazardEventId)
+      .order('created_at', { ascending: true })
+
+    if (error) { console.error('[LIGTAS] loadFloodZones:', error.message); return }
+    set({ floodZones: (data ?? []).map(rowToFloodZone) })
+  },
+
+  // ── Flood zone: draft management ──────────────────────────────────────
+  addDraftFloodZone: (zone) => {
+    if (zone.polygon.length < 3) {
+      console.warn('[LIGTAS] addDraftFloodZone: polygon needs ≥3 points')
+      return
+    }
+    set((s) => ({ draftFloodZones: [...s.draftFloodZones, zone] }))
+  },
+
+  removeDraftFloodZone: (id) => {
+    set((s) => ({ draftFloodZones: s.draftFloodZones.filter((z) => z.id !== id) }))
+  },
+
+  cancelDraftFloodZones: () => set({ draftFloodZones: [] }),
+
+  // ── Flood zone: save drafts to Supabase ───────────────────────────────
+  saveFloodZones: async (hazardEventId) => {
+    const drafts = get().draftFloodZones
+    if (drafts.length === 0) return
+
+    const rows = drafts.map((z) => ({
+      id:              z.id,
+      hazard_event_id: hazardEventId,
+      severity:        z.severity,
+      depth:           z.depth   ?? null,
+      notes:           z.notes   ?? null,
+      polygon:         z.polygon,
+    }))
+
+    const { error } = await supabase.from('flood_zones').insert(rows)
+    if (error) { console.error('[LIGTAS] saveFloodZones:', error.message); return }
+
+    set((s) => ({
+      floodZones:      [...s.floodZones, ...drafts],
+      draftFloodZones: [],
+    }))
+  },
+
+  // ── Flood zone: update a persisted zone ──────────────────────────────
+  updateFloodZone: async (id, updates) => {
+    set((s) => ({
+      floodZones: s.floodZones.map((z) => z.id === id ? { ...z, ...updates } : z),
+    }))
+
+    const { error } = await supabase
+      .from('flood_zones')
+      .update({
+        ...(updates.severity !== undefined && { severity: updates.severity }),
+        ...(updates.depth    !== undefined && { depth:    updates.depth ?? null }),
+        ...(updates.notes    !== undefined && { notes:    updates.notes ?? null }),
+        ...(updates.polygon  !== undefined && { polygon:  updates.polygon }),
+      })
+      .eq('id', id)
+
+    if (error) console.error('[LIGTAS] updateFloodZone:', error.message)
+  },
+
+  // ── Flood zone: delete a single persisted zone ────────────────────────
+  deleteFloodZone: async (id) => {
+    set((s) => ({ floodZones: s.floodZones.filter((z) => z.id !== id) }))
+
+    const { error } = await supabase.from('flood_zones').delete().eq('id', id)
+    if (error) console.error('[LIGTAS] deleteFloodZone:', error.message)
+  },
+
+  // ── Flood zone: delete all zones for current active hazard ────────────
+  clearFloodZones: async () => {
+    const hazard = get().activeHazard
+    if (!hazard) return
+
+    const { error } = await supabase
+      .from('flood_zones')
+      .delete()
+      .eq('hazard_event_id', hazard.id)
+
+    if (error) console.error('[LIGTAS] clearFloodZones:', error.message)
+    set({ floodZones: [], draftFloodZones: [] })
+  },
 }))

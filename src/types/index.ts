@@ -72,6 +72,17 @@ export interface HazardRadii {
   stable:   number  // outermost boundary
 }
 
+export type FloodSeverity = 'critical' | 'high' | 'elevated' | 'stable'
+export type FloodDepth    = 'ankle' | 'knee' | 'waist' | 'chest'
+
+export interface FloodZone {
+  id:       string
+  severity: FloodSeverity
+  depth?:   FloodDepth
+  notes?:   string
+  polygon:  Array<{ lat: number; lng: number }>  // min 3 points
+}
+
 export interface HazardEvent {
   id:       string
   type:     string  // e.g. 'Flood', 'Volcano', 'Earthquake'

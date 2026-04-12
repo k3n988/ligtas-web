@@ -10,11 +10,13 @@ import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import AuthModal from '@/components/auth/AuthModal'
+import WeatherStrip from './WeatherStrip'
 
 const ADMIN_TABS = [
-  { href: '/queue',  label: '🚨 QUEUE'    },
-  { href: '/assets', label: '🚤 ASSETS'   },
-  { href: '/admin',  label: '🗺️ DASHBOARD' },
+  { href: '/queue',        label: '🚨 QUEUE'        },
+  { href: '/assets',       label: '🚤 ASSETS'       },
+  { href: '/admin',        label: '🗺️ DASHBOARD'    },
+  { href: '/register',     label: '📋 REGISTRATION'  },
 ]
 
 const RESCUER_TABS = [
@@ -244,6 +246,8 @@ export default function Header() {
       </div>
 
       {/* ── Search bar ──────────────────────────────────────────────────── */}
+      <WeatherStrip />
+
       <div
         style={{
           padding: '10px 14px',

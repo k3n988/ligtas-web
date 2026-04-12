@@ -2,7 +2,7 @@
 // src/components/map/MapView.tsx
 // Imported via next/dynamic with ssr:false — must stay a pure client module.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Map,
   useMap,
@@ -18,7 +18,7 @@ import AssetMarker from './AssetMarker'
 import MapLegend from './MapLegend'
 import HazardControlPanel from './HazardControlPanel'
 import { Marker } from '@vis.gl/react-google-maps'
-import type { HazardEvent } from '@/types'
+import type { FloodSeverity, HazardEvent } from '@/types'
 
 const DEFAULT_CENTER = { lat: 10.6765, lng: 122.9509 }
 
@@ -95,11 +95,134 @@ function HazardPanController() {
   const activeHazard = useHazardStore((s) => s.activeHazard)
 
   useEffect(() => {
-    if (!map || !activeHazard?.isActive) return
+    // Flood hazards have no meaningful center (lat/lng = 0) — skip auto-pan
+    if (!map || !activeHazard?.isActive || activeHazard.type === 'Flood') return
     map.panTo(activeHazard.center)
     map.setZoom(12)
-  }, [map, activeHazard?.id]) // ← depend on id only, not the whole object
-                               //   so it fires once per new hazard, not on every re-render
+  }, [map, activeHazard?.id])
+
+  return null
+}
+
+// Severity order: stable rendered first so critical sits on top visually
+const SEVERITY_ORDER: Record<FloodSeverity, number> = {
+  stable: 0, elevated: 1, high: 2, critical: 3,
+}
+
+const FLOOD_ZONE_STYLE: Record<FloodSeverity, { fill: string; fillOpacity: number; stroke: string; zIndex: number }> = {
+  critical: { fill: '#ff4d4d', fillOpacity: 0.38, stroke: '#c0392b', zIndex: 14 },
+  high:     { fill: '#f39c12', fillOpacity: 0.30, stroke: '#d68910', zIndex: 13 },
+  elevated: { fill: '#f1c40f', fillOpacity: 0.25, stroke: '#b7950b', zIndex: 12 },
+  stable:   { fill: '#58a6ff', fillOpacity: 0.18, stroke: '#2980b9', zIndex: 11 },
+}
+
+const SEVERITY_LABEL: Record<FloodSeverity, string> = {
+  critical: '🔴 Critical',
+  high:     '🟠 High',
+  elevated: '🟡 Elevated',
+  stable:   '🔵 Stable',
+}
+
+const DEPTH_LABEL: Record<string, string> = {
+  ankle: 'Ankle-deep',
+  knee:  'Knee-deep',
+  waist: 'Waist-deep',
+  chest: 'Chest-deep',
+}
+
+function FloodZoneOverlays() {
+  const map             = useMap()
+  const user            = useAuthStore((s) => s.user)
+  const floodZones      = useHazardStore((s) => s.floodZones)
+  const updateFloodZone = useHazardStore((s) => s.updateFloodZone)
+
+  // Single persistent InfoWindow — avoids stacking popups
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
+
+  useEffect(() => {
+    if (!map) return
+
+    // Ensure one shared InfoWindow exists
+    if (!infoWindowRef.current) {
+      infoWindowRef.current = new google.maps.InfoWindow()
+    }
+    const iw = infoWindowRef.current
+
+    // Close InfoWindow when user clicks the base map
+    const mapClickListener = map.addListener('click', () => iw.close())
+
+    const polygons:  google.maps.Polygon[]             = []
+    const listeners: google.maps.MapsEventListener[]   = []
+
+    // Render stable → critical so higher severity sits on top
+    const sorted = [...floodZones].sort(
+      (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
+    )
+
+    sorted.forEach((zone) => {
+      const style   = FLOOD_ZONE_STYLE[zone.severity]
+      const isAdmin = user?.role === 'admin'
+
+      const poly = new google.maps.Polygon({
+        map,
+        paths:         zone.polygon,
+        fillColor:     style.fill,
+        fillOpacity:   style.fillOpacity,
+        strokeColor:   style.stroke,
+        strokeOpacity: 0.85,
+        strokeWeight:  2.5,
+        clickable:     true,
+        editable:      false,
+        draggable:     false,
+        zIndex:        style.zIndex,
+      })
+
+      // Click → update and reopen the single InfoWindow
+      listeners.push(poly.addListener('click', (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng) return
+        iw.setContent(`
+          <div style="font-family:Inter,sans-serif;padding:4px 2px;min-width:130px">
+            <div style="font-size:0.82rem;font-weight:700;margin-bottom:4px">
+              ${SEVERITY_LABEL[zone.severity]} Flood Zone
+            </div>
+            ${zone.depth ? `<div style="font-size:0.75rem;color:#555">💧 ${DEPTH_LABEL[zone.depth] ?? zone.depth}</div>` : ''}
+            ${zone.notes ? `<div style="font-size:0.73rem;color:#666;margin-top:3px">${zone.notes}</div>` : ''}
+          </div>`)
+        iw.setPosition(e.latLng)
+        iw.open(map)
+      }))
+
+      // Admin path edits → persist to store + DB
+      if (isAdmin) {
+        const syncPath = () => {
+          const path   = poly.getPath()
+          const coords = Array.from({ length: path.getLength() }, (_, i) => {
+            const pt = path.getAt(i)
+            return { lat: pt.lat(), lng: pt.lng() }
+          })
+          updateFloodZone(zone.id, { polygon: coords })
+        }
+        listeners.push(poly.getPath().addListener('set_at',    syncPath))
+        listeners.push(poly.getPath().addListener('insert_at', syncPath))
+        listeners.push(poly.getPath().addListener('remove_at', syncPath))
+      }
+
+      polygons.push(poly)
+    })
+
+    return () => {
+      iw.close()
+      google.maps.event.removeListener(mapClickListener)
+      polygons.forEach((p)  => p.setMap(null))
+      listeners.forEach((l) => google.maps.event.removeListener(l))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, floodZones, user?.role])
+
+  // Destroy InfoWindow on component unmount
+  useEffect(() => {
+    return () => { infoWindowRef.current?.close() }
+  }, [])
 
   return null
 }
@@ -326,7 +449,8 @@ function MapInner() {
         <HazardPanController />   {/* ← add this */}
         <RouteOverlay />
 
-        {activeHazard?.isActive && <HazardCircles hazard={activeHazard} />}
+        {activeHazard?.isActive && activeHazard.type !== 'Flood' && <HazardCircles hazard={activeHazard} />}
+        {activeHazard?.isActive && activeHazard.type === 'Flood' && <FloodZoneOverlays />}
 
         {households.filter((hh) => hh.approvalStatus === 'approved').map((hh) => (
           <HouseholdMarker key={hh.id} household={hh} />
