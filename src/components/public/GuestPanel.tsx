@@ -221,7 +221,7 @@ const selectStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
-const hazardCardTheme: Record<string, { bg: string; border: string; glow: string; badgeBg: string; badgeColor: string; titleColor: string; chipBg: string; chipColor: string }> = {
+const hazardCardTheme: Record<string, { bg: string; border: string; glow: string; badgeBg: string; badgeColor: string; titleColor: string; eyebrowColor: string; bodyColor: string; chipBg: string; chipColor: string; iconBg: string; iconBorder: string }> = {
   volcano: {
     bg: 'linear-gradient(135deg, #ffebe9 0%, #fff8c5 100%)',
     border: '#f97316',
@@ -229,8 +229,12 @@ const hazardCardTheme: Record<string, { bg: string; border: string; glow: string
     badgeBg: '#dc2626',
     badgeColor: '#fff7ed',
     titleColor: '#7c2d12',
+    eyebrowColor: '#94a3b8',
+    bodyColor: '#111827',
     chipBg: 'rgba(255,255,255,0.72)',
     chipColor: '#9a3412',
+    iconBg: 'rgba(255,255,255,0.52)',
+    iconBorder: 'rgba(255,255,255,0.55)',
   },
   flood: {
     bg: 'linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)',
@@ -239,8 +243,12 @@ const hazardCardTheme: Record<string, { bg: string; border: string; glow: string
     badgeBg: '#1d4ed8',
     badgeColor: '#eff6ff',
     titleColor: '#1e3a8a',
+    eyebrowColor: '#64748b',
+    bodyColor: '#0f172a',
     chipBg: 'rgba(255,255,255,0.7)',
     chipColor: '#1d4ed8',
+    iconBg: 'rgba(255,255,255,0.52)',
+    iconBorder: 'rgba(255,255,255,0.55)',
   },
   default: {
     bg: 'linear-gradient(135deg, #ffebe9 0%, #fff8c5 100%)',
@@ -248,9 +256,13 @@ const hazardCardTheme: Record<string, { bg: string; border: string; glow: string
     glow: '0 8px 24px rgba(0,0,0,0.12)',
     badgeBg: 'var(--critical-red)',
     badgeColor: '#fff',
-    titleColor: 'var(--fg-default)',
+    titleColor: '#111827',
+    eyebrowColor: '#94a3b8',
+    bodyColor: '#111827',
     chipBg: 'rgba(255,255,255,0.68)',
-    chipColor: 'var(--fg-default)',
+    chipColor: '#111827',
+    iconBg: 'rgba(255,255,255,0.52)',
+    iconBorder: 'rgba(255,255,255,0.55)',
   },
 }
 
@@ -427,7 +439,7 @@ export default function GuestPanel() {
                   Live {activeHazard.type} Alert
                 </span>
                 <div>
-                  <p className="guest-alert-eyebrow" style={{ margin: '0 0 4px', fontSize: '0.72rem', color: 'var(--fg-muted)', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700 }}>
+                  <p className="guest-alert-eyebrow" style={{ margin: '0 0 4px', fontSize: '0.72rem', color: activeHazardTheme.eyebrowColor, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700 }}>
                     Active Disaster Warning
                   </p>
                   <p className="guest-alert-title" style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: activeHazardTheme.titleColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -444,8 +456,8 @@ export default function GuestPanel() {
                   width: 54,
                   height: 54,
                   borderRadius: 18,
-                  background: 'rgba(255,255,255,0.52)',
-                  border: '1px solid rgba(255,255,255,0.55)',
+                  background: activeHazardTheme.iconBg,
+                  border: `1px solid ${activeHazardTheme.iconBorder}`,
                   fontSize: '1.55rem',
                 }}
               >
@@ -453,7 +465,7 @@ export default function GuestPanel() {
               </div>
             </div>
 
-            <p className="guest-alert-copy" style={{ margin: 0, fontSize: '0.82rem', color: 'var(--fg-default)', lineHeight: 1.6, maxWidth: 460 }}>
+            <p className="guest-alert-copy" style={{ margin: 0, fontSize: '0.82rem', color: activeHazardTheme.bodyColor, lineHeight: 1.6, maxWidth: 460 }}>
               A <strong>{activeHazard.type.toLowerCase()}</strong> hazard zone is currently being monitored on the map. Review the actions below before continuing.
             </p>
 
