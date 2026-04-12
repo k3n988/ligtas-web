@@ -13,7 +13,7 @@ export default function Sidebar({ children }: Props) {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        height: '100%',
         zIndex: 10,
         overflowY: 'hidden',
       }}
@@ -47,6 +47,7 @@ export default function Sidebar({ children }: Props) {
         style={{
           overflowY: 'auto',
           flexGrow: 1,
+          minHeight: 0,
           padding: 20,
           background: 'var(--bg-base)',
         }}

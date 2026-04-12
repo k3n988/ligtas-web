@@ -279,7 +279,7 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 767px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
-    grid-template-rows:    48vh 52vh;
+    grid-template-rows:    54vh 46vh;
     height:                100svh;
   }
 
@@ -293,6 +293,7 @@ input:focus, select:focus, textarea:focus {
   display:        flex;
   flex-direction: column;
   height:         100%;
+  min-height:     0;
   overflow:       hidden;
   background:     var(--bg-surface);
   border-left:    1px solid var(--border);
@@ -441,6 +442,10 @@ input:focus, select:focus, textarea:focus {
 
   .mobile-panel-pad {
     padding: 16px !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .map-legend-overlay {
