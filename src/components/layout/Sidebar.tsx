@@ -7,16 +7,19 @@ interface Props {
   children: React.ReactNode
 }
 
-const MOBILE_SHEET_COLLAPSED_OFFSET = 180
 const MOBILE_SHEET_SNAP_THRESHOLD = 36
 
 export default function Sidebar({ children }: Props) {
   const [sheetOffset, setSheetOffset] = useState(0)
+  const [maxOffset, setMaxOffset] = useState(180)
   const [isMobile, setIsMobile] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const asideRef = useRef<HTMLElement | null>(null)
+  const headerRef = useRef<HTMLDivElement | null>(null)
   const dragStartY = useRef<number | null>(null)
   const dragStartOffset = useRef(0)
   const dragDelta = useRef(0)
+  const hasMobileInit = useRef(false)
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -25,6 +28,7 @@ export default function Sidebar({ children }: Props) {
       setIsMobile(mobile)
       if (!mobile) {
         setSheetOffset(0)
+        hasMobileInit.current = false
         document.documentElement.removeAttribute('data-mobile-sheet')
       }
     }
@@ -45,12 +49,48 @@ export default function Sidebar({ children }: Props) {
 
     document.documentElement.setAttribute(
       'data-mobile-sheet',
-      sheetOffset >= MOBILE_SHEET_COLLAPSED_OFFSET - 24 ? 'collapsed' : 'expanded',
+      sheetOffset >= maxOffset - 24 ? 'collapsed' : 'expanded',
     )
-  }, [isMobile, sheetOffset])
+  }, [isMobile, maxOffset, sheetOffset])
+
+  useEffect(() => {
+    if (!isMobile) return
+
+    const syncOffsets = () => {
+      const asideHeight = asideRef.current?.offsetHeight ?? 0
+      const handleHeight = headerRef.current?.querySelector<HTMLElement>('.mobile-sheet-handle')?.offsetHeight ?? 0
+      const topbarHeight = headerRef.current?.querySelector<HTMLElement>('.header-topbar')?.offsetHeight ?? 0
+      const visibleHeaderHeight = handleHeight + topbarHeight
+      if (!asideHeight || !visibleHeaderHeight) return
+
+      const nextMaxOffset = Math.max(0, asideHeight - visibleHeaderHeight)
+      setMaxOffset(nextMaxOffset)
+
+      setSheetOffset((current) => {
+        if (!hasMobileInit.current) {
+          hasMobileInit.current = true
+          return Math.round(nextMaxOffset / 2)
+        }
+
+        return Math.min(current, nextMaxOffset)
+      })
+    }
+
+    syncOffsets()
+
+    const resizeObserver = new ResizeObserver(syncOffsets)
+    if (asideRef.current) resizeObserver.observe(asideRef.current)
+    if (headerRef.current) resizeObserver.observe(headerRef.current)
+
+    window.addEventListener('resize', syncOffsets)
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', syncOffsets)
+    }
+  }, [isMobile])
 
   function clampOffset(value: number) {
-    return Math.max(0, Math.min(MOBILE_SHEET_COLLAPSED_OFFSET, value))
+    return Math.max(0, Math.min(maxOffset, value))
   }
 
   function startDrag(clientY: number) {
@@ -70,12 +110,12 @@ export default function Sidebar({ children }: Props) {
 
   function endDrag() {
     if (!isMobile || dragStartY.current == null) return
-    let nextOffset = sheetOffset > MOBILE_SHEET_COLLAPSED_OFFSET / 2
-      ? MOBILE_SHEET_COLLAPSED_OFFSET
+    let nextOffset = sheetOffset > maxOffset / 2
+      ? maxOffset
       : 0
 
     if (dragDelta.current > MOBILE_SHEET_SNAP_THRESHOLD) {
-      nextOffset = MOBILE_SHEET_COLLAPSED_OFFSET
+      nextOffset = maxOffset
     } else if (dragDelta.current < -MOBILE_SHEET_SNAP_THRESHOLD) {
       nextOffset = 0
     }
@@ -88,6 +128,7 @@ export default function Sidebar({ children }: Props) {
 
   return (
     <aside
+      ref={asideRef}
       className="sidebar-panel"
       style={{
         display: 'flex',
@@ -99,7 +140,7 @@ export default function Sidebar({ children }: Props) {
         transition: isDragging ? 'none' : 'transform 0.22s ease',
       }}
     >
-      <div className="sidebar-header">
+      <div ref={headerRef} className="sidebar-header">
         <div
           className="mobile-sheet-handle"
           aria-hidden="true"
