@@ -1,28 +1,28 @@
 /// <reference types="@types/google.maps" />
 'use client'
-// src/components/layout/Header.tsx
 
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import AuthModal from '@/components/auth/AuthModal'
 import WeatherStrip from './WeatherStrip'
+import ThemeToggle from './ThemeToggle'
 
 const ADMIN_TABS = [
-  { href: '/queue',        label: '🚨 QUEUE'        },
-  { href: '/assets',       label: '🚤 ASSETS'       },
-  { href: '/admin',        label: '🗺️ DASHBOARD'    },
-  { href: '/register',     label: '📋 REGISTRATION'  },
+  { href: '/queue', label: 'QUEUE' },
+  { href: '/assets', label: 'ASSETS' },
+  { href: '/admin', label: 'DASHBOARD' },
+  { href: '/register', label: 'REGISTRATION' },
 ]
 
 const RESCUER_TABS = [
-  { href: '/queue',  label: '🚨 QUEUE'    },
-  { href: '/assets', label: '🚤 ASSETS'   },
-  { href: '/admin',  label: '🗺️ DASHBOARD' },
+  { href: '/queue', label: 'QUEUE' },
+  { href: '/assets', label: 'ASSETS' },
+  { href: '/admin', label: 'DASHBOARD' },
 ]
 
 const CITIZEN_TABS: { href: string; label: string }[] = []
@@ -36,38 +36,41 @@ interface Suggestion {
 
 export default function Header() {
   const pathname = usePathname()
-  const router   = useRouter()
+  const router = useRouter()
   const { user, logout, showModal, setShowModal } = useAuthStore()
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
 
   const placesLib = useMapsLibrary('places')
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null)
-  const geocoder            = useRef<google.maps.Geocoder | null>(null)
+  const geocoder = useRef<google.maps.Geocoder | null>(null)
 
-  const [query,        setQuery]        = useState('')
-  const [suggestions,  setSuggestions]  = useState<Suggestion[]>([])
+  const [query, setQuery] = useState('')
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
-  const [loading,      setLoading]      = useState(false)
-  const inputRef    = useRef<HTMLInputElement>(null)
+  const [loading, setLoading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Init Google services once the library loads
+  function handleQueryChange(nextQuery: string) {
+    setQuery(nextQuery)
+    if (nextQuery.trim().length < 2) {
+      setSuggestions([])
+      setShowDropdown(false)
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!placesLib) return
     autocompleteService.current = new placesLib.AutocompleteService()
     geocoder.current = new google.maps.Geocoder()
   }, [placesLib])
 
-  // Fetch suggestions with 300ms debounce
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     const q = query.trim()
-    if (q.length < 2 || !autocompleteService.current) {
-      setSuggestions([])
-      setShowDropdown(false)
-      return
-    }
+    if (q.length < 2 || !autocompleteService.current) return
 
     debounceRef.current = setTimeout(() => {
       setLoading(true)
@@ -84,9 +87,9 @@ export default function Header() {
           }
           setSuggestions(
             predictions.map((p: google.maps.places.AutocompletePrediction) => ({
-              place_id:       p.place_id,
-              description:    p.description,
-              main_text:      p.structured_formatting.main_text,
+              place_id: p.place_id,
+              description: p.description,
+              main_text: p.structured_formatting.main_text,
               secondary_text: p.structured_formatting.secondary_text,
             })),
           )
@@ -95,15 +98,16 @@ export default function Header() {
       )
     }, 300)
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
   }, [query])
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (
         dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
-        inputRef.current   && !inputRef.current.contains(e.target as Node)
+        inputRef.current && !inputRef.current.contains(e.target as Node)
       ) {
         setShowDropdown(false)
       }
@@ -144,14 +148,10 @@ export default function Header() {
     inputRef.current?.focus()
   }
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      if (suggestions.length > 0) selectSuggestion(suggestions[0])
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [suggestions],
-  )
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (suggestions.length > 0) selectSuggestion(suggestions[0])
+  }
 
   async function handleLogout() {
     await logout()
@@ -159,7 +159,7 @@ export default function Header() {
   }
 
   function getTabsForRole() {
-    if (user?.role === 'admin')   return ADMIN_TABS
+    if (user?.role === 'admin') return ADMIN_TABS
     if (user?.role === 'rescuer') return RESCUER_TABS
     return CITIZEN_TABS
   }
@@ -168,21 +168,19 @@ export default function Header() {
 
   return (
     <div style={{ flexShrink: 0 }}>
-
-      {/* ── Top bar ─────────────────────────────────────────────────────── */}
       <div
         style={{
-          padding: '10px 14px',
-          background: '#000',
+          padding: '12px 14px',
+          background: 'var(--topbar-bg)',
           borderBottom: '2px solid var(--critical-red)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 10,
+          gap: 12,
+          flexWrap: 'wrap',
         }}
       >
-        {/* Logo + title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           <Image
             src="/logo2.png"
             alt="LIGTAS Logo"
@@ -191,67 +189,69 @@ export default function Header() {
             priority
             style={{ objectFit: 'contain' }}
           />
-          <div>
-            <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', letterSpacing: 2, lineHeight: 1.1 }}>
+          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <h1 style={{ margin: 0, fontSize: '1.12rem', color: 'var(--fg-on-dark)', letterSpacing: 1.6, lineHeight: 1.05 }}>
               L.I.G.T.A.S.
             </h1>
-            <p style={{ margin: 0, fontSize: '0.53rem', color: '#8b949e', letterSpacing: 0.3, lineHeight: 1.45 }}>
-              Location Intelligence &amp; Geospatial Triage<br />for Accelerated Support
+            <p style={{ margin: '2px 0 0', fontSize: '0.54rem', color: 'rgba(255,255,255,0.72)', letterSpacing: 0.28, lineHeight: 1.35 }}>
+              Location Intelligence &amp; Geospatial Triage
+              <br />
+              for Accelerated Support
             </p>
           </div>
         </div>
 
-        {/* Auth */}
-        {user ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <span style={{ fontSize: '0.62rem', color: '#8b949e' }}>{user.contact}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', rowGap: 6 }}>
+          <ThemeToggle />
+          {user ? (
+            <>
+              <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.76)', padding: '0 2px' }}>{user.contact}</span>
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: '5px 10px',
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.22)',
+                  color: 'rgba(255,255,255,0.86)',
+                  borderRadius: 4,
+                  fontSize: '0.62rem',
+                  fontWeight: 600,
+                  letterSpacing: 1,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                LOG OUT
+              </button>
+            </>
+          ) : (
             <button
-              onClick={handleLogout}
+              onClick={() => setShowModal(true)}
               style={{
-                padding: '5px 10px',
-                background: 'transparent',
-                border: '1px solid #30363d',
-                color: '#8b949e',
+                padding: '6px 12px',
+                background: 'var(--accent-blue)',
+                border: 'none',
+                color: '#fff',
                 borderRadius: 4,
-                fontSize: '0.62rem',
-                fontWeight: 600,
+                fontSize: '0.7rem',
+                fontWeight: 700,
                 letterSpacing: 1,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
               }}
             >
-              LOG OUT
+              LOG IN
             </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowModal(true)}
-            style={{
-              padding: '6px 12px',
-              background: 'var(--accent-blue)',
-              border: 'none',
-              color: '#fff',
-              borderRadius: 4,
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              letterSpacing: 1,
-              cursor: 'pointer',
-              flexShrink: 0,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            LOG IN
-          </button>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* ── Search bar ──────────────────────────────────────────────────── */}
       <WeatherStrip />
 
       <div
         style={{
-          padding: '10px 14px',
-          background: '#0d1117',
+          padding: '12px 14px',
+          background: 'var(--bg-base)',
           borderBottom: '1px solid var(--border-color)',
           position: 'relative',
           zIndex: 200,
@@ -263,29 +263,32 @@ export default function Header() {
               display: 'flex',
               alignItems: 'center',
               gap: 10,
-              background: '#161b22',
-              borderRadius: showDropdown ? '4px 4px 0 0' : 4,
-              padding: '8px 12px',
-              border: '1px solid #30363d',
+              background: 'var(--bg-surface)',
+              borderRadius: showDropdown ? '10px 10px 0 0' : 10,
+              padding: '10px 12px',
+              border: '1px solid var(--border)',
               transition: 'border-radius 0.1s',
+              boxShadow: 'var(--shadow-panel)',
             }}
           >
             <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>📍</span>
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search a place or barangay…"
+              aria-label="Search a place or barangay"
+              placeholder="Search a place or barangay..."
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => { if (suggestions.length > 0) setShowDropdown(true) }}
+              onChange={(e) => handleQueryChange(e.target.value)}
+              onFocus={() => {
+                if (suggestions.length > 0) setShowDropdown(true)
+              }}
               style={{
                 flex: 1,
                 border: 'none',
                 outline: 'none',
                 background: 'transparent',
                 fontSize: '0.85rem',
-                color: '#ffffff',
-                fontFamily: 'Inter, sans-serif',
+                color: 'var(--fg-default)',
                 minWidth: 0,
               }}
             />
@@ -293,10 +296,15 @@ export default function Header() {
               <button
                 type="button"
                 onClick={clearQuery}
+                aria-label="Clear search"
                 style={{
-                  background: 'transparent', border: 'none',
-                  color: '#888', cursor: 'pointer',
-                  padding: '0 4px', fontSize: '1rem', lineHeight: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--fg-subtle)',
+                  cursor: 'pointer',
+                  padding: '0 4px',
+                  fontSize: '1rem',
+                  lineHeight: 1,
                 }}
               >
                 ×
@@ -304,13 +312,20 @@ export default function Header() {
             )}
             <button
               type="submit"
+              aria-label="Submit place search"
               style={{
-                width: 28, height: 28,
-                borderRadius: 4,
-                background: loading ? '#8b949e' : '#1f6feb',
-                border: 'none', color: '#fff', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, fontSize: '0.85rem',
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: loading ? 'var(--fg-subtle)' : 'var(--accent-blue)',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                fontSize: '0.85rem',
               }}
             >
               {loading ? '…' : '🔍'}
@@ -318,58 +333,68 @@ export default function Header() {
           </div>
         </form>
 
-        {/* Dropdown */}
         {showDropdown && (
           <div
             ref={dropdownRef}
             style={{
               position: 'absolute',
-              left: 14, right: 14,
-              top: '100%', marginTop: -1,
-              background: '#161b22',
-              borderRadius: '0 0 4px 4px',
-              border: '1px solid #30363d',
+              left: 14,
+              right: 14,
+              top: '100%',
+              marginTop: -1,
+              background: 'var(--bg-surface)',
+              borderRadius: '0 0 10px 10px',
+              border: '1px solid var(--border)',
               overflow: 'hidden',
               zIndex: 300,
+              boxShadow: 'var(--shadow-panel)',
             }}
           >
-            {/* Current location row */}
             <button
               onClick={useCurrentLocation}
               style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                width: '100%', padding: '11px 16px',
-                background: 'transparent', border: 'none',
-                borderBottom: '1px solid #30363d',
-                cursor: 'pointer', textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                width: '100%',
+                padding: '11px 16px',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: '1px solid var(--border)',
+                cursor: 'pointer',
+                textAlign: 'left',
               }}
             >
-              <span style={{ fontSize: '1rem', color: '#1f6feb' }}>🎯</span>
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1f6feb' }}>
+              <span style={{ fontSize: '1rem', color: 'var(--accent-blue)' }}>🎯</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent-blue)' }}>
                 Your Current Location
               </span>
             </button>
 
-            {/* Results */}
             {suggestions.map((s, i) => (
               <button
                 key={s.place_id}
                 onClick={() => selectSuggestion(s)}
                 style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 10,
-                  width: '100%', padding: '10px 16px',
-                  background: 'transparent', border: 'none',
-                  borderBottom: i < suggestions.length - 1 ? '1px solid #21262d' : 'none',
-                  cursor: 'pointer', textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  width: '100%',
+                  padding: '10px 16px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: i < suggestions.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
                 }}
               >
                 <span style={{ fontSize: '0.85rem', marginTop: 1, flexShrink: 0 }}>📍</span>
                 <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f0f6fc', lineHeight: 1.3 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--fg-default)', lineHeight: 1.3 }}>
                     {s.main_text}
                   </div>
                   {s.secondary_text && (
-                    <div style={{ fontSize: '0.7rem', color: '#8b949e', marginTop: 1 }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--fg-muted)', marginTop: 1 }}>
                       {s.secondary_text}
                     </div>
                   )}
@@ -378,7 +403,7 @@ export default function Header() {
             ))}
 
             {suggestions.length === 0 && !loading && (
-              <div style={{ padding: '12px 16px', fontSize: '0.78rem', color: '#888' }}>
+              <div style={{ padding: '12px 16px', fontSize: '0.78rem', color: 'var(--fg-subtle)' }}>
                 No results found.
               </div>
             )}
@@ -386,7 +411,6 @@ export default function Header() {
         )}
       </div>
 
-      {/* ── Nav tabs (admin + rescuer only) ─────────────────────────────── */}
       {user && tabs.length > 0 && (
         <div
           style={{
@@ -414,11 +438,9 @@ export default function Header() {
                   fontSize: '0.72rem',
                   fontWeight: 600,
                   textDecoration: 'none',
-                  borderBottom: active
-                    ? '2px solid var(--accent-blue)'
-                    : '2px solid transparent',
-                  color:      active ? 'var(--accent-blue)' : 'var(--text-muted)',
-                  background: active ? 'var(--panel-bg)'    : 'transparent',
+                  borderBottom: active ? '2px solid var(--accent-blue)' : '2px solid transparent',
+                  color: active ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  background: active ? 'var(--panel-bg)' : 'transparent',
                   transition: 'color 0.15s, background 0.15s',
                 }}
               >

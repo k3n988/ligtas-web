@@ -1,7 +1,6 @@
 'use client'
-// src/app/map/MapStatsPanel.tsx
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { TRIAGE_ORDER } from '@/lib/triage'
@@ -9,9 +8,9 @@ import SummaryReportModal from '@/components/dashboard/SummaryReportModal'
 import { useMap } from 'react-leaflet'
 
 export default function MapStatsPanel() {
-  const households  = useHouseholdStore((s) => s.households)
-  const assets      = useAssetStore((s) => s.assets)
-  const map         = useMap()
+  const households = useHouseholdStore((s) => s.households)
+  const assets = useAssetStore((s) => s.assets)
+  useMap()
   const [showReport, setShowReport] = useState(false)
 
   const pending = households.filter((h) => h.status === 'Pending')
@@ -19,9 +18,9 @@ export default function MapStatsPanel() {
 
   const counts = {
     CRITICAL: pending.filter((h) => h.triage.level === 'CRITICAL').length,
-    HIGH:     pending.filter((h) => h.triage.level === 'HIGH').length,
+    HIGH: pending.filter((h) => h.triage.level === 'HIGH').length,
     ELEVATED: pending.filter((h) => h.triage.level === 'ELEVATED').length,
-    STABLE:   pending.filter((h) => h.triage.level === 'STABLE').length,
+    STABLE: pending.filter((h) => h.triage.level === 'STABLE').length,
   }
 
   const topPriority = [...pending].sort(
@@ -31,7 +30,7 @@ export default function MapStatsPanel() {
   const statCard = (label: string, value: number | string, color: string) => (
     <div
       style={{
-        background: '#21262d',
+        background: 'var(--bg-surface)',
         border: `1px solid ${color}`,
         borderRadius: 6,
         padding: '12px 15px',
@@ -46,7 +45,6 @@ export default function MapStatsPanel() {
   return (
     <>
       <div>
-        {/* ── Triage overview ───────────────────────────────────────────────── */}
         <h2
           style={{
             margin: '0 0 16px',
@@ -59,11 +57,11 @@ export default function MapStatsPanel() {
           Operational Overview
         </h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-          {statCard('CRITICAL', counts.CRITICAL, '#ff4d4d')}
-          {statCard('HIGH',     counts.HIGH,     '#f39c12')}
-          {statCard('ELEVATED', counts.ELEVATED, '#f1c40f')}
-          {statCard('RESCUED',  rescued.length,  '#238636')}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 20 }}>
+          {statCard('CRITICAL', counts.CRITICAL, 'var(--critical-red)')}
+          {statCard('HIGH', counts.HIGH, 'var(--high-orange)')}
+          {statCard('ELEVATED', counts.ELEVATED, 'var(--elevated-yellow)')}
+          {statCard('RESCUED', rescued.length, 'var(--resolved-green)')}
         </div>
 
         <div
@@ -72,16 +70,15 @@ export default function MapStatsPanel() {
             justifyContent: 'space-between',
             marginBottom: 20,
             padding: '10px 14px',
-            background: '#21262d',
+            background: 'var(--bg-surface)',
             borderRadius: 6,
             border: '1px solid var(--border-color)',
           }}
         >
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total Registered</span>
-          <span style={{ fontWeight: 700, color: '#fff' }}>{households.length}</span>
+          <span style={{ fontWeight: 700, color: 'var(--fg-default)' }}>{households.length}</span>
         </div>
 
-        {/* ── Active Assets ─────────────────────────────────────────────────── */}
         <h2
           style={{
             margin: '0 0 10px',
@@ -100,6 +97,7 @@ export default function MapStatsPanel() {
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
+                gap: 8,
                 padding: '8px 0',
                 borderBottom: '1px solid var(--border-color)',
                 fontSize: '0.82rem',
@@ -109,9 +107,11 @@ export default function MapStatsPanel() {
               <span
                 style={{
                   color:
-                    a.status === 'Active'        ? 'var(--resolved-green)'
-                    : a.status === 'Dispatching' ? 'var(--high-orange)'
-                    : 'var(--text-muted)',
+                    a.status === 'Active'
+                      ? 'var(--resolved-green)'
+                      : a.status === 'Dispatching'
+                        ? 'var(--high-orange)'
+                        : 'var(--text-muted)',
                   fontWeight: 600,
                   fontSize: '0.72rem',
                 }}
@@ -122,7 +122,6 @@ export default function MapStatsPanel() {
           ))}
         </div>
 
-        {/* ── Highest Priority ──────────────────────────────────────────────── */}
         {topPriority.length > 0 && (
           <>
             <h2
@@ -142,13 +141,13 @@ export default function MapStatsPanel() {
                 style={{
                   padding: '10px 14px',
                   marginBottom: 8,
-                  background: '#21262d',
+                  background: 'var(--bg-surface)',
                   borderRadius: 6,
                   borderLeft: `3px solid ${hh.triage.hex}`,
                   fontSize: '0.82rem',
                 }}
               >
-                <div style={{ fontWeight: 600, color: '#fff', marginBottom: 2 }}>{hh.head}</div>
+                <div style={{ fontWeight: 600, color: 'var(--fg-default)', marginBottom: 2 }}>{hh.head}</div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                   {hh.street}, {hh.barangay}
                 </div>
@@ -157,35 +156,29 @@ export default function MapStatsPanel() {
           </>
         )}
 
-        {/* ── Report ───────────────────────────────────────────────────────── */}
-        <div style={{ marginTop: 24, borderTop: '1px solid #30363d', paddingTop: 18 }}>
+        <div style={{ marginTop: 24, borderTop: '1px solid var(--border)', paddingTop: 18 }}>
           <button
             onClick={() => setShowReport(true)}
             style={{
               width: '100%',
               padding: '12px',
-              background: '#238636',
+              background: 'var(--resolved-green)',
               color: '#fff',
               border: 'none',
               borderRadius: 6,
               fontWeight: 700,
               fontSize: '0.85rem',
               cursor: 'pointer',
-              fontFamily: 'Inter, sans-serif',
               letterSpacing: 0.5,
             }}
           >
-            📋 Finalize &amp; Export Report
+            Finalize and Export Report
           </button>
         </div>
       </div>
 
       {showReport && (
-        <SummaryReportModal
-          households={households}
-          assets={assets}
-          onClose={() => setShowReport(false)}
-        />
+        <SummaryReportModal households={households} assets={assets} onClose={() => setShowReport(false)} />
       )}
     </>
   )

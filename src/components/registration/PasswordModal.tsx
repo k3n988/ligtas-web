@@ -109,7 +109,7 @@ export default function PasswordModal({ contact, password, role, onClose }: Prop
             letterSpacing: '0.03em',
           }}
         >
-          ✓ DONE — I'VE NOTED THE PASSWORD
+          ✓ DONE — I&apos;VE NOTED THE PASSWORD
         </button>
       </div>
     </div>

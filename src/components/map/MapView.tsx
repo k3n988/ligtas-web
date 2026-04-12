@@ -296,7 +296,7 @@ function RouteOverlay() {
   const selectedId = useHouseholdStore((s) => s.selectedId)
   const user       = useAuthStore((s) => s.user)
 
-  const [renderer, setRenderer] = useState<google.maps.DirectionsRenderer | null>(null)
+  const rendererRef = useRef<google.maps.DirectionsRenderer | null>(null)
 
   useEffect(() => {
     if (!routesLib || !map) return
@@ -308,11 +308,15 @@ function RouteOverlay() {
         strokeOpacity: 0.85,
       },
     })
-    setRenderer(r)
-    return () => { r.setMap(null) }
+    rendererRef.current = r
+    return () => {
+      rendererRef.current = null
+      r.setMap(null)
+    }
   }, [routesLib, map])
 
   useEffect(() => {
+    const renderer = rendererRef.current
     if (!renderer || !routesLib || !map || !user) {
       renderer?.setMap(null)
       return
@@ -345,7 +349,7 @@ function RouteOverlay() {
         }
       },
     )
-  }, [selectedId, households, assets, renderer, routesLib, map, user])
+  }, [selectedId, households, assets, routesLib, map, user])
 
   return null
 }

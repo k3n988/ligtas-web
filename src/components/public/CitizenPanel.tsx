@@ -1,7 +1,7 @@
 'use client'
 // src/components/public/CitizenPanel.tsx
 import { useHazardStore } from '@/store/hazardStore'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import type { Household } from '@/types'
@@ -33,8 +33,12 @@ const activeHazard = useHazardStore((s) => s.activeHazard)
     (hh) => hh.contact === user?.contact,
   )
 
-  // Close confirm dialog if household status changes externally
-  useEffect(() => { setConfirming(null) }, [household?.status])
+  const effectiveConfirming =
+    household?.status === 'Pending'
+      ? (confirming === 'cancel' ? null : confirming)
+      : household?.status === 'Rescued'
+        ? (confirming === 'safe' ? null : confirming)
+        : null
 
   async function handleSafe() {
     if (!household) return
@@ -121,7 +125,7 @@ const activeHazard = useHazardStore((s) => s.activeHazard)
 
                 {household.status === 'Pending' && (
         <div style={{ marginTop: 16 }}>
-          {confirming === 'safe' ? (
+          {effectiveConfirming === 'safe' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <p style={{ margin: 0, fontSize: '0.75rem', color: '#3fb950', fontWeight: 600 }}>
                 Confirm you are safe?
@@ -176,7 +180,7 @@ const activeHazard = useHazardStore((s) => s.activeHazard)
           
           {household.status === 'Rescued' && (
             <div style={{ padding: 16 }}>
-          {confirming === 'cancel' ? (
+          {effectiveConfirming === 'cancel' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <p style={{ margin: 0, fontSize: '0.75rem', color: '#f85149', fontWeight: 600 }}>
                 Re-submit your rescue request?
@@ -288,10 +292,3 @@ function AlertTriangleIcon({ size = 20 }) {
   )
 }
 
-function PhoneIcon({ size = 20 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-    </svg>
-  )
-}

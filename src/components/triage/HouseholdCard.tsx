@@ -1,5 +1,4 @@
 'use client'
-// src/components/triage/HouseholdCard.tsx
 
 import { useState } from 'react'
 import type { Household } from '@/types'
@@ -26,7 +25,6 @@ const btnBase: React.CSSProperties = {
   cursor: 'pointer',
   fontWeight: 600,
   textTransform: 'uppercase',
-  fontFamily: 'Inter, sans-serif',
 }
 
 export default function HouseholdCard({ household: hh }: Props) {
@@ -42,9 +40,7 @@ export default function HouseholdCard({ household: hh }: Props) {
 
   const isRescued = hh.status === 'Rescued'
   const borderColor = isRescued ? 'var(--resolved-green)' : BORDER_COLOR[hh.triage.colorName]
-  const assignedAsset = hh.assignedAssetId
-    ? assets.find((a) => a.id === hh.assignedAssetId)
-    : null
+  const assignedAsset = hh.assignedAssetId ? assets.find((a) => a.id === hh.assignedAssetId) : null
 
   const handleConfirmDispatch = () => {
     if (!selectedAssetId) return
@@ -62,40 +58,40 @@ export default function HouseholdCard({ household: hh }: Props) {
   return (
     <div
       style={{
-        background: '#21262d',
+        background: 'var(--bg-surface)',
         border: '1px solid var(--border-color)',
         borderLeft: `4px solid ${borderColor}`,
         borderRadius: 6,
         padding: 15,
         marginBottom: 10,
-        opacity: isRescued ? 0.7 : 1,
+        opacity: isRescued ? 0.74 : 1,
       }}
     >
-      {/* Header */}
       <div
+        className="mobile-stack"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
           marginBottom: 6,
+          gap: 8,
         }}
       >
-        <h3 style={{ margin: 0, fontWeight: 600, fontSize: '0.95rem', color: '#fff' }}>
+        <h3 style={{ margin: 0, fontWeight: 600, fontSize: '0.95rem', color: 'var(--fg-default)' }}>
           {hh.head}
         </h3>
         <TriageBadge triage={hh.triage} rescued={isRescued} />
       </div>
 
       <p style={{ margin: '0 0 6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        {hh.street}, Brgy. {hh.barangay}, {hh.city} &mdash; {hh.occupants} occupants
+        {hh.street}, Brgy. {hh.barangay}, {hh.city} - {hh.occupants} occupants
       </p>
       {hh.source && (
-        <p style={{ margin: '0 0 8px', fontSize: '0.68rem', color: '#58a6ff' }}>
-          📂 {hh.source}
+        <p style={{ margin: '0 0 8px', fontSize: '0.68rem', color: 'var(--accent-blue)' }}>
+          Source: {hh.source}
         </p>
       )}
 
-      {/* Vulnerability badges */}
       <div style={{ marginBottom: 10 }}>
         {hh.vulnArr.map((v) => (
           <span
@@ -103,7 +99,7 @@ export default function HouseholdCard({ household: hh }: Props) {
             style={{
               display: 'inline-block',
               padding: '2px 6px',
-              background: '#30363d',
+              background: 'var(--bg-elevated)',
               borderRadius: 4,
               fontSize: '0.7rem',
               marginRight: 4,
@@ -117,57 +113,56 @@ export default function HouseholdCard({ household: hh }: Props) {
       </div>
 
       {isRescued ? (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
           <p style={{ margin: 0, color: 'var(--resolved-green)', fontWeight: 'bold', fontSize: '0.8rem' }}>
-            ✓ OPERATION COMPLETE
+            Operation Complete
           </p>
           <button
             onClick={() => restorePending(hh.id)}
-            title="Undo — restore to Pending"
+            title="Restore to pending"
             style={{
               background: 'transparent',
-              border: '1px solid #30363d',
-              color: '#8b949e',
+              border: '1px solid var(--border)',
+              color: 'var(--fg-muted)',
               borderRadius: 4,
               padding: '4px 10px',
               cursor: 'pointer',
               fontSize: '0.72rem',
-              fontFamily: 'Inter, sans-serif',
             }}
           >
-            ↩ Restore
+            Restore
           </button>
         </div>
       ) : (
         <>
-          {/* Dispatch status bar */}
           {assignedAsset && !showPicker && (
             <div
+              className="mobile-stack"
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                background: '#0d1117',
-                border: '1px solid #30363d',
+                background: 'var(--bg-inset)',
+                border: '1px solid var(--border)',
                 borderRadius: 4,
                 padding: '6px 10px',
                 marginBottom: 10,
                 fontSize: '0.75rem',
+                gap: 8,
               }}
             >
               <span style={{ color: 'var(--high-orange)', fontWeight: 600 }}>
-                🚨 {assignedAsset.icon} {assignedAsset.name} — DISPATCHED
+                {assignedAsset.icon} {assignedAsset.name} - dispatched
               </span>
               <button
                 onClick={handleReassign}
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: '#8b949e',
+                  color: 'var(--fg-muted)',
                   cursor: 'pointer',
                   fontSize: '0.7rem',
                   padding: '2px 6px',
-                  fontFamily: 'Inter, sans-serif',
                 }}
               >
                 Reassign
@@ -175,37 +170,37 @@ export default function HouseholdCard({ household: hh }: Props) {
             </div>
           )}
 
-          {/* Asset picker */}
           {showPicker && (
             <div
               style={{
-                background: '#0d1117',
-                border: '1px solid #30363d',
+                background: 'var(--bg-inset)',
+                border: '1px solid var(--border)',
                 borderRadius: 4,
                 padding: '10px',
                 marginBottom: 10,
               }}
             >
-              <div style={{ fontSize: '0.72rem', color: '#8b949e', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--fg-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
                 Select Rescue Asset
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div className="mobile-stack" style={{ display: 'flex', gap: 6 }}>
                 <select
                   value={selectedAssetId}
                   onChange={(e) => setSelectedAssetId(e.target.value)}
                   style={{
                     flex: 1,
-                    background: '#161b22',
-                    border: '1px solid #30363d',
-                    color: '#c9d1d9',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--fg-default)',
                     borderRadius: 4,
                     padding: '6px 8px',
                     fontSize: '0.8rem',
-                    fontFamily: 'Inter, sans-serif',
                     cursor: 'pointer',
                   }}
                 >
-                  <option value="" disabled>Choose asset…</option>
+                  <option value="" disabled>
+                    Choose asset...
+                  </option>
                   {assets.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.icon} {a.name} ({a.status})
@@ -216,64 +211,64 @@ export default function HouseholdCard({ household: hh }: Props) {
                   onClick={handleConfirmDispatch}
                   disabled={!selectedAssetId}
                   style={{
-                    background: selectedAssetId ? '#238636' : '#21262d',
-                    color: selectedAssetId ? '#fff' : '#555',
+                    background: selectedAssetId ? 'var(--resolved-green)' : 'var(--bg-elevated)',
+                    color: selectedAssetId ? '#fff' : 'var(--fg-subtle)',
                     border: 'none',
                     borderRadius: 4,
                     padding: '6px 12px',
                     cursor: selectedAssetId ? 'pointer' : 'default',
                     fontSize: '0.75rem',
                     fontWeight: 700,
-                    fontFamily: 'Inter, sans-serif',
                   }}
                 >
                   Confirm
                 </button>
                 <button
-                  onClick={() => { setShowPicker(false); setSelectedAssetId('') }}
+                  onClick={() => {
+                    setShowPicker(false)
+                    setSelectedAssetId('')
+                  }}
                   style={{
                     background: 'transparent',
-                    border: '1px solid #30363d',
-                    color: '#8b949e',
+                    border: '1px solid var(--border)',
+                    color: 'var(--fg-muted)',
                     borderRadius: 4,
                     padding: '6px 10px',
                     cursor: 'pointer',
                     fontSize: '0.75rem',
-                    fontFamily: 'Inter, sans-serif',
                   }}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
             </div>
           )}
 
-          {/* Action buttons */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="mobile-stack" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {!assignedAsset && !showPicker && (
               <button
                 onClick={() => setShowPicker(true)}
                 style={{
                   ...btnBase,
-                  background: '#ff4d4d',
+                  background: 'var(--critical-red)',
                   color: '#fff',
                   border: 'none',
                 }}
               >
-                🚨 Dispatch Rescue
+                Dispatch Rescue
               </button>
             )}
             <button
               onClick={() => setPanTo(hh.id)}
               style={{
                 ...btnBase,
-                background: '#30363d',
-                color: '#fff',
+                background: 'var(--bg-elevated)',
+                color: 'var(--fg-default)',
                 border: 'none',
                 flex: assignedAsset ? 1 : '0 1 auto',
               }}
             >
-              📍 Locate
+              Locate
             </button>
             <button
               onClick={() => markRescued(hh.id)}
@@ -285,7 +280,7 @@ export default function HouseholdCard({ household: hh }: Props) {
                 flex: assignedAsset ? 1 : '0 1 auto',
               }}
             >
-              ✓ Mark Rescued
+              Mark Rescued
             </button>
           </div>
         </>

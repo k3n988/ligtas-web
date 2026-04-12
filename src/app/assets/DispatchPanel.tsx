@@ -1,4 +1,3 @@
-// src/app/dispatch/DispatchPanel.tsx
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
@@ -14,10 +13,10 @@ export default function DispatchPanel() {
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
   const [showAddForm, setShowAddForm] = useState(false)
 
-  const { pending, critical } = useMemo(() => {
+  const { critical } = useMemo(() => {
     const pendingList = households.filter((h) => h.status === 'Pending')
     const criticalList = pendingList.filter((h) => h.triage.level === 'CRITICAL')
-    return { pending: pendingList, critical: criticalList }
+    return { critical: criticalList }
   }, [households])
 
   useEffect(() => {
@@ -25,7 +24,7 @@ export default function DispatchPanel() {
       const { lat, lng } = (e as CustomEvent<{ lat: number; lng: number }>).detail
       setPanToCoords({ lat, lng, zoom: 16 })
     }
-    
+
     window.addEventListener('ligtas:panToAsset', handler)
     return () => window.removeEventListener('ligtas:panToAsset', handler)
   }, [setPanToCoords])
@@ -35,22 +34,27 @@ export default function DispatchPanel() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex justify-between items-center mb-1.5">
-        <h2 className="m-0 text-xs text-gray-400 uppercase tracking-wide">
+      <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+        <h2 style={{ margin: 0, fontSize: '0.72rem', color: 'var(--fg-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Assets
         </h2>
         <button
           onClick={() => setShowAddForm((v) => !v)}
-          className={`px-3 py-1.5 rounded text-xs font-bold font-sans text-white border-none cursor-pointer ${
-            showAddForm ? 'bg-[#21262d]' : 'bg-[#238636]'
-          }`}
+          className={showAddForm ? 'button-secondary' : 'button-success'}
+          style={{
+            padding: '8px 12px',
+            border: showAddForm ? '1px solid var(--border)' : 'none',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
         >
-          {showAddForm ? '✕ Cancel' : '+ Add Asset'}
+          {showAddForm ? 'Cancel' : '+ Add Asset'}
         </button>
       </div>
 
-      <p className="m-0 mb-4 text-xs text-gray-400">
-        {activeAssetsCount} active &mdash; {dispatchingAssetsCount} dispatching
+      <p style={{ margin: '0 0 16px', fontSize: '0.76rem', color: 'var(--fg-muted)' }}>
+        {activeAssetsCount} active - {dispatchingAssetsCount} dispatching
       </p>
 
       {showAddForm && <AddAssetForm onClose={() => setShowAddForm(false)} />}
@@ -63,25 +67,47 @@ export default function DispatchPanel() {
 
       {critical.length > 0 && (
         <>
-          <h2 className="mt-5 mb-2.5 text-xs text-red-500 uppercase tracking-wide">
-            🚨 Critical — Awaiting Dispatch ({critical.length})
+          <h2 style={{ margin: '22px 0 10px', fontSize: '0.74rem', color: 'var(--fg-danger)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Critical - Awaiting Dispatch ({critical.length})
           </h2>
           {critical.map((hh) => (
             <div
               key={hh.id}
-              className="px-3.5 py-2.5 mb-2 bg-[#21262d] rounded-md border-l-4 border-red-500 text-sm flex justify-between items-center"
+              style={{
+                padding: '12px 14px',
+                marginBottom: 8,
+                background: 'var(--bg-surface)',
+                borderRadius: 12,
+                border: '1px solid var(--border)',
+                borderLeft: '4px solid var(--critical-red)',
+                boxShadow: 'var(--shadow-panel)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 10,
+              }}
             >
               <div>
-                <div className="font-semibold text-white mb-0.5">{hh.head}</div>
-                <div className="text-gray-400 text-xs">
+                <div style={{ fontWeight: 700, color: 'var(--fg-default)', marginBottom: 2 }}>{hh.head}</div>
+                <div style={{ color: 'var(--fg-muted)', fontSize: '0.75rem' }}>
                   {hh.street}, {hh.barangay}
                 </div>
               </div>
               <button
                 onClick={() => setPanTo(hh.id)}
-                className="bg-[#30363d] text-white border-none rounded px-2.5 py-1.5 cursor-pointer text-xs font-semibold"
+                className="button-secondary"
+                style={{
+                  minWidth: 40,
+                  padding: '8px 10px',
+                  background: 'var(--bg-elevated)',
+                  color: 'var(--fg-default)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                }}
               >
-                📍
+                Pin
               </button>
             </div>
           ))}

@@ -1,5 +1,4 @@
 'use client'
-// src/app/admin/page.tsx
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -14,13 +13,12 @@ import type { TriageLevel } from '@/types'
 
 export default function AdminPage() {
   const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
-  const households     = useHouseholdStore((s) => s.households)
-  const assets         = useAssetStore((s) => s.assets)
-  const activeHazard   = useHazardStore((s) => s.activeHazard)
-  const floodZones     = useHazardStore((s) => s.floodZones)
-  const router         = useRouter()
+  const households = useHouseholdStore((s) => s.households)
+  const assets = useAssetStore((s) => s.assets)
+  const activeHazard = useHazardStore((s) => s.activeHazard)
+  const floodZones = useHazardStore((s) => s.floodZones)
+  const router = useRouter()
 
-  // Build a map of id → dynamicTriage for households inside the hazard zone
   const triageOverrides = useMemo<Map<string, TriageLevel>>(() => {
     const map = new Map<string, TriageLevel>()
     if (!activeHazard?.isActive) return map
@@ -48,17 +46,17 @@ export default function AdminPage() {
     void loadHouseholds()
   }, [loadHouseholds])
 
-  const getTabStyle = (isActive: boolean) => ({
+  const getTabStyle = (isActive: boolean): React.CSSProperties => ({
     padding: '8px 16px',
     background: 'transparent',
     border: 'none',
-    borderBottom: isActive ? '2px solid #58a6ff' : '2px solid transparent',
-    color: isActive ? '#58a6ff' : '#8b949e',
+    borderBottom: isActive ? '2px solid var(--accent-blue)' : '2px solid transparent',
+    color: isActive ? 'var(--accent-blue)' : 'var(--fg-muted)',
     cursor: 'pointer',
     fontSize: '0.8rem',
     fontWeight: 600,
-    textTransform: 'uppercase' as const,
-    fontFamily: 'Inter, sans-serif',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
     transition: 'all 0.2s ease',
   })
 
@@ -73,21 +71,21 @@ export default function AdminPage() {
       rows = households.map((h) => [
         h.id,
         h.head ?? '',
-      h.contact ?? '',
-      h.source ?? '',
-      h.city ?? '',
-      h.barangay ?? '',
-      h.purok ?? '',
-      h.street ?? '',
-      h.structure ?? '',
-      String(h.occupants ?? ''),
-      (h.vulnArr ?? []).join('; '),
-      h.triage?.level ?? '',
-      h.status ?? '',
-      h.approvalStatus ?? '',
-      String(h.lat ?? ''),
-      String(h.lng ?? ''),
-      h.created_at ? new Date(h.created_at).toLocaleString() : '',
+        h.contact ?? '',
+        h.source ?? '',
+        h.city ?? '',
+        h.barangay ?? '',
+        h.purok ?? '',
+        h.street ?? '',
+        h.structure ?? '',
+        String(h.occupants ?? ''),
+        (h.vulnArr ?? []).join('; '),
+        h.triage?.level ?? '',
+        h.status ?? '',
+        h.approvalStatus ?? '',
+        String(h.lat ?? ''),
+        String(h.lng ?? ''),
+        h.created_at ? new Date(h.created_at).toLocaleString() : '',
       ])
     } else {
       filename = 'asset_registry.csv'
@@ -106,125 +104,103 @@ export default function AdminPage() {
     }
 
     const escape = (val: string) =>
-      val.includes(',') || val.includes('"') || val.includes('\n')
-        ? `"${val.replace(/"/g, '""')}"`
-        : val
+      val.includes(',') || val.includes('"') || val.includes('\n') ? `"${val.replace(/"/g, '""')}"` : val
 
-    const csv = [
-      headers.join(','),
-      ...rows.map((r) => r.map(escape).join(',')),
-    ].join('\n')
-
+    const csv = [headers.join(','), ...rows.map((r) => r.map(escape).join(','))].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url  = URL.createObjectURL(blob)
+    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.href     = url
+    link.href = url
     link.download = filename
     link.click()
     URL.revokeObjectURL(url)
   }
 
   return (
-    <div style={{ padding: '24px' }}>
-
-      {/* --- HEADER SECTION --- */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 24 }}>
+    <div style={{ padding: '24px', color: 'var(--fg-default)' }}>
+      <div className="mobile-stack" style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 24 }}>
         <button
           onClick={() => router.back()}
-          onMouseOver={(e) => (e.currentTarget.style.background = '#30363d')}
-          onMouseOut={(e) => (e.currentTarget.style.background = '#21262d')}
           style={{
             marginTop: 2,
             padding: '6px 14px',
-            background: '#21262d',
-            border: '1px solid #30363d',
-            color: '#c9d1d9',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            color: 'var(--fg-default)',
             borderRadius: 6,
             cursor: 'pointer',
             fontSize: '0.8rem',
             fontWeight: 600,
-            fontFamily: 'Inter, sans-serif',
             whiteSpace: 'nowrap',
-            transition: 'background 0.2s ease',
           }}
         >
-          ← Back
+          Back
         </button>
         <div style={{ flex: 1 }}>
-          <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#fff' }}>
+          <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--fg-default)' }}>
             Household & Asset Registry
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#8b949e' }}>
+          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>
             View, edit, or delete registered data.
           </p>
         </div>
-
-        {/* --- EXPORT BUTTON --- */}
         <button
           onClick={exportCSV}
-          onMouseOver={(e) => (e.currentTarget.style.background = '#1a3a5c')}
-          onMouseOut={(e) => (e.currentTarget.style.background = '#21262d')}
           style={{
             marginTop: 2,
             padding: '6px 14px',
-            background: '#21262d',
-            border: '1px solid #58a6ff',
-            color: '#58a6ff',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--accent-blue)',
+            color: 'var(--accent-blue)',
             borderRadius: 6,
             cursor: 'pointer',
             fontSize: '0.8rem',
             fontWeight: 600,
-            fontFamily: 'Inter, sans-serif',
             whiteSpace: 'nowrap',
-            transition: 'background 0.2s ease',
           }}
         >
-          ⬇ Export CSV
+          Export CSV
         </button>
       </div>
 
-      {/* --- TABS NAVIGATION --- */}
-      <div style={{ display: 'flex', gap: 10, borderBottom: '1px solid #30363d', marginBottom: 20 }}>
-        <button
-          style={getTabStyle(activeTab === 'summary')}
-          onClick={() => setActiveTab('summary')}
-        >
-          📊 Summary Report
+      <div className="mobile-scroll-x hide-scrollbar" style={{ display: 'flex', gap: 10, borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
+        <button style={getTabStyle(activeTab === 'summary')} onClick={() => setActiveTab('summary')}>
+          Summary Report
         </button>
-        <button
-          style={getTabStyle(activeTab === 'registry')}
-          onClick={() => setActiveTab('registry')}
-        >
+        <button style={getTabStyle(activeTab === 'registry')} onClick={() => setActiveTab('registry')}>
           Household Registry
         </button>
-        <button
-          style={getTabStyle(activeTab === 'assets')}
-          onClick={() => setActiveTab('assets')}
-        >
+        <button style={getTabStyle(activeTab === 'assets')} onClick={() => setActiveTab('assets')}>
           Asset Registry
         </button>
       </div>
 
-      {/* --- CONTENT AREA --- */}
       <div style={{ minHeight: '500px' }}>
         {activeTab === 'summary' && (
-          <SummaryReportModal
-            households={households}
-            assets={assets}
-            onClose={() => setActiveTab('registry')}
-          />
+          <SummaryReportModal households={households} assets={assets} onClose={() => setActiveTab('registry')} />
         )}
         {activeTab === 'registry' && (
           <>
             {activeHazard?.isActive && (
-              <div style={{
-                background: '#3d1a1a', border: '1px solid #da3633',
-                borderRadius: 6, padding: '10px 16px', marginBottom: 14,
-                display: 'flex', alignItems: 'center', gap: 10,
-                fontSize: '0.8rem', fontWeight: 600, color: '#ff4d4d',
-              }}>
-                ⚠ Hazard Layer Active — <span style={{ color: '#f39c12' }}>{activeHazard.type}</span>
-                <span style={{ color: '#8b949e', fontWeight: 400 }}>
+              <div
+                style={{
+                  background: 'var(--bg-danger-subtle)',
+                  border: '1px solid var(--fg-danger)',
+                  borderRadius: 6,
+                  padding: '10px 16px',
+                  marginBottom: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  flexWrap: 'wrap',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: 'var(--fg-danger)',
+                }}
+              >
+                <span>Hazard Layer Active</span>
+                <span style={{ color: 'var(--fg-warning)' }}>{activeHazard.type}</span>
+                <span style={{ color: 'var(--fg-muted)', fontWeight: 400 }}>
                   · {triageOverrides.size} households with overridden triage
                   {activeHazard.type !== 'Flood' && (
                     <> · Critical ≤{activeHazard.radii.critical}km / High ≤{activeHazard.radii.high}km / Elevated ≤{activeHazard.radii.elevated}km / Stable ≤{activeHazard.radii.stable}km</>
@@ -240,7 +216,6 @@ export default function AdminPage() {
         )}
         {activeTab === 'assets' && <AssetTable />}
       </div>
-
     </div>
   )
 }

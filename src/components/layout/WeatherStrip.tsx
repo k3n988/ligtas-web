@@ -86,8 +86,8 @@ export default function WeatherStrip() {
     <div
       style={{
         padding: '10px 14px',
-        background: '#11161d',
-        borderBottom: '1px solid #30363d',
+        background: 'var(--bg-surface)',
+        borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -102,8 +102,8 @@ export default function WeatherStrip() {
             width: 36,
             height: 36,
             borderRadius: 999,
-            background: '#1b2530',
-            border: '1px solid #2f3c4a',
+            background: 'var(--bg-inset)',
+            border: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -120,14 +120,14 @@ export default function WeatherStrip() {
         </div>
 
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: '0.68rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: 1 }}>
+          <div style={{ fontSize: '0.68rem', color: 'var(--fg-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
             Live Weather
           </div>
-          <div style={{ fontSize: '0.9rem', color: '#f0f6fc', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: '0.9rem', color: 'var(--fg-default)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {loading ? 'Loading current conditions...' : error ?? `${weather?.location}, ${weather?.country}`}
           </div>
           {!loading && !error && (
-            <div style={{ fontSize: '0.72rem', color: '#9fb3c8', textTransform: 'capitalize' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--fg-subtle)', textTransform: 'capitalize' }}>
               {weather?.description}
             </div>
           )}
@@ -136,15 +136,15 @@ export default function WeatherStrip() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, flexWrap: 'wrap', marginLeft: 'auto' }}>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '1.05rem', color: '#7ee787', fontWeight: 800 }}>
+          <div style={{ fontSize: '1.05rem', color: 'var(--fg-success)', fontWeight: 800 }}>
             {loading ? '--' : formatNumber(weather?.temperatureC ?? null, ' C')}
           </div>
-          <div style={{ fontSize: '0.68rem', color: '#8b949e' }}>
+          <div style={{ fontSize: '0.68rem', color: 'var(--fg-muted)' }}>
             Feels like {loading ? '--' : formatNumber(weather?.feelsLikeC ?? null, ' deg')}
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, color: '#c9d1d9', fontSize: '0.72rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 10, color: 'var(--fg-default)', fontSize: '0.72rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <span>Humidity {loading ? '--' : formatNumber(weather?.humidity ?? null, '%')}</span>
           <span>Wind {loading ? '--' : formatNumber(weather?.windSpeedMps ?? null, ' m/s')}</span>
           <span>Rain {loading ? '--' : formatNumber(weather?.rain1h ?? null, ' mm')}</span>

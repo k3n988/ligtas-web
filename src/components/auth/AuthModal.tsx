@@ -35,9 +35,9 @@ export default function AuthModal({ onClose }: Props) {
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '10px 12px',
-    background: '#0d1117',
-    border: '1px solid #30363d',
-    color: '#fff',
+    background: 'var(--bg-inset)',
+    border: '1px solid var(--border)',
+    color: 'var(--fg-default)',
     borderRadius: 4,
     fontSize: '0.85rem',
     fontFamily: 'Inter, monospace',
@@ -47,7 +47,7 @@ export default function AuthModal({ onClose }: Props) {
   const labelStyle: React.CSSProperties = {
     display: 'block',
     fontSize: '0.7rem',
-    color: '#8b949e',
+    color: 'var(--fg-muted)',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 5,
@@ -60,7 +60,7 @@ export default function AuthModal({ onClose }: Props) {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.75)',
+        background: 'var(--bg-overlay)',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
@@ -71,12 +71,14 @@ export default function AuthModal({ onClose }: Props) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#161b22',
-          border: '1px solid #30363d',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border)',
           borderRadius: 8,
-          width: 360,
+          width: 'min(360px, calc(100vw - 24px))',
           padding: 28,
           fontFamily: 'Inter, monospace',
+          color: 'var(--fg-default)',
+          boxShadow: 'var(--shadow-overlay)',
         }}
       >
         {/* Header */}
@@ -84,15 +86,15 @@ export default function AuthModal({ onClose }: Props) {
           <p style={{ margin: 0, fontSize: '0.65rem', color: 'var(--accent-blue)', letterSpacing: 2 }}>
             L.I.G.T.A.S. SYSTEM
           </p>
-          <h2 style={{ margin: '4px 0 0', fontSize: '1rem', color: '#fff', letterSpacing: 1 }}>
+          <h2 style={{ margin: '4px 0 0', fontSize: '1rem', color: 'var(--fg-default)', letterSpacing: 1 }}>
             Sign In
           </h2>
         </div>
 
         {/* Info blurb — updated to mention all 3 roles */}
-        <p style={{ fontSize: '0.72rem', color: '#8b949e', margin: '0 0 18px', lineHeight: 1.6 }}>
-          Use your <strong style={{ color: '#c9d1d9' }}>email</strong> if you are an LGU admin.
-          Use your <strong style={{ color: '#c9d1d9' }}>contact number</strong> and the password
+        <p style={{ fontSize: '0.72rem', color: 'var(--fg-muted)', margin: '0 0 18px', lineHeight: 1.6 }}>
+          Use your <strong style={{ color: 'var(--fg-default)' }}>email</strong> if you are an LGU admin.
+          Use your <strong style={{ color: 'var(--fg-default)' }}>contact number</strong> and the password
           provided by LGU if you are a registered household member or a rescuer.
         </p>
 
@@ -127,11 +129,11 @@ export default function AuthModal({ onClose }: Props) {
             <p
               style={{
                 fontSize: '0.75rem',
-                color: '#f85149',
+                color: 'var(--fg-danger)',
                 margin: 0,
                 padding: '8px 10px',
-                background: '#2d1217',
-                border: '1px solid #f8514933',
+                background: 'var(--bg-danger-subtle)',
+                border: '1px solid color-mix(in srgb, var(--fg-danger) 35%, var(--border))',
                 borderRadius: 4,
               }}
             >
@@ -144,7 +146,7 @@ export default function AuthModal({ onClose }: Props) {
             disabled={loading}
             style={{
               padding: '11px',
-              background: loading ? '#21262d' : 'var(--accent-blue)',
+              background: loading ? 'var(--bg-elevated)' : 'var(--accent-blue)',
               color: '#fff',
               border: 'none',
               borderRadius: 4,
@@ -167,8 +169,8 @@ export default function AuthModal({ onClose }: Props) {
             width: '100%',
             padding: '8px',
             background: 'transparent',
-            border: '1px solid #30363d',
-            color: '#8b949e',
+            border: '1px solid var(--border)',
+            color: 'var(--fg-muted)',
             borderRadius: 4,
             fontSize: '0.75rem',
             cursor: 'pointer',

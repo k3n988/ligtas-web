@@ -9,19 +9,20 @@ export default function MapLegend() {
         bottom: 30,
         left: 12,
         zIndex: 10,
-        background: '#161b22',
+        background: 'var(--map-panel-bg)',
         padding: '12px 14px',
-        border: '1px solid #30363d',
+        border: '1px solid var(--map-panel-border)',
         borderRadius: 6,
         fontFamily: 'Inter, sans-serif',
         fontSize: '0.75rem',
-        color: '#c9d1d9',
-        boxShadow: '0 4px 12px rgba(0,0,0,.5)',
+        color: 'var(--fg-default)',
+        boxShadow: 'var(--shadow-overlay)',
         lineHeight: 1.3,
         pointerEvents: 'none',
+        maxWidth: 'calc(100vw - 24px)',
       }}
     >
-      <div style={{ fontWeight: 700, fontSize: '0.72rem', letterSpacing: 1, textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>
+      <div style={{ fontWeight: 700, fontSize: '0.72rem', letterSpacing: 1, textTransform: 'uppercase', color: 'var(--fg-default)', marginBottom: 8 }}>
         Triage Levels
       </div>
       {[
@@ -42,8 +43,8 @@ export default function MapLegend() {
           {label}
         </div>
       ))}
-      <div style={{ borderTop: '1px solid #30363d', margin: '8px 0' }} />
-      <div style={{ fontWeight: 700, fontSize: '0.72rem', letterSpacing: 1, textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>
+      <div style={{ borderTop: '1px solid var(--border)', margin: '8px 0' }} />
+      <div style={{ fontWeight: 700, fontSize: '0.72rem', letterSpacing: 1, textTransform: 'uppercase', color: 'var(--fg-default)', marginBottom: 8 }}>
         Assets
       </div>
       {[

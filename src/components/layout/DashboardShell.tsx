@@ -70,11 +70,9 @@ export default function DashboardShell({ children }: Props) {
   return (
     <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
       <div
+        className="dashboard-grid"
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 450px',
-          height: '100vh',
-          overflow: 'hidden',
+          background: 'var(--bg-base)',
         }}
       >
         <MapView />

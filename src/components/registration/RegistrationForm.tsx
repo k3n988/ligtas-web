@@ -1,5 +1,4 @@
 'use client'
-// src/components/registration/RegistrationForm.tsx
 
 import { useEffect, useRef, useState } from 'react'
 import { useHouseholdStore } from '@/store/householdStore'
@@ -10,24 +9,23 @@ import type { RegistrySource, Vulnerability } from '@/types'
 import TriagePreview from './TriagePreview'
 import PasswordModal from './PasswordModal'
 
-// ── Credential helpers ────────────────────────────────────────────────────────
 function generatePassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const arr   = new Uint8Array(8)
+  const arr = new Uint8Array(8)
   crypto.getRandomValues(arr)
   return Array.from(arr).map((n) => chars[n % chars.length]).join('')
 }
 
 async function hashPassword(plain: string): Promise<string> {
   const encoded = new TextEncoder().encode(plain + 'LIGTAS_SALT_2025')
-  const buf     = await crypto.subtle.digest('SHA-256', encoded)
+  const buf = await crypto.subtle.digest('SHA-256', encoded)
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
 }
 
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R   = 6_371_000
+  const R = 6_371_000
   const rad = (d: number) => (d * Math.PI) / 180
   const dLat = rad(lat2 - lat1)
   const dLng = rad(lng2 - lng1)
@@ -37,99 +35,69 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 const SOURCE_OPTIONS: { value: RegistrySource; label: string }[] = [
-  { value: 'Senior Citizen Registry', label: 'Senior Citizen Registry (OSCA)'     },
-  { value: 'PWD Registry',            label: 'PWD Registry (CPDAO)'               },
-  { value: 'Maternal Health Record',  label: 'Maternal Health Record (RHU/BHW)'   },
-  { value: 'CSWDO Database',          label: 'CSWDO Database'                     },
-  { value: 'BHW Field Survey',        label: 'BHW Field Survey / Community Round' },
+  { value: 'Senior Citizen Registry', label: 'Senior Citizen Registry (OSCA)' },
+  { value: 'PWD Registry', label: 'PWD Registry (CPDAO)' },
+  { value: 'Maternal Health Record', label: 'Maternal Health Record (RHU/BHW)' },
+  { value: 'CSWDO Database', label: 'CSWDO Database' },
+  { value: 'BHW Field Survey', label: 'BHW Field Survey / Community Round' },
 ]
 
 const VULN_OPTIONS: { value: Vulnerability; label: string }[] = [
-  { value: 'Bedridden',  label: 'Bedridden'       },
-  { value: 'Senior',     label: 'Senior Citizen'   },
-  { value: 'Wheelchair', label: 'Wheelchair User'  },
-  { value: 'Infant',     label: 'Infant / Toddler' },
-  { value: 'Pregnant',   label: 'Pregnant'         },
-  { value: 'PWD',        label: 'PWD'              },
-  { value: 'Oxygen',     label: 'Oxygen Dependent' },
-  { value: 'Dialysis',   label: 'Dialysis Patient' },
+  { value: 'Bedridden', label: 'Bedridden' },
+  { value: 'Senior', label: 'Senior Citizen' },
+  { value: 'Wheelchair', label: 'Wheelchair User' },
+  { value: 'Infant', label: 'Infant / Toddler' },
+  { value: 'Pregnant', label: 'Pregnant' },
+  { value: 'PWD', label: 'PWD' },
+  { value: 'Oxygen', label: 'Oxygen Dependent' },
+  { value: 'Dialysis', label: 'Dialysis Patient' },
 ]
 
 const CITY_BARANGAY_MAP: Record<string, string[]> = {
   'Bacolod City': [
-  'Alangilan', 'Alijis', 'Banago',
-  'Barangay 1', 'Barangay 2', 'Barangay 3', 'Barangay 4', 'Barangay 5',
-  'Barangay 6', 'Barangay 7', 'Barangay 8', 'Barangay 9', 'Barangay 10',
-  'Barangay 11', 'Barangay 12', 'Barangay 13', 'Barangay 14', 'Barangay 15',
-  'Barangay 16', 'Barangay 17', 'Barangay 18', 'Barangay 19', 'Barangay 20',
-  'Barangay 21', 'Barangay 22', 'Barangay 23', 'Barangay 24', 'Barangay 25',
-  'Barangay 26', 'Barangay 27', 'Barangay 28', 'Barangay 29', 'Barangay 30',
-  'Barangay 31', 'Barangay 32', 'Barangay 33', 'Barangay 34', 'Barangay 35',
-  'Barangay 36', 'Barangay 37', 'Barangay 38', 'Barangay 39', 'Barangay 40',
-  'Barangay 41',
-  'Bata', 'Cabug', 'Estefania', 'Felisa', 'Granada', 'Handumanan',
-  'Mandalagan', 'Mansilingan', 'Montevista', 'Pahanocoy', 'Punta Taytay',
-  'Singcang-Airport', 'Sum-ag', 'Taculing', 'Tangub', 'Villamonte', 'Vista Alegre',
-],
- 'Bago City': [
-  'Abuanan', 'Alianza', 'Atipuluan', 'Bacong', 'Bagroy', 'Balingasag',
-  'Binubuhan', 'Busay', 'Calumangan', 'Caridad', 'Don Jorge L. Araneta',
-  'Dulao', 'Ilijan', 'Lag-asan', 'Ma-ao Barrio', 'Mailum', 'Malingin',
-  'Napoles', 'Pacol', 'Poblacion', 'Sagasa', 'Sampinit', 'Tabunan', 'Taloc',
-],
-  'Cadiz City':   ['Andres Bonifacio', 'Burgos', 'Cabahug', 'Cadiz Viejo', 'Caduha-an', 'Celestino Villacin', 'Daga', 'Jerusalem', 'Luna', 'Mabini', 'Magsaysay', 'Sicaba', 'Tiglawigan', 'Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6'],
-  'Murcia':       ['Abejuvela', 'Amaya', 'Anahaw', 'Buenavista', 'Caliban', 'Canlandog', 'Cansilayan', 'Damsite', 'Iglau-an', 'Lopez Jaena', 'Minoyan', 'Pandanon', 'Salvacion', 'San Miguel', 'Santa Cruz', 'Santa Rosa', 'Talotog', 'Zone I', 'Zone II', 'Zone III', 'Zone IV', 'Zone V'],
-  'La Carlota City': [
-  'Ara-al', 'Ayungon', 'Balabag',
-  'Barangay I', 'Barangay II', 'Barangay III',
-  'Batuan', 'Cubay', 'Haguimit',
-  'La Granja', 'Nagasi', 'Roberto S. Benedicto',
-  'San Miguel', 'Yubo',
-  ], 
-  'Canlaon City': [
-  'Bayog', 'Binalbagan', 'Bucalan',
-  'Budlasan', 'Linothangan', 'Lumapao',
-  'Mabigo', 'Malaiba', 'Masulog',
-  'Ninoy Aquino', 'Panubigan', 'Pula',
-],
-  'Sagay City':   ['Bato', 'Baviera', 'Bulanon', 'Campo Himoga-an', 'Campo Santiago', 'Colonia Divina', 'Fabrica', 'General Luna', 'Himoga-an Baybay', 'Lopez Jaena', 'Malubon', 'Molocaboc', 'Old Sagay', 'Plaridel', 'Poblacion I', 'Poblacion II', 'Rizal', 'Sewane', 'Taba-ao', 'Tadlong', 'Vito'],
-  'Silay City':   ['Bagtic', 'Balaring', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV', 'Barangay V', 'Guimbala-on', 'Guinhalaran', 'Kapitan Ramon', 'Lantad', 'Mambulac', 'Patag', 'Rizal'],
+    'Alangilan', 'Alijis', 'Banago', 'Barangay 1', 'Barangay 2', 'Barangay 3', 'Barangay 4', 'Barangay 5',
+    'Barangay 6', 'Barangay 7', 'Barangay 8', 'Barangay 9', 'Barangay 10', 'Barangay 11', 'Barangay 12',
+    'Barangay 13', 'Barangay 14', 'Barangay 15', 'Barangay 16', 'Barangay 17', 'Barangay 18', 'Barangay 19',
+    'Barangay 20', 'Barangay 21', 'Barangay 22', 'Barangay 23', 'Barangay 24', 'Barangay 25', 'Barangay 26',
+    'Barangay 27', 'Barangay 28', 'Barangay 29', 'Barangay 30', 'Barangay 31', 'Barangay 32', 'Barangay 33',
+    'Barangay 34', 'Barangay 35', 'Barangay 36', 'Barangay 37', 'Barangay 38', 'Barangay 39', 'Barangay 40',
+    'Barangay 41', 'Bata', 'Cabug', 'Estefania', 'Felisa', 'Granada', 'Handumanan', 'Mandalagan',
+    'Mansilingan', 'Montevista', 'Pahanocoy', 'Punta Taytay', 'Singcang-Airport', 'Sum-ag', 'Taculing',
+    'Tangub', 'Villamonte', 'Vista Alegre',
+  ],
+  'Bago City': [
+    'Abuanan', 'Alianza', 'Atipuluan', 'Bacong', 'Bagroy', 'Balingasag', 'Binubuhan', 'Busay', 'Calumangan',
+    'Caridad', 'Don Jorge L. Araneta', 'Dulao', 'Ilijan', 'Lag-asan', 'Ma-ao Barrio', 'Mailum', 'Malingin',
+    'Napoles', 'Pacol', 'Poblacion', 'Sagasa', 'Sampinit', 'Tabunan', 'Taloc',
+  ],
+  'Cadiz City': ['Andres Bonifacio', 'Burgos', 'Cabahug', 'Cadiz Viejo', 'Caduha-an', 'Celestino Villacin', 'Daga', 'Jerusalem', 'Luna', 'Mabini', 'Magsaysay', 'Sicaba', 'Tiglawigan', 'Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6'],
+  'Murcia': ['Abejuvela', 'Amaya', 'Anahaw', 'Buenavista', 'Caliban', 'Canlandog', 'Cansilayan', 'Damsite', 'Iglau-an', 'Lopez Jaena', 'Minoyan', 'Pandanon', 'Salvacion', 'San Miguel', 'Santa Cruz', 'Santa Rosa', 'Talotog', 'Zone I', 'Zone II', 'Zone III', 'Zone IV', 'Zone V'],
+  'La Carlota City': ['Ara-al', 'Ayungon', 'Balabag', 'Barangay I', 'Barangay II', 'Barangay III', 'Batuan', 'Cubay', 'Haguimit', 'La Granja', 'Nagasi', 'Roberto S. Benedicto', 'San Miguel', 'Yubo'],
+  'Canlaon City': ['Bayog', 'Binalbagan', 'Bucalan', 'Budlasan', 'Linothangan', 'Lumapao', 'Mabigo', 'Malaiba', 'Masulog', 'Ninoy Aquino', 'Panubigan', 'Pula'],
+  'Sagay City': ['Bato', 'Baviera', 'Bulanon', 'Campo Himoga-an', 'Campo Santiago', 'Colonia Divina', 'Fabrica', 'General Luna', 'Himoga-an Baybay', 'Lopez Jaena', 'Malubon', 'Molocaboc', 'Old Sagay', 'Plaridel', 'Poblacion I', 'Poblacion II', 'Rizal', 'Sewane', 'Taba-ao', 'Tadlong', 'Vito'],
+  'Silay City': ['Bagtic', 'Balaring', 'Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV', 'Barangay V', 'Guimbala-on', 'Guinhalaran', 'Kapitan Ramon', 'Lantad', 'Mambulac', 'Patag', 'Rizal'],
   'Talisay City': ['Bubog', 'Cabacungan', 'Concepcion', 'Dos Hermanas', 'Efigenio Lizares', 'Katubhan', 'Matab-ang', 'Poblacion', 'San Fernando', 'Tanza', 'Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 4-A', 'Zone 5', 'Zone 6', 'Zone 7', 'Zone 8', 'Zone 9', 'Zone 10', 'Zone 11', 'Zone 12', 'Zone 12-A', 'Zone 14', 'Zone 14-A', 'Zone 14-B', 'Zone 15', 'Zone 16'],
   'Victorias City': ['Barangay I', 'Barangay II', 'Barangay III', 'Barangay IV', 'Barangay V', 'Barangay VI', 'Barangay VII', 'Barangay VIII', 'Barangay IX', 'Barangay X', 'Barangay XI', 'Barangay XII', 'Barangay XIII', 'Barangay XIV', 'Barangay XV', 'Barangay XVI', 'Barangay XVII', 'Barangay XVIII', 'Barangay XIX', 'Barangay XX', 'Barangay XXI'],
 }
 
 const CITY_OPTIONS = Object.keys(CITY_BARANGAY_MAP).sort()
 
-/** Resolves cityVal to the exact key in CITY_BARANGAY_MAP.
- *  Handles geocoder mismatches like "Bacolod" → "Bacolod City" */
 function resolveMapKey(cityVal: string): string | null {
   if (!cityVal) return null
   const normalized = cityVal.trim().toLowerCase()
-
-  // 1. Exact match
   if (CITY_BARANGAY_MAP[cityVal]) return cityVal
 
-  // 2. Case-insensitive exact match
-  const exactCI = Object.keys(CITY_BARANGAY_MAP).find(
-    (k) => k.toLowerCase() === normalized
-  )
+  const exactCI = Object.keys(CITY_BARANGAY_MAP).find((k) => k.toLowerCase() === normalized)
   if (exactCI) return exactCI
 
-  // 3. Geocoder returns "Bacolod" → match "Bacolod City", etc.
-  //    Only allow "X" → "X City", not broad substring matching
   const withCity = normalized.endsWith(' city') ? normalized : normalized + ' city'
-  const cityMatch = Object.keys(CITY_BARANGAY_MAP).find(
-    (k) => k.toLowerCase() === withCity
-  )
+  const cityMatch = Object.keys(CITY_BARANGAY_MAP).find((k) => k.toLowerCase() === withCity)
   if (cityMatch) return cityMatch
 
-  // 4. Reverse: geocoder returns "Bago City" → strip " city" and try
   const withoutCity = normalized.replace(/ city$/, '').trim()
   const reverseMatch = Object.keys(CITY_BARANGAY_MAP).find(
-    (k) => k.toLowerCase().replace(/ city$/, '') === withoutCity
+    (k) => k.toLowerCase().replace(/ city$/, '') === withoutCity,
   )
   if (reverseMatch) return reverseMatch
 
@@ -138,68 +106,65 @@ function resolveMapKey(cityVal: string): string | null {
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  padding: '10px',
-  background: '#0d1117',
-  border: '1px solid var(--border-color)',
-  color: '#fff',
-  borderRadius: 4,
+  padding: '12px 14px',
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border)',
+  color: 'var(--fg-default)',
+  borderRadius: 10,
   boxSizing: 'border-box',
-  fontFamily: 'Inter, sans-serif',
   fontSize: '0.85rem',
+  lineHeight: 1.35,
 }
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
-  fontSize: '0.75rem',
-  marginBottom: 5,
+  fontSize: '0.7rem',
+  marginBottom: 7,
   color: 'var(--text-muted)',
   textTransform: 'uppercase',
-  fontWeight: 500,
+  fontWeight: 700,
+  letterSpacing: '0.06em',
 }
 
 const subHeaderStyle: React.CSSProperties = {
   display: 'block',
-  fontSize: '0.85rem',
+  fontSize: '0.82rem',
   fontWeight: 800,
-  color: '#fff',
+  color: 'var(--fg-default)',
   letterSpacing: '0.05em',
   textTransform: 'uppercase',
-  marginBottom: 12,
+  marginBottom: 14,
   borderLeft: '4px solid var(--accent-blue)',
-  paddingLeft: 10,
+  paddingLeft: 12,
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function RegistrationForm() {
-  const addHousehold       = useHouseholdStore((s) => s.addHousehold)
-  const households         = useHouseholdStore((s) => s.households)
+  const addHousehold = useHouseholdStore((s) => s.addHousehold)
+  const households = useHouseholdStore((s) => s.households)
   const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
-  const pendingCoords      = useHouseholdStore((s) => s.pendingCoords)
-  const setPendingCoords   = useHouseholdStore((s) => s.setPendingCoords)
+  const pendingCoords = useHouseholdStore((s) => s.pendingCoords)
+  const setPendingCoords = useHouseholdStore((s) => s.setPendingCoords)
 
   const geocodingLib = useMapsLibrary('geocoding')
-  const geocoderRef  = useRef<google.maps.Geocoder | null>(null)
-  const formRef      = useRef<HTMLFormElement>(null)
-  const fileRef      = useRef<HTMLInputElement>(null)
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
-  // ── Coords ───────────────────────────────────────────────────────────────
-  const [lat,           setLat]           = useState<number | null>(null)
-  const [lng,           setLng]           = useState<number | null>(null)
+  const [lat, setLat] = useState<number | null>(null)
+  const [lng, setLng] = useState<number | null>(null)
   const [coordsDisplay, setCoordsDisplay] = useState('')
-  const [locating,      setLocating]      = useState(false)
-  const [gpsAccuracy,   setGpsAccuracy]   = useState<number | null>(null)
-  const [pinSource,     setPinSource]     = useState<'gps' | 'map' | null>(null)
+  const [locating] = useState(false)
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null)
+  const [pinSource, setPinSource] = useState<'gps' | 'map' | null>(null)
 
-  // ── Address — city auto-filled, barangay + street always manual ──────────
-  const [geocoding,  setGeocoding]  = useState(false)
-  const [cityVal,    setCityVal]    = useState('')       // auto-filled from geocode
-  const [barangayVal, setBarangayVal] = useState('')    // always manual dropdown
-  const [streetVal,  setStreetVal]  = useState('')      // always manual text input
+  const [geocoding, setGeocoding] = useState(false)
+  const [cityVal, setCityVal] = useState('')
+  const [barangayVal, setBarangayVal] = useState('')
+  const [streetVal, setStreetVal] = useState('')
 
-  // ── Form ─────────────────────────────────────────────────────────────────
-  const [vulnArr,   setVulnArr]   = useState<Vulnerability[]>([])
+  const [vulnArr, setVulnArr] = useState<Vulnerability[]>([])
   const [sourceVal, setSourceVal] = useState<RegistrySource | ''>('')
-  const [saving,    setSaving]    = useState(false)
+  const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [credModal, setCredModal] = useState<{ contact: string; password: string } | null>(null)
 
@@ -209,54 +174,39 @@ export default function RegistrationForm() {
     }
   }, [geocodingLib])
 
-  // ── Reverse geocode — only extracts city ─────────────────────────────────
   const detectCity = (pLat: number, pLng: number, fillStreet = false) => {
     if (!geocoderRef.current) return
     setGeocoding(true)
-  
+
     geocoderRef.current.geocode({ location: { lat: pLat, lng: pLng } }, (results, status) => {
       setGeocoding(false)
       if (status !== 'OK' || !results?.length) return
-  
+
       const comps = results[0].address_components
-  
-      // Try each tier from most to least specific
       const cityComp =
-        comps.find(c => c.types.includes('locality'))                    ||
-        comps.find(c => c.types.includes('administrative_area_level_3')) ||
-        comps.find(c => c.types.includes('administrative_area_level_2')) ||
-        comps.find(c => c.types.includes('administrative_area_level_1'))
-  
+        comps.find((c) => c.types.includes('locality')) ||
+        comps.find((c) => c.types.includes('administrative_area_level_3')) ||
+        comps.find((c) => c.types.includes('administrative_area_level_2')) ||
+        comps.find((c) => c.types.includes('administrative_area_level_1'))
+
       const rawCity = cityComp?.long_name?.trim() ?? ''
-  
-      // Validate against our map — prevents province/region names being set as city
       let resolved = resolveMapKey(rawCity)
       if (!resolved) resolved = resolveMapKey(rawCity + ' City')
-  
+
       if (resolved) {
         setCityVal(resolved)
         setBarangayVal('')
       }
-  
-      // Street — PH geocoder returns street info with empty types[]
-      // so we extract from formatted_address directly instead
+
       if (fillStreet) {
         const formattedParts = results[0].formatted_address?.split(',') ?? []
-  
-        // formatted_address = "Door 2, Lot 8, Pueblo San Antonio, Talisay, Negros Occidental, Philippines"
-        // Strip last 3 segments (city, province, country) — keep everything before
-        const streetParts = formattedParts
-          .slice(0, -3)
-          .map(p => p.trim())
-          .filter(Boolean)
-  
+        const streetParts = formattedParts.slice(0, -3).map((p) => p.trim()).filter(Boolean)
         const street = streetParts.join(', ')
         if (street) setStreetVal(street)
       }
     })
   }
 
-  // ── Sync map pin ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!pendingCoords) return
     setLat(pendingCoords.lat)
@@ -269,66 +219,43 @@ export default function RegistrationForm() {
 
   const triage = assessTriage(vulnArr)
   const resolvedCityKey = resolveMapKey(cityVal)
-  const toggleVuln = (v: Vulnerability) =>
-    setVulnArr((p) => p.includes(v) ? p.filter((x) => x !== v) : [...p, v])
 
-  // ── GPS capture ───────────────────────────────────────────────────────────
-  const getLocation = () => {
-    if (!navigator.geolocation) return
-    setLocating(true)
-    setCoordsDisplay('Capturing GPS…')
-    setGpsAccuracy(null)
-    setSaveError(null)
-
-    navigator.geolocation.getCurrentPosition(
-      ({ coords: c }) => {
-        setLat(c.latitude)
-        setLng(c.longitude)
-        setCoordsDisplay(`${c.latitude.toFixed(6)}, ${c.longitude.toFixed(6)}`)
-        setGpsAccuracy(Math.round(c.accuracy))
-        setPinSource('gps')
-        setPendingCoords({ lat: c.latitude, lng: c.longitude })
-        setLocating(false)
-        detectCity(c.latitude, c.longitude, true)
-
-      },
-      (err) => {
-        setCoordsDisplay('')
-        setLocating(false)
-        setPinSource(null)
-        setGpsAccuracy(null)
-        setSaveError('GPS failed: ' + err.message)
-      },
-      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
-    )
+  const toggleVuln = (v: Vulnerability) => {
+    setVulnArr((p) => (p.includes(v) ? p.filter((x) => x !== v) : [...p, v]))
   }
 
-  // ── Full address preview ──────────────────────────────────────────────────
   const fullAddressPreview = [streetVal, barangayVal, cityVal, 'Negros Occidental']
-    .filter(Boolean).join(', ')
+    .filter(Boolean)
+    .join(', ')
 
-  // ── Reset ─────────────────────────────────────────────────────────────────
   const resetForm = () => {
     formRef.current?.reset()
     setVulnArr([])
-    setLat(null); setLng(null)
-    setCoordsDisplay(''); setPinSource(null); setGpsAccuracy(null); setPendingCoords(null)
-    setSourceVal(''); setCityVal(''); setBarangayVal(''); setStreetVal('')
+    setLat(null)
+    setLng(null)
+    setCoordsDisplay('')
+    setPinSource(null)
+    setGpsAccuracy(null)
+    setPendingCoords(null)
+    setSourceVal('')
+    setCityVal('')
+    setBarangayVal('')
+    setStreetVal('')
     setSaveError(null)
   }
 
-  // ── Duplicate check ───────────────────────────────────────────────────────
   const detectDuplicate = (contact: string, pLat: number, pLng: number) => {
     for (const hh of households) {
-      if (hh.contact === contact)
+      if (hh.contact === contact) {
         return { isDuplicate: true, reason: `Contact ${contact} already registered (${hh.id}).` }
-      if (haversineMeters(pLat, pLng, hh.lat, hh.lng) <= 10)
-        return { isDuplicate: true, reason: `Household within 10 m already exists (${hh.id} — ${hh.head}).` }
+      }
+      if (haversineMeters(pLat, pLng, hh.lat, hh.lng) <= 10) {
+        return { isDuplicate: true, reason: `Household within 10 m already exists (${hh.id} - ${hh.head}).` }
+      }
     }
     return { isDuplicate: false, reason: '' }
   }
 
-  // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     setSaveError(null)
@@ -346,17 +273,21 @@ export default function RegistrationForm() {
       return
     }
 
-    const form       = e.currentTarget
-    const fd         = new FormData(form)
-    const source     = fd.get('source')   as RegistrySource
+    const form = e.currentTarget
+    const fd = new FormData(form)
+    const source = fd.get('source') as RegistrySource
     const contactVal = (fd.get('contact') as string).trim()
-    const id         = 'HH-' + Date.now().toString().slice(-6)
+    const id = 'HH-' + Date.now().toString().slice(-6)
 
     const fullAddress = [streetVal, barangayVal, cityVal, 'Negros Occidental']
-      .filter(Boolean).join(', ')
+      .filter(Boolean)
+      .join(', ')
 
     const { isDuplicate, reason } = detectDuplicate(contactVal, lat, lng)
-    if (isDuplicate) { setSaveError(`⚠ Duplicate detected — ${reason}`); return }
+    if (isDuplicate) {
+      setSaveError(`Duplicate detected - ${reason}`)
+      return
+    }
 
     setSaving(true)
     try {
@@ -372,11 +303,12 @@ export default function RegistrationForm() {
       }
 
       const plainPassword = generatePassword()
-      const passwordHash  = await hashPassword(plainPassword)
+      const passwordHash = await hashPassword(plainPassword)
 
       await addHousehold({
         id,
-        lat, lng,
+        lat,
+        lng,
         city: cityVal,
         barangay: barangayVal,
         purok: (fd.get('purok') as string) || 'N/A',
@@ -408,84 +340,82 @@ export default function RegistrationForm() {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       <form ref={formRef} onSubmit={handleSubmit}>
-
-        {/* LGU header */}
-        <div style={{ background: '#0000c3', borderLeft: '3px solid var(--accent-blue)', borderRadius: 4, padding: '10px 14px', marginBottom: 20, fontSize: '0.75rem', lineHeight: 1.6 }}>
-          <strong style={{ color: '#fff', display: 'block', marginBottom: 2, fontSize: '0.85rem' }}>
-            📋 LGU Vulnerability Registry — Authorized Personnel Only
+        <div className="sidebar-hero" style={{ marginBottom: 20, fontSize: '0.75rem', lineHeight: 1.6 }}>
+          <strong style={{ color: 'var(--fg-default)', display: 'block', marginBottom: 4, fontSize: '0.88rem' }}>
+            LGU Vulnerability Registry - Authorized Personnel Only
           </strong>
-          <span style={{ color: '#e9d5ff' }}>
-            For use by Barangay Health Workers (BHWs), CSWDO, and LGU field staff to digitize existing registries pre-disaster.
+          <span style={{ color: 'var(--fg-muted)' }}>
+            For use by Barangay Health Workers, CSWDO, and LGU field staff to digitize existing registries before disasters.
           </span>
         </div>
 
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* 1. RESCUE LOCATION                                           */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: 8, padding: 16, marginBottom: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+        <div className="sidebar-form-section" style={{ marginBottom: 20 }}>
           <h3 style={subHeaderStyle}>1. Rescue Location</h3>
 
-          {/* Pin status row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, marginBottom: 10 }}>
             <label style={{ ...labelStyle, marginBottom: 0 }}>Latitude, Longitude</label>
             {pinSource && (
-              <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? '#58a6ff' : '#238636', fontWeight: 600 }}>
-                {pinSource === 'map' ? '🗺 Pinned on map' : '📡 GPS captured'}
+              <span style={{ fontSize: '0.68rem', color: pinSource === 'map' ? 'var(--accent-blue)' : 'var(--resolved-green)', fontWeight: 700 }}>
+                {pinSource === 'map' ? 'Pinned on map' : 'GPS captured'}
                 {gpsAccuracy !== null && ` · ±${gpsAccuracy} m`}
               </span>
             )}
           </div>
 
-          {/* Coords */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+          <div className="sidebar-form-grid" style={{ marginBottom: 12 }}>
             <input
-              style={{ ...inputStyle, color: pinSource ? '#58a6ff' : '#fff', fontVariantNumeric: 'tabular-nums' }}
+              style={{ ...inputStyle, color: pinSource ? 'var(--accent-blue)' : 'var(--fg-default)', fontVariantNumeric: 'tabular-nums' }}
               type="text"
               value={coordsDisplay}
               onChange={(e) => {
                 const raw = e.target.value
                 setCoordsDisplay(raw)
-                setPinSource(null); setPendingCoords(null); setGpsAccuracy(null)
+                setPinSource(null)
+                setPendingCoords(null)
+                setGpsAccuracy(null)
                 const parts = raw.split(',').map((n) => parseFloat(n.trim()))
                 if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                  setLat(parts[0]); setLng(parts[1])
-                } else { setLat(null); setLng(null) }
+                  setLat(parts[0])
+                  setLng(parts[1])
+                } else {
+                  setLat(null)
+                  setLng(null)
+                }
               }}
               placeholder="e.g. 10.676553, 122.954105"
               required
               readOnly={locating}
             />
 
-            <button type="button" onClick={() => setPickingLocation(true)} style={{ width: '100%', padding: '10px', background: 'transparent', border: '1px solid var(--accent-blue)', color: 'var(--accent-blue)', borderRadius: 4, cursor: 'pointer', fontSize: '0.9rem', fontWeight: 800 }}>
-              🗺 MANUALLY ADJUST PIN
+            <button
+              type="button"
+              onClick={() => setPickingLocation(true)}
+              className="button-secondary"
+              style={{ width: '100%', padding: '12px 14px', color: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', cursor: 'pointer', fontSize: '0.84rem', fontWeight: 800 }}
+            >
+              Manually Adjust Pin
             </button>
           </div>
 
-          {/* Detecting city spinner */}
           {geocoding && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#58a6ff', fontSize: '0.78rem', marginBottom: 10, fontWeight: 500 }}>
-              <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>🔄</span>
-              Detecting city…
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-blue)', fontSize: '0.78rem', marginBottom: 10, fontWeight: 600 }}>
+              <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>↻</span>
+              Detecting city...
             </div>
           )}
 
-          {/* City (auto) + Barangay (manual dropdown) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-
-            {/* City — auto-filled, user can still change */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, marginBottom: 12 }}>
             <div>
               <label style={labelStyle}>
                 City
-                {geocoding
-                  ? <span style={{ marginLeft: 6, fontSize: '0.65rem', color: '#58a6ff', fontWeight: 400, textTransform: 'none' }}>detecting…</span>
-                  : cityVal
-                    ? <span style={{ marginLeft: 6, fontSize: '0.65rem', color: '#238636', fontWeight: 600, textTransform: 'none' }}>✓ auto-filled</span>
-                    : null
-                }
+                {geocoding ? (
+                  <span style={{ marginLeft: 6, fontSize: '0.65rem', color: 'var(--accent-blue)', fontWeight: 500, textTransform: 'none' }}>detecting...</span>
+                ) : cityVal ? (
+                  <span style={{ marginLeft: 6, fontSize: '0.65rem', color: 'var(--resolved-green)', fontWeight: 700, textTransform: 'none' }}>auto-filled</span>
+                ) : null}
               </label>
               <select
                 name="city"
@@ -494,19 +424,24 @@ export default function RegistrationForm() {
                 value={cityVal}
                 onChange={(e) => {
                   setCityVal(e.target.value)
-                  setBarangayVal('') // reset brgy when city changes
+                  setBarangayVal('')
                 }}
               >
-                <option value="" disabled>Select City</option>
-                {CITY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="" disabled>
+                  Select City
+                </option>
+                {CITY_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Barangay — always manual dropdown */}
             <div>
               <label style={labelStyle}>
                 Barangay
-                <span style={{ marginLeft: 6, fontSize: '0.65rem', color: '#f0a500', fontWeight: 600, textTransform: 'none' }}>✎ manual</span>
+                <span style={{ marginLeft: 6, fontSize: '0.65rem', color: 'var(--fg-warning)', fontWeight: 700, textTransform: 'none' }}>manual</span>
               </label>
               <select
                 name="barangay"
@@ -515,34 +450,36 @@ export default function RegistrationForm() {
                 value={barangayVal}
                 onChange={(e) => setBarangayVal(e.target.value)}
               >
-                <option value="" disabled>Select Barangay</option>
+                <option value="" disabled>
+                  Select Barangay
+                </option>
                 {resolvedCityKey
-                  // Exact/resolved city match → flat list for that city only
                   ? CITY_BARANGAY_MAP[resolvedCityKey].map((b) => (
-                      <option key={b} value={b}>{b}</option>
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
                     ))
-                  // No match or no city selected → all barangays grouped by city
                   : Object.entries(CITY_BARANGAY_MAP)
                       .sort(([a], [b]) => a.localeCompare(b))
                       .map(([city, bgs]) => (
                         <optgroup key={city} label={city}>
                           {bgs.map((b) => (
-                            <option key={`${city}-${b}`} value={b}>{b}</option>
+                            <option key={`${city}-${b}`} value={b}>
+                              {b}
+                            </option>
                           ))}
                         </optgroup>
-                      ))
-                }
+                      ))}
               </select>
             </div>
           </div>
 
-          {/* Street — always manual */}
           <div style={{ marginBottom: 10 }}>
             <label style={labelStyle}>Street / Landmark</label>
             <input
               name="street"
               type="text"
-              placeholder="House #, Street, or Landmark"
+              placeholder="House #, street, or landmark"
               required
               style={inputStyle}
               value={streetVal}
@@ -550,24 +487,28 @@ export default function RegistrationForm() {
             />
           </div>
 
-          {/* Full address preview */}
           {(streetVal || barangayVal || cityVal) && !geocoding && (
-            <div style={{ padding: '8px 10px', background: '#161b22', border: '1px dashed #30363d', borderRadius: 4, fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
-              <span style={{ color: '#58a6ff', fontWeight: 700, marginRight: 6 }}>📌</span>
+            <div style={{ padding: '10px 12px', background: 'var(--bg-accent-soft)', border: '1px dashed var(--border)', borderRadius: 10, fontSize: '0.75rem', color: 'var(--fg-muted)', lineHeight: 1.5 }}>
+              <span style={{ color: 'var(--accent-blue)', fontWeight: 700, marginRight: 6 }}>Address:</span>
               {fullAddressPreview}
             </div>
           )}
         </div>
 
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* 2. TRIAGE INTELLIGENCE                                       */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        <div style={{ marginBottom: 25, background: '#161b22', padding: 16, borderRadius: 8, border: '1px solid #30363d' }}>
+        <div className="sidebar-form-section" style={{ marginBottom: 25 }}>
           <h3 style={subHeaderStyle}>2. Triage Intelligence</h3>
           <label style={{ ...labelStyle, marginTop: 15 }}>Vulnerability Profile</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: '#0d1117', padding: 12, borderRadius: 4, border: '1px solid var(--border-color)', marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: 'var(--bg-inset)', padding: 12, borderRadius: 12, border: '1px solid var(--border-color)', marginBottom: 12 }}>
             {VULN_OPTIONS.map(({ value, label }) => (
-              <label key={value} style={{ display: 'flex', alignItems: 'center', fontSize: '0.8rem', cursor: 'pointer', background: vulnArr.includes(value) ? '#30363d' : 'transparent', padding: '6px 10px', borderRadius: '20px', border: `1px solid ${vulnArr.includes(value) ? '#58a6ff' : '#30363d'}`, color: (value === 'Bedridden' || value === 'Oxygen') && vulnArr.includes(value) ? '#ff4d4d' : '#c9d1d9' }}>
+              <label
+                key={value}
+                className={vulnArr.includes(value) ? 'pill-option is-active' : 'pill-option'}
+                style={{
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  color: (value === 'Bedridden' || value === 'Oxygen') && vulnArr.includes(value) ? 'var(--critical-red)' : 'var(--fg-default)',
+                }}
+              >
                 <input type="checkbox" checked={vulnArr.includes(value)} onChange={() => toggleVuln(value)} style={{ width: 'auto', marginRight: 8, cursor: 'pointer' }} />
                 {label}
               </label>
@@ -576,19 +517,16 @@ export default function RegistrationForm() {
           <TriagePreview triage={triage} />
         </div>
 
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* 3. HOUSEHOLD INFORMATION                                     */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        <div style={{ marginBottom: 25, opacity: 0.9 }}>
+        <div className="sidebar-form-section" style={{ marginBottom: 25 }}>
           <h3 style={subHeaderStyle}>3. Household Information</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 10 }}>
             <div style={{ gridColumn: 'span 2' }}>
               <label style={labelStyle}>Head of Household / Patient Name</label>
               <input name="head" type="text" placeholder="Full Name" required style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Contact Number</label>
-              <input name="contact" type="tel" placeholder="09xxxxxxxxx" required pattern="^(09|\+639)\d{9}$" title="Enter a valid PH mobile number (e.g. 09171234567)" style={inputStyle} />
+              <input name="contact" type="tel" placeholder="09xxxxxxxxx" required pattern="^(09|\\+639)\\d{9}$" title="Enter a valid PH mobile number (e.g. 09171234567)" style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Total Occupants</label>
@@ -598,38 +536,66 @@ export default function RegistrationForm() {
           <div style={{ marginTop: 15 }}>
             <label style={labelStyle}>Data Source / Registry</label>
             <select name="source" required style={inputStyle} value={sourceVal} onChange={(e) => setSourceVal(e.target.value as RegistrySource)}>
-              <option value="" disabled>Select Source</option>
-              {SOURCE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              <option value="" disabled>
+                Select Source
+              </option>
+              {SOURCE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
           </div>
           <div style={{ marginTop: 15 }}>
             <label style={labelStyle}>Responder / Evacuation Notes</label>
-            <textarea name="notes" rows={2} placeholder="Critical instructions (e.g. Needs stretcher, 4 men required)" style={{ ...inputStyle, resize: 'vertical' }} />
+            <textarea name="notes" rows={3} placeholder="Critical instructions (e.g. needs stretcher, 4 responders required)" style={{ ...inputStyle, resize: 'vertical' }} />
           </div>
         </div>
 
-        {/* Error banner */}
         {saveError && (
-          <div style={{ background: '#3d1a1a', border: '1px solid #f85149', color: '#f85149', borderRadius: 4, padding: '10px 14px', marginBottom: 16, fontWeight: 600, fontSize: '0.82rem', lineHeight: 1.5 }}>
+          <div style={{ background: 'var(--bg-danger-subtle)', border: '1px solid var(--fg-danger)', color: 'var(--fg-danger)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontWeight: 600, fontSize: '0.82rem', lineHeight: 1.5 }}>
             {saveError}
           </div>
         )}
 
-        {/* Submit */}
         <button
           type="submit"
           disabled={saving || geocoding}
-          style={{ width: '100%', padding: 15, background: saving ? '#1a3a5c' : 'var(--accent-blue)', color: saving ? '#8b949e' : '#fff', border: 'none', borderRadius: 6, fontWeight: 'bold', cursor: saving || geocoding ? 'not-allowed' : 'pointer', marginTop: 10, fontSize: '0.9rem', fontFamily: 'Inter, sans-serif', transition: 'background 0.2s', opacity: geocoding ? 0.7 : 1 }}
+          className="button-primary"
+          style={{
+            width: '100%',
+            padding: 15,
+            background: saving ? 'var(--bg-elevated)' : 'var(--accent-blue)',
+            color: saving ? 'var(--fg-muted)' : '#fff',
+            border: 'none',
+            fontWeight: 'bold',
+            cursor: saving || geocoding ? 'not-allowed' : 'pointer',
+            marginTop: 10,
+            fontSize: '0.9rem',
+            opacity: geocoding ? 0.7 : 1,
+          }}
         >
-          {saving ? '⏳ Saving…' : geocoding ? '🔄 Detecting city…' : 'REGISTER & PIN TO VULNERABILITY MAP'}
+          {saving ? 'Saving...' : geocoding ? 'Detecting city...' : 'Register & Pin to Vulnerability Map'}
         </button>
       </form>
 
-          {credModal && (
-      <PasswordModal contact={credModal.contact} password={credModal.password} role="citizen" onClose={() => setCredModal(null)} />
-    )}
+      {credModal && (
+        <PasswordModal contact={credModal.contact} password={credModal.password} role="citizen" onClose={() => setCredModal(null)} />
+      )}
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 767px) {
+          form > div[style*='grid-template-columns: repeat(2, minmax(0, 1fr))'],
+          form > div[style*='grid-template-columns: 1fr 1fr'] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </>
   )
 }

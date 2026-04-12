@@ -252,14 +252,7 @@ export default function GuestPanel() {
   const hotlines = city ? (HOTLINES[city] ?? [{ label: 'National Emergency', number: '911' }]) : []
 
   useEffect(() => {
-    if (!city || !barangay) { 
-      setStatus(null)
-      setNoData(false)
-      return 
-    }
-
-    setFetching(true)
-    setNoData(false)
+    if (!city || !barangay) return
     
     supabase
       .from('area_status')
@@ -288,6 +281,8 @@ export default function GuestPanel() {
 
   function handleBarangayChange(b: string) {
     setBarangay(b)
+    setFetching(Boolean(b && city))
+    setNoData(false)
     if (!b || !city) return
     geocodeAndPan(`${b}, ${city}, Philippines`, 16)
   }

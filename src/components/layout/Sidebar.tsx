@@ -9,9 +9,8 @@ interface Props {
 export default function Sidebar({ children }: Props) {
   return (
     <aside
+      className="sidebar-panel"
       style={{
-        background: 'var(--panel-bg)',
-        borderLeft: '1px solid var(--border-color)',
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
@@ -25,6 +24,7 @@ export default function Sidebar({ children }: Props) {
           overflowY: 'auto',
           flexGrow: 1,
           padding: 20,
+          background: 'var(--bg-base)',
         }}
       >
         {children}

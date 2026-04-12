@@ -11,7 +11,24 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en" className={inter.className} data-theme="light" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var storedTheme = localStorage.getItem('ligtas-theme');
+                  var theme = storedTheme === 'dark' ? 'dark' : 'light';
+                  document.documentElement.dataset.theme = theme;
+                } catch (error) {
+                  document.documentElement.dataset.theme = 'light';
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   )
