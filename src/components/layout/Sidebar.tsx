@@ -25,13 +25,29 @@ export default function Sidebar({ children }: Props) {
       setIsMobile(mobile)
       if (!mobile) {
         setSheetOffset(0)
+        document.documentElement.removeAttribute('data-mobile-sheet')
       }
     }
 
     sync()
     media.addEventListener('change', sync)
-    return () => media.removeEventListener('change', sync)
+    return () => {
+      media.removeEventListener('change', sync)
+      document.documentElement.removeAttribute('data-mobile-sheet')
+    }
   }, [])
+
+  useEffect(() => {
+    if (!isMobile) {
+      document.documentElement.removeAttribute('data-mobile-sheet')
+      return
+    }
+
+    document.documentElement.setAttribute(
+      'data-mobile-sheet',
+      sheetOffset >= MOBILE_SHEET_COLLAPSED_OFFSET - 24 ? 'collapsed' : 'expanded',
+    )
+  }, [isMobile, sheetOffset])
 
   function clampOffset(value: number) {
     return Math.max(0, Math.min(MOBILE_SHEET_COLLAPSED_OFFSET, value))
