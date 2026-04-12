@@ -19,6 +19,27 @@ export default function Sidebar({ children }: Props) {
       }}
     >
       <div className="sidebar-header">
+        <div
+          className="mobile-sheet-handle"
+          aria-hidden="true"
+          style={{
+            display: 'none',
+            justifyContent: 'center',
+            paddingTop: 8,
+            paddingBottom: 2,
+            background: 'var(--bg-surface)',
+          }}
+        >
+          <span
+            style={{
+              width: 42,
+              height: 5,
+              borderRadius: 999,
+              background: 'var(--border)',
+              display: 'block',
+            }}
+          />
+        </div>
         <Header />
       </div>
       <div

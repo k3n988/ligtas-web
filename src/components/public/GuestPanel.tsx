@@ -381,6 +381,7 @@ export default function GuestPanel() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {activeHazard?.isActive && (
         <div
+          className="guest-alert-card"
           style={{
             background: activeHazardTheme.bg,
             border: `1px solid ${activeHazardTheme.border}`,
@@ -403,10 +404,11 @@ export default function GuestPanel() {
               filter: 'blur(2px)',
             }}
           />
-          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span
+                  className="guest-alert-badge"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -425,15 +427,16 @@ export default function GuestPanel() {
                   Live {activeHazard.type} Alert
                 </span>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: 'var(--fg-muted)', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700 }}>
+                  <p className="guest-alert-eyebrow" style={{ margin: '0 0 4px', fontSize: '0.72rem', color: 'var(--fg-muted)', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700 }}>
                     Active Disaster Warning
                   </p>
-                  <p style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: activeHazardTheme.titleColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  <p className="guest-alert-title" style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: activeHazardTheme.titleColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     {activeHazard.type}
                   </p>
                 </div>
               </div>
               <div
+                className="guest-alert-icon"
                 aria-hidden="true"
                 style={{
                   display: 'grid',
@@ -450,11 +453,11 @@ export default function GuestPanel() {
               </div>
             </div>
 
-            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--fg-default)', lineHeight: 1.6, maxWidth: 460 }}>
+            <p className="guest-alert-copy" style={{ margin: 0, fontSize: '0.82rem', color: 'var(--fg-default)', lineHeight: 1.6, maxWidth: 460 }}>
               A <strong>{activeHazard.type.toLowerCase()}</strong> hazard zone is currently being monitored on the map. Review the actions below before continuing.
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div className="guest-alert-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {activeHazardActions.map((action) => (
                 <span
                   key={action}

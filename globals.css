@@ -482,6 +482,10 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (max-width: 767px) {
+  .mobile-sheet-handle {
+    display: flex !important;
+  }
+
   .sidebar-header {
     position: sticky;
     top: 0;
@@ -491,14 +495,19 @@ input:focus, select:focus, textarea:focus {
   }
 
   .header-topbar {
-    padding: 10px 12px !important;
+    padding: 8px 12px !important;
     align-items: flex-start !important;
-    gap: 10px !important;
+    gap: 8px !important;
   }
 
   .header-brand {
-    gap: 10px !important;
+    gap: 8px !important;
     align-items: flex-start !important;
+  }
+
+  .header-brand img {
+    width: 34px !important;
+    height: 34px !important;
   }
 
   .header-brand-copy {
@@ -506,19 +515,23 @@ input:focus, select:focus, textarea:focus {
   }
 
   .header-brand-title {
-    font-size: 0.94rem !important;
-    letter-spacing: 1.1px !important;
+    font-size: 0.88rem !important;
+    letter-spacing: 0.9px !important;
   }
 
   .header-brand-subtitle {
-    font-size: 0.47rem !important;
+    font-size: 0.44rem !important;
     line-height: 1.2 !important;
+  }
+
+  .header-brand-subtitle br:last-child {
+    display: none;
   }
 
   .header-controls {
     width: 100%;
     align-items: flex-start !important;
-    gap: 4px !important;
+    gap: 3px !important;
   }
 
   .header-controls-row {
@@ -533,9 +546,9 @@ input:focus, select:focus, textarea:focus {
   }
 
   .header-search-shell {
-    padding: 10px 12px !important;
+    padding: 8px 12px 10px !important;
     position: sticky !important;
-    top: 78px;
+    top: 68px;
     z-index: 17 !important;
   }
 
@@ -546,9 +559,43 @@ input:focus, select:focus, textarea:focus {
 
   .header-tabs-bar {
     position: sticky;
-    top: 142px;
+    top: 122px;
     z-index: 16;
     background: var(--bg-surface) !important;
+  }
+
+  .guest-alert-card {
+    padding: 16px !important;
+    border-radius: 20px !important;
+  }
+
+  .guest-alert-badge {
+    padding: 4px 9px !important;
+    font-size: 0.62rem !important;
+  }
+
+  .guest-alert-eyebrow {
+    display: none;
+  }
+
+  .guest-alert-title {
+    font-size: 1.18rem !important;
+  }
+
+  .guest-alert-icon {
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 16px !important;
+    font-size: 1.3rem !important;
+  }
+
+  .guest-alert-copy {
+    font-size: 0.76rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .guest-alert-chips {
+    gap: 6px !important;
   }
 }
 
