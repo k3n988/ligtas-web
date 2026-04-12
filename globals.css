@@ -501,9 +501,9 @@ input:focus, select:focus, textarea:focus {
     left:         0;
     right:        0;
     bottom:       0;
-    height:       46svh;
-    max-height:   46svh;
-    min-height:   46svh;
+    height:       100svh;
+    max-height:   100svh;
+    min-height:   100svh;
     margin-top:   0;
     z-index:      12;
     box-shadow:   0 -18px 38px rgba(12, 24, 38, 0.18);
