@@ -1,6 +1,5 @@
 // src/lib/geo.ts
-import type { FloodZone, HazardEvent, TriageLevel } from '@/types'
-import type { Household } from '@/types'
+import type { FloodZone, HazardEvent, Household, TriageLevel } from '@/types'
 
 // ─── EXISTING CODE (unchanged) ───────────────────────────────────────────────
 
@@ -49,6 +48,49 @@ export function pointInPolygon(
     if (intersect) inside = !inside
   }
   return inside
+}
+
+export function getHouseholdHazardDistanceKm(
+  household: Pick<Household, 'lat' | 'lng'>,
+  hazard: HazardEvent | null,
+): number | null {
+  if (!hazard?.isActive || hazard.type === 'Flood') return null
+  return haversineKm(household.lat, household.lng, hazard.center.lat, hazard.center.lng)
+}
+
+export function isHouseholdInHazardZone(
+  household: Pick<Household, 'lat' | 'lng'>,
+  hazard: HazardEvent | null,
+  floodZones: FloodZone[] = [],
+): boolean {
+  if (!hazard?.isActive) return false
+
+  if (hazard.type === 'Flood') {
+    return floodZones.some((zone) =>
+      pointInPolygon({ lat: household.lat, lng: household.lng }, zone.polygon),
+    )
+  }
+
+  const distanceKm = getHouseholdHazardDistanceKm(household, hazard)
+  return distanceKm !== null && distanceKm <= hazard.radii.stable
+}
+
+export function getEffectiveHouseholdTriage(
+  household: Pick<Household, 'lat' | 'lng' | 'triage'>,
+  hazard: HazardEvent | null,
+  floodZones: FloodZone[] = [],
+): TriageLevel {
+  if (!hazard?.isActive) return household.triage.level
+
+  if (hazard.type === 'Flood') {
+    return getFloodTriage(
+      { lat: household.lat, lng: household.lng },
+      floodZones,
+      household.triage.level,
+    )
+  }
+
+  return getDynamicTriage(household.lat, household.lng, household.triage.level, hazard)
 }
 
 // ─── NEW: Hazard zone filtering & queue prioritization ────────────────────────

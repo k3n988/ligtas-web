@@ -17,6 +17,7 @@ import HouseholdMarker from './HouseholdMarker'
 import AssetMarker from './AssetMarker'
 import MapLegend from './MapLegend'
 import HazardControlPanel from './HazardControlPanel'
+import NoahFloodLayer from './NoahFloodLayer'
 import { Marker } from '@vis.gl/react-google-maps'
 import type { FloodSeverity, HazardEvent } from '@/types'
 
@@ -368,6 +369,9 @@ function MapInner() {
   const setDraftCenter       = useHazardStore((s) => s.setDraftCenter)
 
   const [openAssetId, setOpenAssetId] = useState<string | null>(null)
+  const [showNoahFlood, setShowNoahFlood] = useState(false)
+  const [noahStatus, setNoahStatus] = useState<'idle' | 'loading' | 'ready'>('idle')
+  const [noahFeatureCount, setNoahFeatureCount] = useState(0)
 
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
@@ -452,6 +456,11 @@ function MapInner() {
         <PickCursorController />
         <HazardPanController />   {/* ← add this */}
         <RouteOverlay />
+        <NoahFloodLayer
+          visible={showNoahFlood}
+          onStatusChange={setNoahStatus}
+          onFeatureCountChange={setNoahFeatureCount}
+        />
 
         {activeHazard?.isActive && activeHazard.type !== 'Flood' && <HazardCircles hazard={activeHazard} />}
         {activeHazard?.isActive && activeHazard.type === 'Flood' && <FloodZoneOverlays />}
@@ -479,10 +488,69 @@ function MapInner() {
           />
         )}
 
-        <MapLegend />
+        <MapLegend showNoahFlood={showNoahFlood} />
       </Map>
 
       {/* ✅ HazardControlPanel is OUTSIDE <Map> so it renders as a proper DOM overlay */}
+      <div
+        style={{
+          position: 'absolute',
+          right: 12,
+          bottom: 30,
+          zIndex: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          alignItems: 'flex-end',
+          maxWidth: 'min(320px, calc(100vw - 24px))',
+        }}
+      >
+        <button
+          onClick={() => setShowNoahFlood((current) => !current)}
+          style={{
+            background: showNoahFlood ? '#102a19' : 'var(--map-panel-bg)',
+            border: `1px solid ${showNoahFlood ? '#238636' : 'var(--map-panel-border)'}`,
+            color: showNoahFlood ? '#3fb950' : 'var(--fg-default)',
+            borderRadius: 12,
+            padding: '10px 12px',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            boxShadow: 'var(--shadow-overlay)',
+            cursor: 'pointer',
+            backdropFilter: 'blur(10px)',
+          }}
+          title="Toggle the NOAH flood susceptibility reference layer"
+        >
+          {showNoahFlood ? 'Hide' : 'Show'} NOAH Flood Layer
+        </button>
+
+        <div
+          style={{
+            background: 'var(--map-panel-bg)',
+            border: '1px solid var(--map-panel-border)',
+            borderRadius: 12,
+            padding: '10px 12px',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '0.7rem',
+            color: 'var(--fg-muted)',
+            boxShadow: 'var(--shadow-overlay)',
+            lineHeight: 1.35,
+          }}
+        >
+          <div style={{ fontWeight: 700, color: 'var(--fg-default)', marginBottom: 4 }}>
+            NOAH Reference Layer
+          </div>
+          <div>
+            {showNoahFlood
+              ? noahStatus === 'loading'
+                ? 'Loading flood polygons from /data/flood_negocc.geojson...'
+                : `Visible on map${noahFeatureCount > 0 ? ` • ${noahFeatureCount.toLocaleString()} features loaded` : ''}`
+              : 'Off by default to avoid loading the large GeoJSON until needed.'}
+          </div>
+        </div>
+      </div>
+
       <HazardControlPanel />
 
     </div>

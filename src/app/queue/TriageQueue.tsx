@@ -2,8 +2,15 @@
 
 import { useMemo, useState } from 'react'
 import { useHouseholdStore } from '@/store/householdStore'
+import { useHazardStore } from '@/store/hazardStore'
 import { TRIAGE_ORDER } from '@/lib/triage'
+import {
+  getEffectiveHouseholdTriage,
+  getHouseholdHazardDistanceKm,
+  isHouseholdInHazardZone,
+} from '@/lib/geo'
 import HouseholdCard from '@/components/triage/HouseholdCard'
+import type { Household, TriageLevel, TriageResult } from '@/types'
 
 const selectStyle: React.CSSProperties = {
   background: 'var(--bg-surface)',
@@ -17,9 +24,25 @@ const selectStyle: React.CSSProperties = {
   color: 'var(--fg-default)',
 }
 
+const TRIAGE_DISPLAY: Record<TriageLevel, TriageResult> = {
+  CRITICAL: { level: 'CRITICAL', hex: '#ff4d4d', colorName: 'red' },
+  HIGH: { level: 'HIGH', hex: '#f39c12', colorName: 'orange' },
+  ELEVATED: { level: 'ELEVATED', hex: '#f1c40f', colorName: 'yellow' },
+  STABLE: { level: 'STABLE', hex: '#58a6ff', colorName: 'blue' },
+}
+
+interface QueueEntry {
+  household: Household
+  effectiveLevel: TriageLevel
+  isInHazardZone: boolean
+  hazardDistanceKm: number | null
+}
+
 export default function TriageQueue() {
   const households = useHouseholdStore((s) => s.households)
   const setSelectedId = useHouseholdStore((s) => s.setSelectedId)
+  const activeHazard = useHazardStore((s) => s.activeHazard)
+  const floodZones = useHazardStore((s) => s.floodZones)
 
   const [cityFilter, setCityFilter] = useState('')
   const [brgyFilter, setBrgyFilter] = useState('')
@@ -45,23 +68,85 @@ export default function TriageQueue() {
     setBrgyFilter('')
   }
 
-  const sortedHouseholds = useMemo(() => {
+  const queueEntries = useMemo<QueueEntry[]>(() => {
     const filtered = households
       .filter((h) => h.approvalStatus === 'approved')
       .filter((h) => (!cityFilter || h.city === cityFilter) && h.city.toLowerCase().endsWith('city'))
       .filter((h) => !brgyFilter || h.barangay === brgyFilter)
-      .filter((h) => !vulnerabilityFilter || h.triage.level === vulnerabilityFilter)
+      .map((household) => {
+        const effectiveLevel = getEffectiveHouseholdTriage(household, activeHazard, floodZones)
+        const isInHazardZone = isHouseholdInHazardZone(household, activeHazard, floodZones)
+        return {
+          household: {
+            ...household,
+            triage: TRIAGE_DISPLAY[effectiveLevel],
+          },
+          effectiveLevel,
+          isInHazardZone,
+          hazardDistanceKm: getHouseholdHazardDistanceKm(household, activeHazard),
+        }
+      })
+      .filter((entry) => !vulnerabilityFilter || entry.effectiveLevel === vulnerabilityFilter)
 
     return filtered.sort((a, b) => {
-      if (a.status === 'Rescued' && b.status !== 'Rescued') return 1
-      if (a.status !== 'Rescued' && b.status === 'Rescued') return -1
-      return TRIAGE_ORDER[a.triage.level] - TRIAGE_ORDER[b.triage.level]
-    })
-  }, [households, cityFilter, brgyFilter, vulnerabilityFilter])
+      if (a.household.status === 'Rescued' && b.household.status !== 'Rescued') return 1
+      if (a.household.status !== 'Rescued' && b.household.status === 'Rescued') return -1
 
-  const pending = sortedHouseholds.filter((h) => h.status === 'Pending')
-  const rescued = sortedHouseholds.filter((h) => h.status === 'Rescued')
+      if (activeHazard?.isActive && a.isInHazardZone !== b.isInHazardZone) {
+        return a.isInHazardZone ? -1 : 1
+      }
+
+      const triageDiff = TRIAGE_ORDER[a.effectiveLevel] - TRIAGE_ORDER[b.effectiveLevel]
+      if (triageDiff !== 0) return triageDiff
+
+      if (a.isInHazardZone && b.isInHazardZone) {
+        const distanceA = a.hazardDistanceKm ?? Number.MAX_SAFE_INTEGER
+        const distanceB = b.hazardDistanceKm ?? Number.MAX_SAFE_INTEGER
+        if (distanceA !== distanceB) return distanceA - distanceB
+      }
+
+      return a.household.city.localeCompare(b.household.city) || a.household.barangay.localeCompare(b.household.barangay)
+    })
+  }, [households, cityFilter, brgyFilter, vulnerabilityFilter, activeHazard, floodZones])
+
+  const pending = queueEntries.filter((entry) => entry.household.status === 'Pending')
+  const rescued = queueEntries.filter((entry) => entry.household.status === 'Rescued')
+  const hazardPending = pending.filter((entry) => entry.isInHazardZone)
+  const regularPending = pending.filter((entry) => !entry.isInHazardZone)
   const isFiltered = Boolean(cityFilter || brgyFilter || vulnerabilityFilter)
+  const showHazardPriority = Boolean(activeHazard?.isActive && hazardPending.length > 0)
+
+  const renderPriorityGroups = (entries: QueueEntry[]) =>
+    Object.keys(TRIAGE_ORDER).map((level) => {
+      const group = entries.filter((entry) => entry.effectiveLevel === level)
+      if (group.length === 0) return null
+
+      return (
+        <div key={level} style={{ marginBottom: 20 }}>
+          <div
+            style={{
+              fontSize: '0.65rem',
+              fontWeight: 800,
+              color: group[0].household.triage.hex,
+              textTransform: 'uppercase',
+              letterSpacing: 1.2,
+              marginBottom: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span>{level.charAt(0) + level.slice(1).toLowerCase()} Priority</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)', opacity: 0.5 }} />
+          </div>
+          {group.map(({ household }) => (
+            <div key={household.id} onClick={() => setSelectedId(household.id)}>
+              <HouseholdCard household={household} />
+            </div>
+          ))}
+        </div>
+      )
+    })
 
   return (
     <div>
@@ -193,7 +278,27 @@ export default function TriageQueue() {
         </span>
       </div>
 
-      {sortedHouseholds.length === 0 ? (
+      {showHazardPriority && (
+        <div
+          style={{
+            marginBottom: 14,
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--critical-red)',
+            background: 'var(--bg-danger-subtle)',
+            color: 'var(--fg-default)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, color: 'var(--critical-red)' }}>
+            {activeHazard?.type} Hazard Priority Active
+          </div>
+          <div style={{ marginTop: 4, fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
+            {hazardPending.length} household{hazardPending.length !== 1 ? 's' : ''} inside the active hazard layer are pinned to the top of the queue.
+          </div>
+        </div>
+      )}
+
+      {queueEntries.length === 0 ? (
         <div
           style={{
             textAlign: 'center',
@@ -211,36 +316,47 @@ export default function TriageQueue() {
         </div>
       ) : (
         <>
-          {Object.keys(TRIAGE_ORDER).map((level) => {
-            const group = pending.filter((h) => h.triage.level === level)
-            if (group.length === 0) return null
-
-            return (
-              <div key={level} style={{ marginBottom: 20 }}>
-                <div
-                  style={{
-                    fontSize: '0.65rem',
-                    fontWeight: 800,
-                    color: group[0].triage.hex,
-                    textTransform: 'uppercase',
-                    letterSpacing: 1.2,
-                    marginBottom: 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
-                  <span>{level.charAt(0) + level.slice(1).toLowerCase()} Priority</span>
-                  <div style={{ flex: 1, height: 1, background: 'var(--border)', opacity: 0.5 }} />
-                </div>
-                {group.map((hh) => (
-                  <div key={hh.id} onClick={() => setSelectedId(hh.id)}>
-                    <HouseholdCard household={hh} />
-                  </div>
-                ))}
+          {showHazardPriority ? (
+            <>
+              <div
+                style={{
+                  fontSize: '0.68rem',
+                  color: 'var(--critical-red)',
+                  textTransform: 'uppercase',
+                  letterSpacing: 1.5,
+                  fontWeight: 800,
+                  marginBottom: 12,
+                }}
+              >
+                Inside Active Hazard Layer
               </div>
-            )
-          })}
+              {renderPriorityGroups(hazardPending)}
+
+              {regularPending.length > 0 && (
+                <>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      margin: '24px 0 16px',
+                      fontSize: '0.65rem',
+                      color: 'var(--fg-muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: 1.5,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span style={{ flexShrink: 0 }}>Outside Active Hazard Layer</span>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  </div>
+                  {renderPriorityGroups(regularPending)}
+                </>
+              )}
+            </>
+          ) : (
+            renderPriorityGroups(pending)
+          )}
 
           {rescued.length > 0 && (
             <>
@@ -260,9 +376,9 @@ export default function TriageQueue() {
                 <span style={{ flexShrink: 0 }}>Completed Operations</span>
                 <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
               </div>
-              {rescued.map((hh) => (
-                <div key={hh.id} onClick={() => setSelectedId(hh.id)}>
-                  <HouseholdCard household={hh} />
+              {rescued.map(({ household }) => (
+                <div key={household.id} onClick={() => setSelectedId(household.id)}>
+                  <HouseholdCard household={household} />
                 </div>
               ))}
             </>

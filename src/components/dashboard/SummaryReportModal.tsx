@@ -1,11 +1,15 @@
 'use client'
 
-import type { Asset, Household } from '@/types'
+import { useMemo } from 'react'
+import { getEffectiveHouseholdTriage, isHouseholdInHazardZone } from '@/lib/geo'
 import { TRIAGE_ORDER } from '@/lib/triage'
+import type { Asset, FloodZone, HazardEvent, Household, TriageLevel, TriageResult } from '@/types'
 
 interface Props {
   households: Household[]
   assets: Asset[]
+  activeHazard: HazardEvent | null
+  floodZones: FloodZone[]
   onClose: () => void
 }
 
@@ -42,6 +46,13 @@ const sectionShell: React.CSSProperties = {
   overflow: 'hidden',
   background: 'var(--bg-surface)',
   boxShadow: 'var(--shadow-soft)',
+}
+
+const TRIAGE_DISPLAY: Record<TriageLevel, TriageResult> = {
+  CRITICAL: { level: 'CRITICAL', hex: '#ff4d4d', colorName: 'red' },
+  HIGH: { level: 'HIGH', hex: '#f39c12', colorName: 'orange' },
+  ELEVATED: { level: 'ELEVATED', hex: '#f1c40f', colorName: 'yellow' },
+  STABLE: { level: 'STABLE', hex: '#58a6ff', colorName: 'blue' },
 }
 
 function fmt(iso: string) {
@@ -92,10 +103,30 @@ function assetStatusBadgeStyle(status: string): React.CSSProperties {
   }
 }
 
-export default function SummaryReportModal({ households, assets }: Props) {
+export default function SummaryReportModal({ households, assets, activeHazard, floodZones }: Props) {
   const now = new Date().toISOString()
-  const pending = households.filter((h) => h.status === 'Pending')
-  const rescued = households.filter((h) => h.status === 'Rescued')
+  const incidentLabel = activeHazard?.isActive
+    ? activeHazard.type === 'Volcano'
+      ? 'Volcano Eruption'
+      : activeHazard.type
+    : null
+
+  const reportHouseholds = useMemo(() => {
+    if (!activeHazard?.isActive) return households
+
+    return households
+      .filter((household) => isHouseholdInHazardZone(household, activeHazard, floodZones))
+      .map((household) => {
+        const effectiveLevel = getEffectiveHouseholdTriage(household, activeHazard, floodZones)
+        return {
+          ...household,
+          triage: TRIAGE_DISPLAY[effectiveLevel],
+        }
+      })
+  }, [households, activeHazard, floodZones])
+
+  const pending = reportHouseholds.filter((h) => h.status === 'Pending')
+  const rescued = reportHouseholds.filter((h) => h.status === 'Rescued')
 
   const counts = {
     CRITICAL: pending.filter((h) => h.triage.level === 'CRITICAL').length,
@@ -104,7 +135,7 @@ export default function SummaryReportModal({ households, assets }: Props) {
     STABLE: pending.filter((h) => h.triage.level === 'STABLE').length,
   }
 
-  const allSorted = [...households].sort(
+  const allSorted = [...reportHouseholds].sort(
     (a, b) => TRIAGE_ORDER[a.triage.level] - TRIAGE_ORDER[b.triage.level],
   )
 
@@ -114,11 +145,12 @@ export default function SummaryReportModal({ households, assets }: Props) {
     const lines = [
       'L.I.G.T.A.S. INCIDENT SUMMARY REPORT',
       `Generated: ${fmt(now)}`,
+      incidentLabel ? `Latest Incident: ${incidentLabel}` : 'Latest Incident: None',
       '',
       `CRITICAL: ${counts.CRITICAL}  HIGH: ${counts.HIGH}  ELEVATED: ${counts.ELEVATED}  STABLE: ${counts.STABLE}`,
-      `RESCUED: ${rescued.length}  PENDING: ${pending.length}  TOTAL: ${households.length}`,
+      `RESCUED: ${rescued.length}  PENDING: ${pending.length}  TOTAL: ${reportHouseholds.length}`,
       '',
-      '=== ALL HOUSEHOLDS ===',
+      `=== ${incidentLabel ? `${incidentLabel.toUpperCase()} AFFECTED` : 'ALL HOUSEHOLDS'} ===`,
       ...allSorted.map((hh) => {
         const asset = assets.find((item) => item.id === hh.assignedAssetId)
         return `${hh.head} | ${hh.triage.level} | ${hh.barangay}, ${hh.city} | ${hh.status} | ${asset ? asset.name : 'Unassigned'}`
@@ -142,6 +174,14 @@ export default function SummaryReportModal({ households, assets }: Props) {
           </div>
           <div style={{ fontSize: '0.72rem', color: 'var(--accent-strong)', marginTop: 3 }}>
             Generated: {fmt(now)} &mdash; Bacolod City DRRMO Command Center
+          </div>
+          <div style={{ fontSize: '0.74rem', color: activeHazard?.isActive ? 'var(--critical-red)' : 'var(--fg-muted)', marginTop: 8, fontWeight: 700 }}>
+            {incidentLabel ? `Latest Incident: ${incidentLabel}` : 'Latest Incident: None'}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--fg-muted)', marginTop: 4 }}>
+            {incidentLabel
+              ? `This summary only includes households inside the active ${incidentLabel.toLowerCase()} hazard layer.`
+              : 'This summary includes all registered households because there is no active hazard layer.'}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -187,7 +227,7 @@ export default function SummaryReportModal({ households, assets }: Props) {
           { label: 'ELEVATED', value: counts.ELEVATED, color: LEVEL_COLOR.ELEVATED },
           { label: 'STABLE', value: counts.STABLE, color: LEVEL_COLOR.STABLE },
           { label: 'RESCUED', value: rescued.length, color: '#2da44e' },
-          { label: 'TOTAL', value: households.length, color: 'var(--fg-strong)' },
+          { label: 'TOTAL', value: reportHouseholds.length, color: 'var(--fg-strong)' },
         ].map(({ label, value, color }) => (
           <div
             key={label}
@@ -209,7 +249,7 @@ export default function SummaryReportModal({ households, assets }: Props) {
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', borderLeft: '3px solid var(--accent-solid)', paddingLeft: 10, marginBottom: 12 }}>
           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fg-strong)', textTransform: 'uppercase', letterSpacing: 1 }}>
-            All Households ({households.length})
+            {incidentLabel ? `${incidentLabel} Affected Households (${reportHouseholds.length})` : `All Households (${reportHouseholds.length})`}
           </span>
         </div>
         <div style={sectionShell}>
@@ -229,7 +269,9 @@ export default function SummaryReportModal({ households, assets }: Props) {
               {allSorted.length === 0 && (
                 <tr>
                   <td colSpan={7} style={{ ...tdStyle, color: 'var(--fg-muted)', textAlign: 'center', padding: '20px' }}>
-                    No households registered yet.
+                    {incidentLabel
+                      ? `No households are currently inside the active ${incidentLabel.toLowerCase()} hazard layer.`
+                      : 'No households registered yet.'}
                   </td>
                 </tr>
               )}
@@ -302,7 +344,7 @@ export default function SummaryReportModal({ households, assets }: Props) {
                 </tr>
               )}
               {assets.map((asset) => {
-                const assignedHouseholds = households.filter((hh) => hh.assignedAssetId === asset.id)
+                const assignedHouseholds = reportHouseholds.filter((hh) => hh.assignedAssetId === asset.id)
                 return (
                   <tr
                     key={asset.id}

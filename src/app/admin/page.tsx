@@ -177,7 +177,13 @@ export default function AdminPage() {
 
       <div style={{ minHeight: '500px' }}>
         {activeTab === 'summary' && (
-          <SummaryReportModal households={households} assets={assets} onClose={() => setActiveTab('registry')} />
+          <SummaryReportModal
+            households={households}
+            assets={assets}
+            activeHazard={activeHazard}
+            floodZones={floodZones}
+            onClose={() => setActiveTab('registry')}
+          />
         )}
         {activeTab === 'registry' && (
           <>
