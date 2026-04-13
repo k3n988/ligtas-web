@@ -49,6 +49,7 @@ export default function CitizenPanel() {
     }
 
     const controller = new AbortController()
+    const hh = household
 
     async function loadAdvisory() {
       try {
@@ -56,11 +57,11 @@ export default function CitizenPanel() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            city: household.city,
-            barangay: household.barangay,
-            coords: { lat: household.lat, lng: household.lng },
+            city: hh.city,
+            barangay: hh.barangay,
+            coords: { lat: hh.lat, lng: hh.lng },
             hazard: activeHazard,
-            vulnerabilities: household.vulnArr,
+            vulnerabilities: hh.vulnArr,
           }),
           signal: controller.signal,
         })
