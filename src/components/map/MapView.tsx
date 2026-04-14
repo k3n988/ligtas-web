@@ -2,7 +2,7 @@
 // src/components/map/MapView.tsx
 // Imported via next/dynamic with ssr:false — must stay a pure client module.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Map,
   useMap,
@@ -13,6 +13,7 @@ import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHazardStore } from '@/store/hazardStore'
+import { useNoahFloodStore } from '@/store/noahFloodStore'
 import HouseholdMarker from './HouseholdMarker'
 import AssetMarker from './AssetMarker'
 import MapLegend from './MapLegend'
@@ -20,6 +21,7 @@ import HazardControlPanel from './HazardControlPanel'
 import NoahFloodLayer from './NoahFloodLayer'
 import { Marker } from '@vis.gl/react-google-maps'
 import type { FloodSeverity, HazardEvent } from '@/types'
+import { isPointInAnyPolygon } from '@/lib/geo'
 
 const DEFAULT_CENTER = { lat: 10.6765, lng: 122.9509 }
 
@@ -367,11 +369,49 @@ function MapInner() {
   const isSelectingCenter    = useHazardStore((s) => s.isSelectingCenter)
   const setIsSelectingCenter = useHazardStore((s) => s.setIsSelectingCenter)
   const setDraftCenter       = useHazardStore((s) => s.setDraftCenter)
+  const showNoahFlood        = useNoahFloodStore((s) => s.visible)
+  const setShowNoahFlood     = useNoahFloodStore((s) => s.setVisible)
+  const noahAnalysisStatus   = useNoahFloodStore((s) => s.analysisStatus)
+  const noahVar3PolygonCount = useNoahFloodStore((s) => s.var3PolygonCount)
+  const noahVar2PolygonCount = useNoahFloodStore((s) => s.var2PolygonCount)
+  const noahVar3Polygons = useNoahFloodStore((s) => s.var3Polygons)
+  const noahVar2Polygons = useNoahFloodStore((s) => s.var2Polygons)
+  const ensureAnalysisLoaded = useNoahFloodStore((s) => s.ensureAnalysisLoaded)
 
   const [openAssetId, setOpenAssetId] = useState<string | null>(null)
-  const [showNoahFlood, setShowNoahFlood] = useState(false)
   const [noahStatus, setNoahStatus] = useState<'idle' | 'loading' | 'ready'>('idle')
   const [noahFeatureCount, setNoahFeatureCount] = useState(0)
+
+  useEffect(() => {
+    if (!showNoahFlood) return
+    void ensureAnalysisLoaded()
+  }, [ensureAnalysisLoaded, showNoahFlood])
+
+  const noahCriticalHouseholdCount = useMemo(() => {
+    if (!showNoahFlood || noahAnalysisStatus !== 'ready') return 0
+
+    if (noahVar3Polygons.length === 0) return 0
+
+    return households
+      .filter((hh) => hh.approvalStatus === 'approved')
+      .reduce((total, hh) => (
+        isPointInAnyPolygon({ lat: hh.lat, lng: hh.lng }, noahVar3Polygons) ? total + 1 : total
+      ), 0)
+  }, [households, noahVar3Polygons, noahAnalysisStatus, showNoahFlood])
+
+  const noahHighHouseholdCount = useMemo(() => {
+    if (!showNoahFlood || noahAnalysisStatus !== 'ready') return 0
+
+    if (noahVar2Polygons.length === 0) return 0
+
+    return households
+      .filter((hh) => hh.approvalStatus === 'approved')
+      .reduce((total, hh) => {
+        const point = { lat: hh.lat, lng: hh.lng }
+        if (isPointInAnyPolygon(point, noahVar3Polygons)) return total
+        return isPointInAnyPolygon(point, noahVar2Polygons) ? total + 1 : total
+      }, 0)
+  }, [households, noahAnalysisStatus, noahVar2Polygons, noahVar3Polygons, showNoahFlood])
 
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
@@ -506,7 +546,13 @@ function MapInner() {
         }}
       >
         <button
-          onClick={() => setShowNoahFlood((current) => !current)}
+          onClick={() => {
+            const next = !showNoahFlood
+            setShowNoahFlood(next)
+            if (next) {
+              void ensureAnalysisLoaded()
+            }
+          }}
           style={{
             background: showNoahFlood ? '#102a19' : 'var(--map-panel-bg)',
             border: `1px solid ${showNoahFlood ? '#238636' : 'var(--map-panel-border)'}`,
@@ -544,10 +590,17 @@ function MapInner() {
           <div>
             {showNoahFlood
               ? noahStatus === 'loading'
-                ? 'Loading flood polygons from /data/flood_negocc.geojson...'
-                : `Visible on map${noahFeatureCount > 0 ? ` • ${noahFeatureCount.toLocaleString()} features loaded` : ''}`
-              : 'Off by default to avoid loading the large GeoJSON until needed.'}
+                ? 'Loading Var 2 and Var 3 GeoJSON flood layers...'
+                : `Var 2 + Var 3 GeoJSON flood layers visible${noahFeatureCount > 0 ? ` • ${noahFeatureCount.toLocaleString()} features loaded` : ''}`
+              : 'Off by default. This GeoJSON test uses the split Var 2 and Var 3 flood analysis files.'}
           </div>
+          {showNoahFlood && (
+            <div style={{ marginTop: 5 }}>
+              {noahAnalysisStatus === 'loading' && 'Loading Var 2 and Var 3 analysis GeoJSON...'}
+              {noahAnalysisStatus === 'ready' && `Flood analysis ready • Critical: ${noahVar3PolygonCount.toLocaleString()} polygons / ${noahCriticalHouseholdCount} households • High: ${noahVar2PolygonCount.toLocaleString()} polygons / ${noahHighHouseholdCount} households`}
+              {noahAnalysisStatus === 'error' && 'Flood analysis GeoJSON failed to load.'}
+            </div>
+          )}
         </div>
       </div>
 

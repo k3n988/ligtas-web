@@ -11,98 +11,101 @@ interface Props {
   onFeatureCountChange?: (count: number) => void
 }
 
-const NOAH_STYLE: Record<number, { fillColor: string; strokeColor: string; label: string }> = {
-  1: { fillColor: '#f1c40f', strokeColor: '#b7950b', label: 'Low Flood Susceptibility' },
-  2: { fillColor: '#f39c12', strokeColor: '#d68910', label: 'Moderate Flood Susceptibility' },
-  3: { fillColor: '#ff4d4d', strokeColor: '#c0392b', label: 'High Flood Susceptibility' },
-}
-
-function getVarBand(value: unknown): number {
-  if (typeof value === 'number') return value
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
 export default function NoahFloodLayer({
   visible,
   onStatusChange,
   onFeatureCountChange,
 }: Props) {
   const map = useMap()
-  const dataLayerRef = useRef<google.maps.Data | null>(null)
-  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
-  const cleanupRef = useRef<Array<google.maps.MapsEventListener>>([])
-  const hasLoadedRef = useRef(false)
+  const var3LayerRef = useRef<google.maps.Data | null>(null)
+  const var2LayerRef = useRef<google.maps.Data | null>(null)
+  const featureCountRef = useRef({ var3: 0, var2: 0 })
 
   useEffect(() => {
     if (!map) return
 
-    if (!dataLayerRef.current) {
-      dataLayerRef.current = new google.maps.Data()
-      dataLayerRef.current.setStyle((feature) => {
-        const style = NOAH_STYLE[getVarBand(feature.getProperty('Var'))] ?? NOAH_STYLE[1]
-        return {
-          fillColor: style.fillColor,
-          fillOpacity: 0.16,
-          strokeColor: style.strokeColor,
-          strokeOpacity: 0.55,
-          strokeWeight: 1.2,
-          clickable: true,
-          zIndex: 8,
+    if (!var3LayerRef.current) {
+      var3LayerRef.current = new google.maps.Data()
+      var3LayerRef.current.setStyle({
+        fillColor: '#ff4d4d',
+        fillOpacity: 0.34,
+        strokeColor: '#c0392b',
+        strokeOpacity: 0.5,
+        strokeWeight: 1,
+        clickable: false,
+        zIndex: 8,
+      })
+    }
+
+    if (!var2LayerRef.current) {
+      var2LayerRef.current = new google.maps.Data()
+      var2LayerRef.current.setStyle({
+        fillColor: '#f39c12',
+        fillOpacity: 0.26,
+        strokeColor: '#d68910',
+        strokeOpacity: 0.42,
+        strokeWeight: 1,
+        clickable: false,
+        zIndex: 7,
+      })
+    }
+
+    const var3Layer = var3LayerRef.current
+    const var2Layer = var2LayerRef.current
+
+    if (visible) {
+      if (featureCountRef.current.var3 === 0 || featureCountRef.current.var2 === 0) {
+        onStatusChange?.('loading')
+        let loaded = 0
+        const finishLoad = () => {
+          loaded += 1
+          if (loaded < 2) return
+          onFeatureCountChange?.(featureCountRef.current.var3 + featureCountRef.current.var2)
+          onStatusChange?.('ready')
+          var2Layer.setMap(map)
+          var3Layer.setMap(map)
         }
-      })
+
+        var2Layer.loadGeoJson('/data/flood_var2_analysis.geojson', null, (features) => {
+          featureCountRef.current.var2 = features.length
+          finishLoad()
+        })
+
+        var3Layer.loadGeoJson('/data/flood_var3_analysis.geojson', null, (features) => {
+          featureCountRef.current.var3 = features.length
+          finishLoad()
+        })
+
+        return () => {
+          var2Layer.setMap(null)
+          var3Layer.setMap(null)
+        }
+      }
+
+      var2Layer.setMap(map)
+      var3Layer.setMap(map)
+      onFeatureCountChange?.(featureCountRef.current.var3 + featureCountRef.current.var2)
+      onStatusChange?.('ready')
+      return () => {
+        var2Layer.setMap(null)
+        var3Layer.setMap(null)
+      }
     }
 
-    if (!infoWindowRef.current) {
-      infoWindowRef.current = new google.maps.InfoWindow()
-    }
-
-    const layer = dataLayerRef.current
-    const infoWindow = infoWindowRef.current
-
-    if (!hasLoadedRef.current) {
-      onStatusChange?.('loading')
-      layer.loadGeoJson('/data/flood_negocc.geojson', null, (features) => {
-        hasLoadedRef.current = true
-        onFeatureCountChange?.(features.length)
-        onStatusChange?.('ready')
-      })
-
-      cleanupRef.current.push(
-        layer.addListener('click', (event: google.maps.Data.MouseEvent) => {
-          if (!event.latLng) return
-          const band = getVarBand(event.feature.getProperty('Var'))
-          const style = NOAH_STYLE[band] ?? NOAH_STYLE[1]
-          infoWindow.setContent(`
-            <div style="font-family:Inter,sans-serif;padding:4px 2px;min-width:170px">
-              <div style="font-size:0.82rem;font-weight:700;margin-bottom:4px">
-                NOAH Flood Reference
-              </div>
-              <div style="font-size:0.75rem;color:#555">${style.label}</div>
-              <div style="font-size:0.72rem;color:#666;margin-top:3px">Dataset band: Var ${band || '?'}</div>
-            </div>
-          `)
-          infoWindow.setPosition(event.latLng)
-          infoWindow.open(map)
-        }),
-        map.addListener('click', () => infoWindow.close()),
-      )
-    }
-
-    layer.setMap(visible ? map : null)
-    if (!visible) infoWindow.close()
+    var2Layer.setMap(null)
+    var3Layer.setMap(null)
+    onStatusChange?.('idle')
 
     return () => {
-      layer.setMap(null)
+      var2Layer.setMap(null)
+      var3Layer.setMap(null)
     }
   }, [map, onFeatureCountChange, onStatusChange, visible])
 
   useEffect(() => {
     return () => {
-      cleanupRef.current.forEach((listener) => google.maps.event.removeListener(listener))
-      cleanupRef.current = []
-      infoWindowRef.current?.close()
-      dataLayerRef.current?.setMap(null)
+      var2LayerRef.current?.setMap(null)
+      var3LayerRef.current?.setMap(null)
     }
   }, [])
 

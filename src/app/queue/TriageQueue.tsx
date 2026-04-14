@@ -1,13 +1,15 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useHazardStore } from '@/store/hazardStore'
+import { useNoahFloodStore } from '@/store/noahFloodStore'
 import { TRIAGE_ORDER } from '@/lib/triage'
 import {
   getEffectiveHouseholdTriage,
   getHouseholdHazardDistanceKm,
   isHouseholdInHazardZone,
+  isPointInAnyPolygon,
 } from '@/lib/geo'
 import HouseholdCard from '@/components/triage/HouseholdCard'
 import type { Household, TriageLevel, TriageResult } from '@/types'
@@ -43,10 +45,20 @@ export default function TriageQueue() {
   const setSelectedId = useHouseholdStore((s) => s.setSelectedId)
   const activeHazard = useHazardStore((s) => s.activeHazard)
   const floodZones = useHazardStore((s) => s.floodZones)
+  const showNoahFlood = useNoahFloodStore((s) => s.visible)
+  const noahAnalysisStatus = useNoahFloodStore((s) => s.analysisStatus)
+  const noahVar3Polygons = useNoahFloodStore((s) => s.var3Polygons)
+  const noahVar2Polygons = useNoahFloodStore((s) => s.var2Polygons)
+  const ensureAnalysisLoaded = useNoahFloodStore((s) => s.ensureAnalysisLoaded)
 
   const [cityFilter, setCityFilter] = useState('')
   const [brgyFilter, setBrgyFilter] = useState('')
   const [vulnerabilityFilter, setVulnerabilityFilter] = useState('')
+
+  useEffect(() => {
+    if (!showNoahFlood) return
+    void ensureAnalysisLoaded()
+  }, [ensureAnalysisLoaded, showNoahFlood])
 
   const cities = useMemo(
     () =>
@@ -74,8 +86,18 @@ export default function TriageQueue() {
       .filter((h) => (!cityFilter || h.city === cityFilter) && h.city.toLowerCase().endsWith('city'))
       .filter((h) => !brgyFilter || h.barangay === brgyFilter)
       .map((household) => {
-        const effectiveLevel = getEffectiveHouseholdTriage(household, activeHazard, floodZones)
-        const isInHazardZone = isHouseholdInHazardZone(household, activeHazard, floodZones)
+        const point = { lat: household.lat, lng: household.lng }
+        const isInsideNoahVar3 = showNoahFlood
+          && noahAnalysisStatus === 'ready'
+          && isPointInAnyPolygon(point, noahVar3Polygons)
+        const isInsideNoahVar2 = showNoahFlood
+          && noahAnalysisStatus === 'ready'
+          && !isInsideNoahVar3
+          && isPointInAnyPolygon(point, noahVar2Polygons)
+
+        const baseEffectiveLevel = getEffectiveHouseholdTriage(household, activeHazard, floodZones)
+        const effectiveLevel = isInsideNoahVar3 ? 'CRITICAL' : isInsideNoahVar2 ? 'HIGH' : baseEffectiveLevel
+        const isInHazardZone = isInsideNoahVar3 || isInsideNoahVar2 || isHouseholdInHazardZone(household, activeHazard, floodZones)
         return {
           household: {
             ...household,
@@ -107,14 +129,15 @@ export default function TriageQueue() {
 
       return a.household.city.localeCompare(b.household.city) || a.household.barangay.localeCompare(b.household.barangay)
     })
-  }, [households, cityFilter, brgyFilter, vulnerabilityFilter, activeHazard, floodZones])
+  }, [households, cityFilter, brgyFilter, vulnerabilityFilter, activeHazard, floodZones, showNoahFlood, noahAnalysisStatus, noahVar3Polygons, noahVar2Polygons])
 
   const pending = queueEntries.filter((entry) => entry.household.status === 'Pending')
   const rescued = queueEntries.filter((entry) => entry.household.status === 'Rescued')
   const hazardPending = pending.filter((entry) => entry.isInHazardZone)
   const regularPending = pending.filter((entry) => !entry.isInHazardZone)
   const isFiltered = Boolean(cityFilter || brgyFilter || vulnerabilityFilter)
-  const showHazardPriority = Boolean(activeHazard?.isActive && hazardPending.length > 0)
+  const showHazardPriority = Boolean((activeHazard?.isActive || showNoahFlood) && hazardPending.length > 0)
+  const hazardPriorityLabel = showNoahFlood ? 'Flood' : activeHazard?.type
 
   const renderPriorityGroups = (entries: QueueEntry[]) =>
     Object.keys(TRIAGE_ORDER).map((level) => {
@@ -290,7 +313,7 @@ export default function TriageQueue() {
           }}
         >
           <div style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, color: 'var(--critical-red)' }}>
-            {activeHazard?.type} Hazard Priority Active
+            {hazardPriorityLabel} Hazard Priority Active
           </div>
           <div style={{ marginTop: 4, fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
             {hazardPending.length} household{hazardPending.length !== 1 ? 's' : ''} inside the active hazard layer are pinned to the top of the queue.

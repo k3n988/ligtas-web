@@ -50,6 +50,63 @@ export function pointInPolygon(
   return inside
 }
 
+type GeoJsonPolygonCoordinates = number[][][]
+type GeoJsonMultiPolygonCoordinates = number[][][][]
+
+interface GeoJsonFeature {
+  geometry?: {
+    type?: string
+    coordinates?: GeoJsonPolygonCoordinates | GeoJsonMultiPolygonCoordinates
+  }
+}
+
+interface GeoJsonFeatureCollection {
+  features?: GeoJsonFeature[]
+}
+
+function ringToLatLngPolygon(ring: number[][]): Array<{ lat: number; lng: number }> {
+  return ring
+    .filter((point) => point.length >= 2)
+    .map(([lng, lat]) => ({ lat, lng }))
+}
+
+export function extractPolygonsFromGeoJson(
+  geojson: GeoJsonFeatureCollection,
+): Array<Array<{ lat: number; lng: number }>> {
+  const polygons: Array<Array<{ lat: number; lng: number }>> = []
+
+  for (const feature of geojson.features ?? []) {
+    const geometry = feature.geometry
+    if (!geometry?.coordinates) continue
+
+    if (geometry.type === 'Polygon') {
+      const outerRing = (geometry.coordinates as GeoJsonPolygonCoordinates)[0]
+      if (!outerRing) continue
+      const polygon = ringToLatLngPolygon(outerRing)
+      if (polygon.length >= 3) polygons.push(polygon)
+      continue
+    }
+
+    if (geometry.type === 'MultiPolygon') {
+      for (const polygonCoords of geometry.coordinates as GeoJsonMultiPolygonCoordinates) {
+        const outerRing = polygonCoords[0]
+        if (!outerRing) continue
+        const polygon = ringToLatLngPolygon(outerRing)
+        if (polygon.length >= 3) polygons.push(polygon)
+      }
+    }
+  }
+
+  return polygons
+}
+
+export function isPointInAnyPolygon(
+  point: { lat: number; lng: number },
+  polygons: Array<Array<{ lat: number; lng: number }>>,
+): boolean {
+  return polygons.some((polygon) => pointInPolygon(point, polygon))
+}
+
 export function getHouseholdHazardDistanceKm(
   household: Pick<Household, 'lat' | 'lng'>,
   hazard: HazardEvent | null,
