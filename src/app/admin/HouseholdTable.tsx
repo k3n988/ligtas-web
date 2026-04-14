@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { assessTriage } from '@/lib/triage'
-import { buildEvacuationNote } from '@/lib/ai/advisories'
+import { buildEvacuationNote, type EvacuationNoteResult } from '@/lib/ai/advisories'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useHazardStore } from '@/store/hazardStore'
 import type { Household, RegistrySource, TriageLevel, Vulnerability } from '@/types'
@@ -117,6 +117,47 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
   const [status, setStatus] = useState<'Pending' | 'Rescued'>(hh.status)
   const [vulnArr, setVulnArr] = useState<Vulnerability[]>(hh.vulnArr)
   const [saving, setSaving] = useState(false)
+  const [aiNote, setAiNote] = useState<EvacuationNoteResult>(() =>
+    buildEvacuationNote({
+      household: { ...hh, head, contact, occupants, notes, status, vulnArr },
+      hazard: activeHazard,
+      floodZones,
+    }),
+  )
+  const [aiNoteLoading, setAiNoteLoading] = useState(false)
+
+  const refreshAiNote = useCallback(
+    async (currentVulnArr: Vulnerability[], currentOccupants: number) => {
+      setAiNoteLoading(true)
+      try {
+        const res = await fetch('/api/ai/evacuation-note', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            household: { ...hh, head, contact, occupants: currentOccupants, notes, status, vulnArr: currentVulnArr },
+            hazard: activeHazard,
+            floodZones,
+          }),
+        })
+        if (res.ok) {
+          const data = (await res.json()) as EvacuationNoteResult
+          setAiNote(data)
+        }
+      } catch {
+        // keep existing note
+      } finally {
+        setAiNoteLoading(false)
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [hh, activeHazard, floodZones],
+  )
+
+  useEffect(() => {
+    void refreshAiNote(vulnArr, occupants)
+    // only re-run when vulnArr or occupants change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vulnArr.join(','), occupants])
 
   const toggleVuln = (value: Vulnerability) => {
     setVulnArr((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]))
@@ -140,12 +181,6 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
     setSaving(false)
     onClose()
   }
-
-  const aiNote = buildEvacuationNote({
-    household: { ...hh, head, contact, occupants, notes, status, vulnArr },
-    hazard: activeHazard,
-    floodZones,
-  })
 
   return (
     <>
@@ -263,10 +298,18 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
             <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--fg-muted)', marginBottom: 4, textTransform: 'uppercase' }}>Notes</label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
             <div style={{ marginTop: 8, padding: 10, borderRadius: 12, background: 'var(--bg-warning-subtle)', border: '1px solid var(--warning-border)' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--warning-strong)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
-                AI Evacuation Note
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--warning-strong)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  AI Evacuation Note
+                </div>
+                <span style={{ fontSize: '0.6rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700,
+                  background: aiNote.source === 'gemini' ? 'var(--accent-blue)' : 'var(--bg-elevated)',
+                  color: aiNote.source === 'gemini' ? '#fff' : 'var(--fg-muted)',
+                }}>
+                  {aiNoteLoading ? 'loading…' : aiNote.source === 'gemini' ? 'Gemini AI' : 'Rule-based'}
+                </span>
               </div>
-              <div style={{ fontSize: '0.76rem', color: 'var(--fg-default)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '0.76rem', color: 'var(--fg-default)', lineHeight: 1.5, opacity: aiNoteLoading ? 0.5 : 1 }}>
                 {aiNote.note}
               </div>
               {aiNote.equipment.length > 0 && (

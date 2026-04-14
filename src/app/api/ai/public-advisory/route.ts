@@ -38,13 +38,20 @@ export async function POST(request: NextRequest) {
   })
 
   const hazardType = body.hazard?.type ?? 'hazard'
+  const location = [body.barangay, body.city].filter(Boolean).join(', ') || 'Unknown area'
+  const vulnerabilities = body.vulnerabilities?.length
+    ? `Household vulnerabilities: ${body.vulnerabilities.join(', ')}.`
+    : 'No special vulnerabilities reported.'
+
   const prompt = [
-    'You are generating a concise Philippine disaster advisory for a public map banner.',
-    `Location: ${[body.barangay, body.city].filter(Boolean).join(', ') || 'Unknown area'}.`,
-    `Hazard: ${hazardType}.`,
-    `Fallback summary: ${fallback.summary}`,
-    `Actions to preserve or improve: ${fallback.actions.join('; ')}`,
-    'Keep the response localized, calm, and actionable. Avoid jargon. Use 3 short action items.',
+    'You are generating a concise Philippine disaster advisory for a public-facing map banner used by residents and responders.',
+    `Location: ${location}.`,
+    `Active hazard type: ${hazardType}.`,
+    vulnerabilities,
+    `Hazard zone: ${fallback.severity} (${fallback.summary})`,
+    `Fallback actions: ${fallback.actions.join('; ')}.`,
+    'Generate a short advisory title (max 8 words), a calm 1-2 sentence summary appropriate for Filipino residents, and exactly 3 short actionable bullet points.',
+    'Use plain language. Do not use technical jargon. Keep it reassuring but urgent when needed.',
   ].join('\n')
 
   const gemini = await maybeGenerateGeminiJson<Omit<PublicAdvisoryResult, 'source'>>({

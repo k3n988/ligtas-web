@@ -1,44 +1,47 @@
 import 'server-only'
 
+const RAILWAY_URL = process.env.RAILWAY_URL ?? 'https://ligtas-production.up.railway.app'
+
 export async function maybeGenerateGeminiJson<T>(input: {
   prompt: string
   schema: object
 }): Promise<T | null> {
-  const apiKey = process.env.GEMINI_API_KEY
-  const model = process.env.GEMINI_MODEL ?? 'gemini-1.5-flash'
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 8000)
 
-  if (!apiKey) return null
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
+  try {
+    const response = await fetch(`${RAILWAY_URL}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [
+        messages: [
           {
             role: 'user',
-            parts: [{ text: input.prompt }],
+            content: `${input.prompt}\n\nRespond ONLY with a valid JSON object matching this structure: ${JSON.stringify(input.schema)}. No explanation, no markdown, just the raw JSON.`,
           },
         ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: input.schema,
-        },
       }),
       cache: 'no-store',
-    },
-  )
+      signal: controller.signal,
+    })
 
-  if (!response.ok) return null
+    if (!response.ok) return null
 
-  const data = await response.json()
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) return null
+    const data = (await response.json()) as { reply?: string }
+    const raw = data?.reply?.trim()
+    if (!raw) return null
 
-  try {
-    return JSON.parse(text) as T
+    // Strip markdown code fences if the model wraps the JSON
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+
+    try {
+      return JSON.parse(cleaned) as T
+    } catch {
+      return null
+    }
   } catch {
     return null
+  } finally {
+    clearTimeout(timeout)
   }
 }

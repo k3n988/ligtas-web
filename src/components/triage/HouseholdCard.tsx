@@ -1,11 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Household } from '@/types'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { useHazardStore } from '@/store/hazardStore'
-import { buildAssetRecommendation } from '@/lib/ai/advisories'
+import { buildAssetRecommendation, type AssetRecommendationResult } from '@/lib/ai/advisories'
 import TriageBadge from './TriageBadge'
 
 interface Props {
@@ -46,7 +46,7 @@ export default function HouseholdCard({ household: hh }: Props) {
   const borderColor = isRescued ? 'var(--resolved-green)' : BORDER_COLOR[hh.triage.colorName]
   const assignedAsset = hh.assignedAssetId ? assets.find((a) => a.id === hh.assignedAssetId) : null
 
-  const recommendation = useMemo(
+  const ruleBasedRecommendation = useMemo(
     () =>
       buildAssetRecommendation({
         household: hh,
@@ -56,6 +56,29 @@ export default function HouseholdCard({ household: hh }: Props) {
       }),
     [activeHazard, assets, floodZones, hh],
   )
+
+  const [recommendation, setRecommendation] = useState<AssetRecommendationResult>(ruleBasedRecommendation)
+
+  useEffect(() => {
+    if (!showPicker) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch('/api/ai/asset-recommendation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ household: hh, assets, hazard: activeHazard, floodZones }),
+        })
+        if (res.ok && !cancelled) {
+          const data = (await res.json()) as AssetRecommendationResult
+          setRecommendation(data)
+        }
+      } catch {
+        // keep rule-based
+      }
+    })()
+    return () => { cancelled = true }
+  }, [showPicker, hh, assets, activeHazard, floodZones])
 
   const recommendedIds = new Set(recommendation.recommendedAssetIds)
   const blockedIds = new Set(recommendation.blockedAssetIds)
@@ -140,8 +163,16 @@ export default function HouseholdCard({ household: hh }: Props) {
             marginBottom: 10,
           }}
         >
-          <div style={{ fontSize: '0.7rem', color: 'var(--warning-strong)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
-            AI Dispatch Advisory
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--warning-strong)', textTransform: 'uppercase', letterSpacing: 1 }}>
+              AI Dispatch Advisory
+            </div>
+            <span style={{ fontSize: '0.6rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700,
+              background: recommendation.source === 'gemini' ? 'var(--accent-blue)' : 'var(--bg-elevated)',
+              color: recommendation.source === 'gemini' ? '#fff' : 'var(--fg-muted)',
+            }}>
+              {recommendation.source === 'gemini' ? 'Gemini AI' : 'Rule-based'}
+            </span>
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--fg-default)', fontWeight: 700, marginBottom: 4 }}>
             {recommendation.summary}
