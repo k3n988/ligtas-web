@@ -107,6 +107,45 @@ function HazardPanController() {
   return null
 }
 
+function NoahFloodAutoFocusController() {
+  const map = useMap()
+  const showNoahFlood = useNoahFloodStore((s) => s.visible)
+  const noahAnalysisStatus = useNoahFloodStore((s) => s.analysisStatus)
+  const noahVar3Polygons = useNoahFloodStore((s) => s.var3Polygons)
+  const noahVar2Polygons = useNoahFloodStore((s) => s.var2Polygons)
+  const noahVar1Polygons = useNoahFloodStore((s) => s.var1Polygons)
+  const hasAutoFocusedRef = useRef(false)
+
+  useEffect(() => {
+    if (!showNoahFlood) {
+      hasAutoFocusedRef.current = false
+      return
+    }
+
+    if (!map || noahAnalysisStatus !== 'ready' || hasAutoFocusedRef.current) return
+
+    const allPolygons = [...noahVar3Polygons, ...noahVar2Polygons, ...noahVar1Polygons]
+    if (allPolygons.length === 0) return
+
+    const bounds = new google.maps.LatLngBounds()
+    let hasPoint = false
+
+    allPolygons.forEach((polygon) => {
+      polygon.forEach((point) => {
+        bounds.extend(point)
+        hasPoint = true
+      })
+    })
+
+    if (!hasPoint || bounds.isEmpty()) return
+
+    map.fitBounds(bounds, 48)
+    hasAutoFocusedRef.current = true
+  }, [map, noahAnalysisStatus, noahVar1Polygons, noahVar2Polygons, noahVar3Polygons, showNoahFlood])
+
+  return null
+}
+
 // Severity order: stable rendered first so critical sits on top visually
 const SEVERITY_ORDER: Record<FloodSeverity, number> = {
   stable: 0, elevated: 1, high: 2, critical: 3,
@@ -512,6 +551,7 @@ function MapInner() {
         <PanCoordsController />
         <PickCursorController />
         <HazardPanController />   {/* ← add this */}
+        <NoahFloodAutoFocusController />
         <RouteOverlay />
         <NoahFloodLayer
           visible={showNoahFlood}
