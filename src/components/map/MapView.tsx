@@ -411,6 +411,7 @@ function MapInner() {
   const showNoahFlood        = useNoahFloodStore((s) => s.visible)
   const setShowNoahFlood     = useNoahFloodStore((s) => s.setVisible)
   const noahAnalysisStatus   = useNoahFloodStore((s) => s.analysisStatus)
+  const noahAnalysisError    = useNoahFloodStore((s) => s.analysisError)
   const noahVar3PolygonCount = useNoahFloodStore((s) => s.var3PolygonCount)
   const noahVar2PolygonCount = useNoahFloodStore((s) => s.var2PolygonCount)
   const noahVar1PolygonCount = useNoahFloodStore((s) => s.var1PolygonCount)
@@ -647,15 +648,15 @@ function MapInner() {
           <div>
             {showNoahFlood
               ? noahStatus === 'loading'
-                ? 'Loading Var 2 and Var 3 GeoJSON flood layers. Var 1 will join if it finishes.'
-                : `GeoJSON flood layers visible${noahFeatureCount > 0 ? ` • ${noahFeatureCount.toLocaleString()} features loaded` : ''}`
-              : 'Off by default. This GeoJSON test uses the split flood analysis files.'}
+                ? 'Loading Var 1, Var 2, and Var 3 from Supabase by current map bounds.'
+                : `Flood layers visible${noahFeatureCount > 0 ? ` • ${noahFeatureCount.toLocaleString()} features loaded` : ''}`
+              : 'Off by default. Flood display now loads Var 1, Var 2, and Var 3 from Supabase by current map bounds.'}
           </div>
           {showNoahFlood && (
             <div style={{ marginTop: 5 }}>
-              {noahAnalysisStatus === 'loading' && 'Loading Var 2 and Var 3 analysis GeoJSON. Var 1 is optional while we test performance.'}
+              {noahAnalysisStatus === 'loading' && 'Loading flood analysis while display layers are requested from Supabase.'}
               {noahAnalysisStatus === 'ready' && `Flood analysis ready • Critical: ${noahVar3PolygonCount.toLocaleString()} polygons / ${noahCriticalHouseholdCount} households • High: ${noahVar2PolygonCount.toLocaleString()} polygons / ${noahHighHouseholdCount} households • Elevated: ${noahVar1PolygonCount.toLocaleString()} polygons / ${noahElevatedHouseholdCount} households`}
-              {noahAnalysisStatus === 'error' && 'Flood analysis GeoJSON failed to load.'}
+              {noahAnalysisStatus === 'error' && `Flood analysis failed to load${noahAnalysisError ? ` • ${noahAnalysisError}` : '.'}`}
             </div>
           )}
         </div>
