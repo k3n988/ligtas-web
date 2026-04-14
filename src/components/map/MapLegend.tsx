@@ -152,6 +152,7 @@ export default function MapLegend({ showNoahFlood = false }: Props) {
             </div>
 
             {[
+              { color: '#f1c40f', label: 'Elevated' },
               { color: '#f39c12', label: 'High' },
               { color: '#ff4d4d', label: 'Critical' },
             ].map(({ color, label }) => (

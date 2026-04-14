@@ -374,8 +374,10 @@ function MapInner() {
   const noahAnalysisStatus   = useNoahFloodStore((s) => s.analysisStatus)
   const noahVar3PolygonCount = useNoahFloodStore((s) => s.var3PolygonCount)
   const noahVar2PolygonCount = useNoahFloodStore((s) => s.var2PolygonCount)
+  const noahVar1PolygonCount = useNoahFloodStore((s) => s.var1PolygonCount)
   const noahVar3Polygons = useNoahFloodStore((s) => s.var3Polygons)
   const noahVar2Polygons = useNoahFloodStore((s) => s.var2Polygons)
+  const noahVar1Polygons = useNoahFloodStore((s) => s.var1Polygons)
   const ensureAnalysisLoaded = useNoahFloodStore((s) => s.ensureAnalysisLoaded)
 
   const [openAssetId, setOpenAssetId] = useState<string | null>(null)
@@ -412,6 +414,21 @@ function MapInner() {
         return isPointInAnyPolygon(point, noahVar2Polygons) ? total + 1 : total
       }, 0)
   }, [households, noahAnalysisStatus, noahVar2Polygons, noahVar3Polygons, showNoahFlood])
+
+  const noahElevatedHouseholdCount = useMemo(() => {
+    if (!showNoahFlood || noahAnalysisStatus !== 'ready') return 0
+
+    if (noahVar1Polygons.length === 0) return 0
+
+    return households
+      .filter((hh) => hh.approvalStatus === 'approved')
+      .reduce((total, hh) => {
+        const point = { lat: hh.lat, lng: hh.lng }
+        if (isPointInAnyPolygon(point, noahVar3Polygons)) return total
+        if (isPointInAnyPolygon(point, noahVar2Polygons)) return total
+        return isPointInAnyPolygon(point, noahVar1Polygons) ? total + 1 : total
+      }, 0)
+  }, [households, noahAnalysisStatus, noahVar1Polygons, noahVar2Polygons, noahVar3Polygons, showNoahFlood])
 
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
@@ -590,14 +607,14 @@ function MapInner() {
           <div>
             {showNoahFlood
               ? noahStatus === 'loading'
-                ? 'Loading Var 2 and Var 3 GeoJSON flood layers...'
-                : `Var 2 + Var 3 GeoJSON flood layers visible${noahFeatureCount > 0 ? ` • ${noahFeatureCount.toLocaleString()} features loaded` : ''}`
-              : 'Off by default. This GeoJSON test uses the split Var 2 and Var 3 flood analysis files.'}
+                ? 'Loading Var 2 and Var 3 GeoJSON flood layers. Var 1 will join if it finishes.'
+                : `GeoJSON flood layers visible${noahFeatureCount > 0 ? ` • ${noahFeatureCount.toLocaleString()} features loaded` : ''}`
+              : 'Off by default. This GeoJSON test uses the split flood analysis files.'}
           </div>
           {showNoahFlood && (
             <div style={{ marginTop: 5 }}>
-              {noahAnalysisStatus === 'loading' && 'Loading Var 2 and Var 3 analysis GeoJSON...'}
-              {noahAnalysisStatus === 'ready' && `Flood analysis ready • Critical: ${noahVar3PolygonCount.toLocaleString()} polygons / ${noahCriticalHouseholdCount} households • High: ${noahVar2PolygonCount.toLocaleString()} polygons / ${noahHighHouseholdCount} households`}
+              {noahAnalysisStatus === 'loading' && 'Loading Var 2 and Var 3 analysis GeoJSON. Var 1 is optional while we test performance.'}
+              {noahAnalysisStatus === 'ready' && `Flood analysis ready • Critical: ${noahVar3PolygonCount.toLocaleString()} polygons / ${noahCriticalHouseholdCount} households • High: ${noahVar2PolygonCount.toLocaleString()} polygons / ${noahHighHouseholdCount} households • Elevated: ${noahVar1PolygonCount.toLocaleString()} polygons / ${noahElevatedHouseholdCount} households`}
               {noahAnalysisStatus === 'error' && 'Flood analysis GeoJSON failed to load.'}
             </div>
           )}

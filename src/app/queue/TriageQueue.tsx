@@ -49,6 +49,7 @@ export default function TriageQueue() {
   const noahAnalysisStatus = useNoahFloodStore((s) => s.analysisStatus)
   const noahVar3Polygons = useNoahFloodStore((s) => s.var3Polygons)
   const noahVar2Polygons = useNoahFloodStore((s) => s.var2Polygons)
+  const noahVar1Polygons = useNoahFloodStore((s) => s.var1Polygons)
   const ensureAnalysisLoaded = useNoahFloodStore((s) => s.ensureAnalysisLoaded)
 
   const [cityFilter, setCityFilter] = useState('')
@@ -94,10 +95,15 @@ export default function TriageQueue() {
           && noahAnalysisStatus === 'ready'
           && !isInsideNoahVar3
           && isPointInAnyPolygon(point, noahVar2Polygons)
+        const isInsideNoahVar1 = showNoahFlood
+          && noahAnalysisStatus === 'ready'
+          && !isInsideNoahVar3
+          && !isInsideNoahVar2
+          && isPointInAnyPolygon(point, noahVar1Polygons)
 
         const baseEffectiveLevel = getEffectiveHouseholdTriage(household, activeHazard, floodZones)
-        const effectiveLevel = isInsideNoahVar3 ? 'CRITICAL' : isInsideNoahVar2 ? 'HIGH' : baseEffectiveLevel
-        const isInHazardZone = isInsideNoahVar3 || isInsideNoahVar2 || isHouseholdInHazardZone(household, activeHazard, floodZones)
+        const effectiveLevel = isInsideNoahVar3 ? 'CRITICAL' : isInsideNoahVar2 ? 'HIGH' : isInsideNoahVar1 ? 'ELEVATED' : baseEffectiveLevel
+        const isInHazardZone = isInsideNoahVar3 || isInsideNoahVar2 || isInsideNoahVar1 || isHouseholdInHazardZone(household, activeHazard, floodZones)
         return {
           household: {
             ...household,
@@ -129,7 +135,7 @@ export default function TriageQueue() {
 
       return a.household.city.localeCompare(b.household.city) || a.household.barangay.localeCompare(b.household.barangay)
     })
-  }, [households, cityFilter, brgyFilter, vulnerabilityFilter, activeHazard, floodZones, showNoahFlood, noahAnalysisStatus, noahVar3Polygons, noahVar2Polygons])
+  }, [households, cityFilter, brgyFilter, vulnerabilityFilter, activeHazard, floodZones, showNoahFlood, noahAnalysisStatus, noahVar3Polygons, noahVar2Polygons, noahVar1Polygons])
 
   const pending = queueEntries.filter((entry) => entry.household.status === 'Pending')
   const rescued = queueEntries.filter((entry) => entry.household.status === 'Rescued')
