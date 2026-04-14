@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { assessTriage } from '@/lib/triage'
 import { buildEvacuationNote } from '@/lib/ai/advisories'
 import { useHouseholdStore } from '@/store/householdStore'
@@ -338,20 +338,41 @@ export default function HouseholdTable({
 
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<'All' | 'Pending' | 'Rescued'>('All')
+  const [filterCity, setFilterCity] = useState('All')
+  const [filterBarangay, setFilterBarangay] = useState('All')
   const [editTarget, setEditTarget] = useState<Household | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [approvingId, setApprovingId] = useState<string | null>(null)
 
   const pendingApprovals = households.filter((hh) => hh.approvalStatus === 'pending_review')
   const approvedCount = households.filter((hh) => hh.approvalStatus === 'approved').length
+  const approvedHouseholds = households.filter((hh) => hh.approvalStatus === 'approved')
 
-  const filtered = households
-    .filter((hh) => hh.approvalStatus === 'approved')
+  const cityOptions = useMemo(() => (
+    Array.from(new Set(
+      approvedHouseholds
+        .map((hh) => hh.city?.trim())
+        .filter((value): value is string => Boolean(value)),
+    )).sort((a, b) => a.localeCompare(b))
+  ), [approvedHouseholds])
+
+  const barangayOptions = useMemo(() => (
+    Array.from(new Set(
+      approvedHouseholds
+        .filter((hh) => filterCity === 'All' || hh.city === filterCity)
+        .map((hh) => hh.barangay?.trim())
+        .filter((value): value is string => Boolean(value)),
+    )).sort((a, b) => a.localeCompare(b))
+  ), [approvedHouseholds, filterCity])
+
+  const filtered = approvedHouseholds
     .filter((hh) => {
       const matchStatus = filterStatus === 'All' || hh.status === filterStatus
+      const matchCity = filterCity === 'All' || hh.city === filterCity
+      const matchBarangay = filterBarangay === 'All' || hh.barangay === filterBarangay
       const q = search.toLowerCase()
       const matchSearch = !q || hh.head.toLowerCase().includes(q) || hh.barangay.toLowerCase().includes(q) || hh.city.toLowerCase().includes(q) || hh.id.toLowerCase().includes(q)
-      return matchStatus && matchSearch
+      return matchStatus && matchCity && matchBarangay && matchSearch
     })
 
   const handleApprove = async (id: string) => {
@@ -433,6 +454,29 @@ export default function HouseholdTable({
         <>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, barangay, city, or ID..." style={{ ...inputStyle, flex: 1, minWidth: 220, borderRadius: 999, background: 'var(--bg-surface)' }} />
+            <select
+              value={filterCity}
+              onChange={(e) => {
+                setFilterCity(e.target.value)
+                setFilterBarangay('All')
+              }}
+              style={{ ...inputStyle, width: 180, borderRadius: 999, background: 'var(--bg-surface)' }}
+            >
+              <option value="All">All Cities</option>
+              {cityOptions.map((city) => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+            <select
+              value={filterBarangay}
+              onChange={(e) => setFilterBarangay(e.target.value)}
+              style={{ ...inputStyle, width: 200, borderRadius: 999, background: 'var(--bg-surface)' }}
+            >
+              <option value="All">All Barangays</option>
+              {barangayOptions.map((barangay) => (
+                <option key={barangay} value={barangay}>{barangay}</option>
+              ))}
+            </select>
             {(['All', 'Pending', 'Rescued'] as const).map((item) => (
               <button key={item} onClick={() => setFilterStatus(item)} style={{ padding: '8px 16px', background: filterStatus === item ? 'var(--accent-solid)' : 'var(--bg-elevated)', color: filterStatus === item ? '#fff' : 'var(--fg-default)', border: `1px solid ${filterStatus === item ? 'var(--accent-solid)' : 'var(--border)'}`, borderRadius: 999, fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
                 {item}
