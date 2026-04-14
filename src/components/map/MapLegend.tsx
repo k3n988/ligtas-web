@@ -1,10 +1,6 @@
 'use client'
 
-interface Props {
-  showNoahFlood?: boolean
-}
-
-export default function MapLegend({ showNoahFlood = false }: Props) {
+export default function MapLegend() {
   return (
     <div
       className="map-legend-overlay"
@@ -133,51 +129,6 @@ export default function MapLegend({ showNoahFlood = false }: Props) {
         ))}
       </div>
 
-      {showNoahFlood && (
-        <>
-          <div className="map-legend-divider" style={{ borderTop: '1px solid var(--border)', margin: '8px 0' }} />
-
-          <div className="map-legend-section map-legend-section--flood">
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: '0.72rem',
-                letterSpacing: 1,
-                textTransform: 'uppercase',
-                color: 'var(--fg-default)',
-                marginBottom: 8,
-              }}
-            >
-              NOAH Flood
-            </div>
-
-            {[
-              { color: '#f1c40f', label: 'Elevated' },
-              { color: '#f39c12', label: 'High' },
-              { color: '#ff4d4d', label: 'Critical' },
-            ].map(({ color, label }) => (
-              <div
-                key={label}
-                className="map-legend-row"
-                style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}
-              >
-                <div
-                  style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: 3,
-                    background: color,
-                    border: '1px solid rgba(255,255,255,.3)',
-                    marginRight: 8,
-                    flexShrink: 0,
-                  }}
-                />
-                {label}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   )
 }

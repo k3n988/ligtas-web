@@ -1,7 +1,7 @@
 'use client'
 // src/components/map/HazardControlPanel.tsx
 import { useMap } from '@vis.gl/react-google-maps'
-import { useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { useHazardStore } from '@/store/hazardStore'
 import { useAuthStore } from '@/store/authStore'
 import type { FloodDepth, FloodSeverity, FloodZone, HazardEvent } from '@/types'
@@ -45,7 +45,12 @@ const RING_COLORS = {
   stable:   '#58a6ff',
 }
 
-export default function HazardControlPanel() {
+interface HazardControlPanelProps {
+  topControls?: ReactNode
+  forceHazardType?: string | null
+}
+
+export default function HazardControlPanel({ topControls, forceHazardType }: HazardControlPanelProps) {
   const {
     activeHazard,
     setActiveHazard,
@@ -79,6 +84,13 @@ export default function HazardControlPanel() {
   const [draftSeverity,  setDraftSeverity]  = useState<FloodSeverity>('stable')
   const [draftDepth,     setDraftDepth]     = useState<FloodDepth | ''>('')
   const [draftNotes,     setDraftNotes]     = useState('')
+
+  useEffect(() => {
+    if (!forceHazardType || hazardType === forceHazardType) return
+    setHazardType(forceHazardType)
+    setPendingPolygon(null)
+    setIsDrawing(false)
+  }, [forceHazardType, hazardType])
 
   // Early return AFTER all hooks
   if (!activeHazard?.isActive && user?.role !== 'admin') return null
@@ -154,6 +166,18 @@ export default function HazardControlPanel() {
     ? (draftFloodZones.length > 0 || floodZones.length > 0)
     : !!draftCenter
 
+  function quickSelectHazard(nextType: string) {
+    setHazardType(nextType)
+    setPendingPolygon(null)
+    setIsDrawing(false)
+    setOpen(true)
+
+    if (activeHazard?.isActive && map && activeHazard.type === nextType && activeHazard.type !== 'Flood') {
+      map.panTo(activeHazard.center)
+      map.setZoom(12)
+    }
+  }
+
   return (
     <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 20 }}>
 
@@ -161,36 +185,86 @@ export default function HazardControlPanel() {
       <FloodDrawingManager active={isDrawing} onPolygonComplete={handlePolygonComplete} />
 
       {/* ── Toggle button ─────────────────────────────────────────────── */}
-      <button
-        onClick={() => {
-          setOpen((o) => !o)
-          if (activeHazard?.isActive && map && activeHazard.type !== 'Flood') {
-            map.panTo(activeHazard.center)
-            map.setZoom(12)
-          }
-        }}
-        title="Hazard Layer Control"
-        style={{
-          height: 38,
-          padding: '0 14px',
-          borderRadius: 6,
-          background: activeHazard?.isActive ? '#3d1a1a' : (user?.role === 'admin' ? '#161b22' : 'transparent'),
-          border: `1.5px solid ${activeHazard?.isActive ? '#da3633' : '#58a6ff'}`,
-          color: activeHazard?.isActive ? '#ff4d4d' : '#58a6ff',
-          fontSize: '0.75rem',
-          fontWeight: 700,
-          letterSpacing: 0.5,
-          cursor: (activeHazard?.isActive || user?.role === 'admin') ? 'pointer' : 'default',
-          display: 'flex', alignItems: 'center', gap: 6,
-          boxShadow: '0 2px 8px rgba(0,0,0,.5)',
-          fontFamily: 'Inter, sans-serif',
-          whiteSpace: 'nowrap',
-          pointerEvents: (!activeHazard?.isActive && user?.role !== 'admin') ? 'none' : 'auto',
-          opacity: (!activeHazard?.isActive && user?.role !== 'admin') ? 0 : 1,
-        }}
-      >
-        ⚠ {activeHazard?.isActive ? `ACTIVE: ${activeHazard.type}` : 'HAZARD LAYER'}
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+        <button
+          onClick={() => {
+            setOpen((o) => !o)
+            if (activeHazard?.isActive && map && activeHazard.type !== 'Flood') {
+              map.panTo(activeHazard.center)
+              map.setZoom(12)
+            }
+          }}
+          title="Hazard Layer Control"
+          style={{
+            height: 38,
+            padding: '0 14px',
+            borderRadius: 6,
+            background: activeHazard?.isActive ? '#3d1a1a' : (user?.role === 'admin' ? '#161b22' : 'transparent'),
+            border: `1.5px solid ${activeHazard?.isActive ? '#da3633' : '#58a6ff'}`,
+            color: activeHazard?.isActive ? '#ff4d4d' : '#58a6ff',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            letterSpacing: 0.5,
+            cursor: (activeHazard?.isActive || user?.role === 'admin') ? 'pointer' : 'default',
+            display: 'flex', alignItems: 'center', gap: 6,
+            boxShadow: '0 2px 8px rgba(0,0,0,.5)',
+            fontFamily: 'Inter, sans-serif',
+            whiteSpace: 'nowrap',
+            pointerEvents: (!activeHazard?.isActive && user?.role !== 'admin') ? 'none' : 'auto',
+            opacity: (!activeHazard?.isActive && user?.role !== 'admin') ? 0 : 1,
+          }}
+        >
+          ⚠ {activeHazard?.isActive ? `ACTIVE: ${activeHazard.type}` : 'HAZARD LAYER'}
+        </button>
+
+        <button
+          onClick={() => quickSelectHazard('Volcano')}
+          title="Configure volcano hazard"
+          style={{
+            height: 38,
+            padding: '0 14px',
+            borderRadius: 6,
+            background: hazardType === 'Volcano' ? '#3d2412' : '#161b22',
+            border: `1.5px solid ${hazardType === 'Volcano' ? '#f39c12' : '#58a6ff'}`,
+            color: hazardType === 'Volcano' ? '#f39c12' : '#58a6ff',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            letterSpacing: 0.5,
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+            boxShadow: '0 2px 8px rgba(0,0,0,.5)',
+            fontFamily: 'Inter, sans-serif',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Volcano
+        </button>
+
+        <button
+          onClick={() => quickSelectHazard('Earthquake')}
+          title="Configure earthquake hazard"
+          style={{
+            height: 38,
+            padding: '0 14px',
+            borderRadius: 6,
+            background: hazardType === 'Earthquake' ? '#2c1f3d' : '#161b22',
+            border: `1.5px solid ${hazardType === 'Earthquake' ? '#c084fc' : '#58a6ff'}`,
+            color: hazardType === 'Earthquake' ? '#c084fc' : '#58a6ff',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            letterSpacing: 0.5,
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+            boxShadow: '0 2px 8px rgba(0,0,0,.5)',
+            fontFamily: 'Inter, sans-serif',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Earthquake
+        </button>
+
+        {topControls}
+      </div>
 
       {open && (
         <div style={{
@@ -572,3 +646,4 @@ function ZoneCard({ zone, onRemove }: { zone: FloodZone; onRemove: () => void })
     </div>
   )
 }
+

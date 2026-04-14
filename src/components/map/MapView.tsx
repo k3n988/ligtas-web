@@ -2,7 +2,7 @@
 // src/components/map/MapView.tsx
 // Imported via next/dynamic with ssr:false — must stay a pure client module.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Map,
   useMap,
@@ -21,7 +21,6 @@ import HazardControlPanel from './HazardControlPanel'
 import NoahFloodLayer from './NoahFloodLayer'
 import { Marker } from '@vis.gl/react-google-maps'
 import type { FloodSeverity, HazardEvent } from '@/types'
-import { isPointInAnyPolygon } from '@/lib/geo'
 
 const DEFAULT_CENTER = { lat: 10.6765, lng: 122.9509 }
 
@@ -410,65 +409,14 @@ function MapInner() {
   const setDraftCenter       = useHazardStore((s) => s.setDraftCenter)
   const showNoahFlood        = useNoahFloodStore((s) => s.visible)
   const setShowNoahFlood     = useNoahFloodStore((s) => s.setVisible)
-  const noahAnalysisStatus   = useNoahFloodStore((s) => s.analysisStatus)
-  const noahAnalysisError    = useNoahFloodStore((s) => s.analysisError)
-  const noahVar3PolygonCount = useNoahFloodStore((s) => s.var3PolygonCount)
-  const noahVar2PolygonCount = useNoahFloodStore((s) => s.var2PolygonCount)
-  const noahVar1PolygonCount = useNoahFloodStore((s) => s.var1PolygonCount)
-  const noahVar3Polygons = useNoahFloodStore((s) => s.var3Polygons)
-  const noahVar2Polygons = useNoahFloodStore((s) => s.var2Polygons)
-  const noahVar1Polygons = useNoahFloodStore((s) => s.var1Polygons)
   const ensureAnalysisLoaded = useNoahFloodStore((s) => s.ensureAnalysisLoaded)
 
   const [openAssetId, setOpenAssetId] = useState<string | null>(null)
-  const [noahStatus, setNoahStatus] = useState<'idle' | 'loading' | 'ready'>('idle')
-  const [noahFeatureCount, setNoahFeatureCount] = useState(0)
 
   useEffect(() => {
     if (!showNoahFlood) return
     void ensureAnalysisLoaded()
   }, [ensureAnalysisLoaded, showNoahFlood])
-
-  const noahCriticalHouseholdCount = useMemo(() => {
-    if (!showNoahFlood || noahAnalysisStatus !== 'ready') return 0
-
-    if (noahVar3Polygons.length === 0) return 0
-
-    return households
-      .filter((hh) => hh.approvalStatus === 'approved')
-      .reduce((total, hh) => (
-        isPointInAnyPolygon({ lat: hh.lat, lng: hh.lng }, noahVar3Polygons) ? total + 1 : total
-      ), 0)
-  }, [households, noahVar3Polygons, noahAnalysisStatus, showNoahFlood])
-
-  const noahHighHouseholdCount = useMemo(() => {
-    if (!showNoahFlood || noahAnalysisStatus !== 'ready') return 0
-
-    if (noahVar2Polygons.length === 0) return 0
-
-    return households
-      .filter((hh) => hh.approvalStatus === 'approved')
-      .reduce((total, hh) => {
-        const point = { lat: hh.lat, lng: hh.lng }
-        if (isPointInAnyPolygon(point, noahVar3Polygons)) return total
-        return isPointInAnyPolygon(point, noahVar2Polygons) ? total + 1 : total
-      }, 0)
-  }, [households, noahAnalysisStatus, noahVar2Polygons, noahVar3Polygons, showNoahFlood])
-
-  const noahElevatedHouseholdCount = useMemo(() => {
-    if (!showNoahFlood || noahAnalysisStatus !== 'ready') return 0
-
-    if (noahVar1Polygons.length === 0) return 0
-
-    return households
-      .filter((hh) => hh.approvalStatus === 'approved')
-      .reduce((total, hh) => {
-        const point = { lat: hh.lat, lng: hh.lng }
-        if (isPointInAnyPolygon(point, noahVar3Polygons)) return total
-        if (isPointInAnyPolygon(point, noahVar2Polygons)) return total
-        return isPointInAnyPolygon(point, noahVar1Polygons) ? total + 1 : total
-      }, 0)
-  }, [households, noahAnalysisStatus, noahVar1Polygons, noahVar2Polygons, noahVar3Polygons, showNoahFlood])
 
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
@@ -556,8 +504,6 @@ function MapInner() {
         <RouteOverlay />
         <NoahFloodLayer
           visible={showNoahFlood}
-          onStatusChange={setNoahStatus}
-          onFeatureCountChange={setNoahFeatureCount}
         />
 
         {activeHazard?.isActive && activeHazard.type !== 'Flood' && <HazardCircles hazard={activeHazard} />}
@@ -586,86 +532,48 @@ function MapInner() {
           />
         )}
 
-        <MapLegend showNoahFlood={showNoahFlood} />
+        <MapLegend />
       </Map>
-
-      {/* ✅ HazardControlPanel is OUTSIDE <Map> so it renders as a proper DOM overlay */}
-      <div
-        style={{
-          position: 'absolute',
-          right: 12,
-          bottom: 30,
-          zIndex: 20,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          alignItems: 'flex-end',
-          maxWidth: 'min(320px, calc(100vw - 24px))',
-        }}
-      >
-        <button
-          onClick={() => {
-            const next = !showNoahFlood
-            setShowNoahFlood(next)
-            if (next) {
-              void ensureAnalysisLoaded()
-            }
-          }}
-          style={{
-            background: showNoahFlood ? '#102a19' : 'var(--map-panel-bg)',
-            border: `1px solid ${showNoahFlood ? '#238636' : 'var(--map-panel-border)'}`,
-            color: showNoahFlood ? '#3fb950' : 'var(--fg-default)',
-            borderRadius: 12,
-            padding: '10px 12px',
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            boxShadow: 'var(--shadow-overlay)',
-            cursor: 'pointer',
-            backdropFilter: 'blur(10px)',
-          }}
-          title="Toggle the NOAH flood susceptibility reference layer"
-        >
-          {showNoahFlood ? 'Hide' : 'Show'} NOAH Flood Layer
-        </button>
-
-        <div
-          style={{
-            background: 'var(--map-panel-bg)',
-            border: '1px solid var(--map-panel-border)',
-            borderRadius: 12,
-            padding: '10px 12px',
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '0.7rem',
-            color: 'var(--fg-muted)',
-            boxShadow: 'var(--shadow-overlay)',
-            lineHeight: 1.35,
-          }}
-        >
-          <div style={{ fontWeight: 700, color: 'var(--fg-default)', marginBottom: 4 }}>
-            NOAH Reference Layer
-          </div>
-          <div>
-            {showNoahFlood
-              ? noahStatus === 'loading'
-                ? 'Loading Var 1, Var 2, and Var 3 from Supabase by current map bounds.'
-                : `Flood layers visible${noahFeatureCount > 0 ? ` • ${noahFeatureCount.toLocaleString()} features loaded` : ''}`
-              : 'Off by default. Flood display now loads Var 1, Var 2, and Var 3 from Supabase by current map bounds.'}
-          </div>
-          {showNoahFlood && (
-            <div style={{ marginTop: 5 }}>
-              {noahAnalysisStatus === 'loading' && 'Loading flood analysis while display layers are requested from Supabase.'}
-              {noahAnalysisStatus === 'ready' && `Flood analysis ready • Critical: ${noahVar3PolygonCount.toLocaleString()} polygons / ${noahCriticalHouseholdCount} households • High: ${noahVar2PolygonCount.toLocaleString()} polygons / ${noahHighHouseholdCount} households • Elevated: ${noahVar1PolygonCount.toLocaleString()} polygons / ${noahElevatedHouseholdCount} households`}
-              {noahAnalysisStatus === 'error' && `Flood analysis failed to load${noahAnalysisError ? ` • ${noahAnalysisError}` : '.'}`}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <HazardControlPanel />
+      <HazardControlPanel
+        forceHazardType={showNoahFlood ? 'Flood' : null}
+        topControls={
+          <button
+            onClick={() => {
+              const next = !showNoahFlood
+              setShowNoahFlood(next)
+              if (next) {
+                void ensureAnalysisLoaded()
+              }
+            }}
+            style={{
+              height: 38,
+              padding: '0 14px',
+              borderRadius: 6,
+              background: showNoahFlood ? '#102a19' : '#161b22',
+              border: `1.5px solid ${showNoahFlood ? '#238636' : '#58a6ff'}`,
+              color: showNoahFlood ? '#3fb950' : '#58a6ff',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              letterSpacing: 0.5,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              boxShadow: '0 2px 8px rgba(0,0,0,.5)',
+              fontFamily: 'Inter, sans-serif',
+              whiteSpace: 'nowrap',
+            }}
+            title="Toggle the flood reference layer"
+          >
+            {showNoahFlood ? 'Hide' : 'Show'} Flood Layer
+          </button>
+        }
+      />
 
     </div>
   )
 }
 
 export default MapInner
+
+
