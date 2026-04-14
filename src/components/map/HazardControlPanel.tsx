@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 // src/components/map/HazardControlPanel.tsx
 import { useMap } from '@vis.gl/react-google-maps'
 import { type ReactNode, useEffect, useState } from 'react'
@@ -68,17 +68,17 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
   const user = useAuthStore((s) => s.user)
   const map  = useMap()
 
-  // ── Panel open/close ──────────────────────────────────────────────────
+  // â”€â”€ Panel open/close â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [open, setOpen] = useState(false)
 
-  // ── Volcano state ─────────────────────────────────────────────────────
+  // â”€â”€ Volcano state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [hazardType, setHazardType] = useState(() => activeHazard?.type ?? 'Flood')
   const [critical,   setCritical]   = useState(() => String(activeHazard?.radii.critical ?? 1))
   const [high,       setHigh]       = useState(() => String(activeHazard?.radii.high     ?? 3))
   const [elevated,   setElevated]   = useState(() => String(activeHazard?.radii.elevated ?? 5))
   const [stable,     setStable]     = useState(() => String(activeHazard?.radii.stable   ?? 10))
 
-  // ── Flood drawing state ───────────────────────────────────────────────
+  // â”€â”€ Flood drawing state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [isDrawing,      setIsDrawing]      = useState(false)
   const [pendingPolygon, setPendingPolygon] = useState<Array<{ lat: number; lng: number }> | null>(null)
   const [draftSeverity,  setDraftSeverity]  = useState<FloodSeverity>('stable')
@@ -95,7 +95,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
   // Early return AFTER all hooks
   if (!activeHazard?.isActive && user?.role !== 'admin') return null
 
-  // ── Handlers ──────────────────────────────────────────────────────────
+  // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   function handlePickCenter() {
     setIsSelectingCenter(true)
@@ -160,11 +160,55 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
     setOpen(false)
   }
 
-  // ── Derived ───────────────────────────────────────────────────────────
+  // â”€â”€ Derived â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const isFlood       = hazardType === 'Flood'
   const canActivate   = isFlood
     ? (draftFloodZones.length > 0 || floodZones.length > 0)
     : !!draftCenter
+  const currentMode = forceHazardType ?? hazardType
+
+  const primaryControlStyle: React.CSSProperties = {
+    minHeight: 42,
+    padding: '0 16px',
+    borderRadius: 10,
+    background: activeHazard?.isActive ? '#1f3044' : '#102338',
+    border: `1.5px solid ${activeHazard?.isActive ? '#5db0ff' : '#3c78ad'}`,
+    color: '#d7ebff',
+    fontSize: '0.75rem',
+    fontWeight: 800,
+    letterSpacing: 0.5,
+    cursor: (activeHazard?.isActive || user?.role === 'admin') ? 'pointer' : 'default',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    boxShadow: '0 6px 18px rgba(3, 15, 28, 0.34)',
+    fontFamily: 'Inter, sans-serif',
+    whiteSpace: 'nowrap',
+    pointerEvents: (!activeHazard?.isActive && user?.role !== 'admin') ? 'none' : 'auto',
+    opacity: (!activeHazard?.isActive && user?.role !== 'admin') ? 0 : 1,
+  }
+
+  function modeChipStyle(active: boolean): React.CSSProperties {
+    return {
+      minHeight: 42,
+      padding: '0 16px',
+      borderRadius: 10,
+      background: active ? 'rgba(35, 134, 54, 0.22)' : 'rgba(13, 23, 36, 0.92)',
+      border: `1.5px solid ${active ? '#3fb950' : '#31597c'}`,
+      color: active ? '#c8f7d3' : '#a9d3ff',
+      fontSize: '0.75rem',
+      fontWeight: 700,
+      letterSpacing: 0.3,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: '0 6px 18px rgba(3, 15, 28, 0.24)',
+      fontFamily: 'Inter, sans-serif',
+      whiteSpace: 'nowrap',
+      flexShrink: 0,
+    }
+  }
 
   function quickSelectHazard(nextType: string) {
     setHazardType(nextType)
@@ -179,13 +223,37 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
   }
 
   return (
-    <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 20 }}>
+    <div
+      style={{
+        position: 'absolute',
+        top: 12,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 20,
+        width: 'min(calc(100vw - 24px), 920px)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 8,
+      }}
+    >
 
-      {/* ── Drawing manager (mounts only when drawing) ─────────────────── */}
+      {/* â”€â”€ Drawing manager (mounts only when drawing) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <FloodDrawingManager active={isDrawing} onPolygonComplete={handlePolygonComplete} />
 
-      {/* ── Toggle button ─────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+      {/* â”€â”€ Toggle button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <div
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          flexWrap: 'wrap',
+          overflowX: 'auto',
+          paddingBottom: 2,
+        }}
+      >
         <button
           onClick={() => {
             setOpen((o) => !o)
@@ -195,47 +263,15 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
             }
           }}
           title="Hazard Layer Control"
-          style={{
-            height: 38,
-            padding: '0 14px',
-            borderRadius: 6,
-            background: activeHazard?.isActive ? '#3d1a1a' : (user?.role === 'admin' ? '#161b22' : 'transparent'),
-            border: `1.5px solid ${activeHazard?.isActive ? '#da3633' : '#58a6ff'}`,
-            color: activeHazard?.isActive ? '#ff4d4d' : '#58a6ff',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            letterSpacing: 0.5,
-            cursor: (activeHazard?.isActive || user?.role === 'admin') ? 'pointer' : 'default',
-            display: 'flex', alignItems: 'center', gap: 6,
-            boxShadow: '0 2px 8px rgba(0,0,0,.5)',
-            fontFamily: 'Inter, sans-serif',
-            whiteSpace: 'nowrap',
-            pointerEvents: (!activeHazard?.isActive && user?.role !== 'admin') ? 'none' : 'auto',
-            opacity: (!activeHazard?.isActive && user?.role !== 'admin') ? 0 : 1,
-          }}
+          style={primaryControlStyle}
         >
-          ⚠ {activeHazard?.isActive ? `ACTIVE: ${activeHazard.type}` : 'HAZARD LAYER'}
+            {activeHazard?.isActive ? `ACTIVE: ${activeHazard.type}` : `HAZARD LAYER · ${currentMode.toUpperCase()}`}
         </button>
 
         <button
           onClick={() => quickSelectHazard('Volcano')}
           title="Configure volcano hazard"
-          style={{
-            height: 38,
-            padding: '0 14px',
-            borderRadius: 6,
-            background: hazardType === 'Volcano' ? '#3d2412' : '#161b22',
-            border: `1.5px solid ${hazardType === 'Volcano' ? '#f39c12' : '#58a6ff'}`,
-            color: hazardType === 'Volcano' ? '#f39c12' : '#58a6ff',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            letterSpacing: 0.5,
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 6,
-            boxShadow: '0 2px 8px rgba(0,0,0,.5)',
-            fontFamily: 'Inter, sans-serif',
-            whiteSpace: 'nowrap',
-          }}
+          style={modeChipStyle(currentMode === 'Volcano')}
         >
           Volcano
         </button>
@@ -243,22 +279,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
         <button
           onClick={() => quickSelectHazard('Earthquake')}
           title="Configure earthquake hazard"
-          style={{
-            height: 38,
-            padding: '0 14px',
-            borderRadius: 6,
-            background: hazardType === 'Earthquake' ? '#2c1f3d' : '#161b22',
-            border: `1.5px solid ${hazardType === 'Earthquake' ? '#c084fc' : '#58a6ff'}`,
-            color: hazardType === 'Earthquake' ? '#c084fc' : '#58a6ff',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            letterSpacing: 0.5,
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 6,
-            boxShadow: '0 2px 8px rgba(0,0,0,.5)',
-            fontFamily: 'Inter, sans-serif',
-            whiteSpace: 'nowrap',
-          }}
+          style={modeChipStyle(currentMode === 'Earthquake')}
         >
           Earthquake
         </button>
@@ -266,10 +287,28 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
         {topControls}
       </div>
 
+      <div
+        style={{
+          padding: '5px 12px',
+          borderRadius: 999,
+          background: 'rgba(9, 18, 30, 0.84)',
+          border: '1px solid rgba(88, 166, 255, 0.28)',
+          color: '#c5e0ff',
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '0.7rem',
+          fontWeight: 600,
+          letterSpacing: 0.2,
+          boxShadow: '0 6px 18px rgba(3, 15, 28, 0.2)',
+          backdropFilter: 'blur(10px)',
+        }}
+      >
+        Current mode: {currentMode}
+      </div>
+
       {open && (
         <div style={{
           position: 'absolute',
-          top: 50, left: '50%', transform: 'translateX(-50%)',
+          top: 84, left: '50%', transform: 'translateX(-50%)',
           width: 290,
           background: '#161b22',
           border: '1px solid #30363d',
@@ -287,7 +326,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
             textTransform: 'uppercase', letterSpacing: 1,
             borderLeft: '3px solid #ff4d4d', paddingLeft: 8, marginBottom: 12,
           }}>
-            ⚠ Hazard Layer
+            âš  Hazard Layer
             {user?.role !== 'admin' && (
               <span style={{ float: 'right', fontSize: '0.6rem', color: '#8b949e', fontWeight: 400, textTransform: 'none' }}>
                 Read-only
@@ -303,13 +342,13 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
               fontSize: '0.72rem', color: '#ff4d4d', fontWeight: 600,
             }}>
               {activeHazard.type === 'Flood'
-                ? `FLOOD — ${floodZones.length} zone${floodZones.length !== 1 ? 's' : ''} active`
-                : `HAZARD: ${activeHazard.type} — ${activeHazard.center.lat.toFixed(4)}, ${activeHazard.center.lng.toFixed(4)}`
+                ? `FLOOD â€” ${floodZones.length} zone${floodZones.length !== 1 ? 's' : ''} active`
+                : `HAZARD: ${activeHazard.type} â€” ${activeHazard.center.lat.toFixed(4)}, ${activeHazard.center.lng.toFixed(4)}`
               }
             </div>
           )}
 
-          {/* ── ADMIN CONTROLS ──────────────────────────────────────────── */}
+          {/* â”€â”€ ADMIN CONTROLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {user?.role === 'admin' ? (
             <>
               {/* Disaster type selector */}
@@ -328,7 +367,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                 </select>
               </div>
 
-              {/* ── FLOOD BRANCH ──────────────────────────────────────── */}
+              {/* â”€â”€ FLOOD BRANCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
               {isFlood ? (
                 <>
                   {/* Persisted zones (already saved) */}
@@ -379,11 +418,11 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                         marginBottom: 10,
                       }}
                     >
-                      {isDrawing ? '🖊 Drawing… click map to place points' : '🖊 Draw Flood Area'}
+                      {isDrawing ? 'ðŸ–Š Drawingâ€¦ click map to place points' : 'ðŸ–Š Draw Flood Area'}
                     </button>
                   )}
 
-                  {/* Inline zone form — appears after polygon drawn */}
+                  {/* Inline zone form â€” appears after polygon drawn */}
                   {pendingPolygon && (
                     <div style={{
                       background: '#0d1117',
@@ -393,7 +432,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                       marginBottom: 10,
                     }}>
                       <p style={{ margin: '0 0 8px', fontSize: '0.68rem', color: '#3fb950', fontWeight: 600 }}>
-                        ✅ Polygon drawn ({pendingPolygon.length} pts) — fill in details
+                        âœ… Polygon drawn ({pendingPolygon.length} pts) â€” fill in details
                       </p>
 
                       <div style={{ marginBottom: 6 }}>
@@ -417,7 +456,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                           onChange={(e) => setDraftDepth(e.target.value as FloodDepth | '')}
                           style={inputStyle}
                         >
-                          <option value="">— None —</option>
+                          <option value="">â€” None â€”</option>
                           <option value="ankle">Ankle-deep</option>
                           <option value="knee">Knee-deep</option>
                           <option value="waist">Waist-deep</option>
@@ -466,7 +505,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                   )}
                 </>
               ) : (
-                /* ── VOLCANO / OTHER BRANCH ─────────────────────────────── */
+                /* â”€â”€ VOLCANO / OTHER BRANCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
                 <>
                   {/* Radii grid */}
                   <div style={{ marginBottom: 10 }}>
@@ -503,7 +542,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                         border: '1px solid #238636', borderRadius: 4,
                         fontSize: '0.72rem', color: '#3fb950', fontWeight: 600,
                       }}>
-                        📍 {draftCenter.lat.toFixed(5)}, {draftCenter.lng.toFixed(5)}
+                        ðŸ“ {draftCenter.lat.toFixed(5)}, {draftCenter.lng.toFixed(5)}
                       </div>
                     ) : (
                       <div style={{ fontSize: '0.72rem', color: '#8b949e' }}>No center picked yet</div>
@@ -523,12 +562,12 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                       marginBottom: 6,
                     }}
                   >
-                    📍 Pick Center on Map
+                    ðŸ“ Pick Center on Map
                   </button>
                 </>
               )}
 
-              {/* ── Shared action buttons ──────────────────────────────── */}
+              {/* â”€â”€ Shared action buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
                 <button
                   onClick={handleActivate}
@@ -543,7 +582,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                     fontFamily: 'Inter, sans-serif',
                   }}
                 >
-                  ✅ Activate Hazard Layer
+                  âœ… Activate Hazard Layer
                 </button>
 
                 {activeHazard && (
@@ -556,13 +595,13 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                       cursor: 'pointer', fontFamily: 'Inter, sans-serif',
                     }}
                   >
-                    🗑 Clear Hazard Layer
+                    ðŸ—‘ Clear Hazard Layer
                   </button>
                 )}
               </div>
             </>
           ) : (
-            /* ── READ-ONLY VIEW (guests / citizens) ───────────────────── */
+            /* â”€â”€ READ-ONLY VIEW (guests / citizens) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
             <div style={{ fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
               {activeHazard?.type === 'Flood' ? (
                 <>
@@ -575,7 +614,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                       if (!count) return null
                       return (
                         <div key={sev} style={{ color: SEVERITY_COLOR[sev] }}>
-                          • {sev.charAt(0).toUpperCase() + sev.slice(1)}: {count} area{count !== 1 ? 's' : ''}
+                          â€¢ {sev.charAt(0).toUpperCase() + sev.slice(1)}: {count} area{count !== 1 ? 's' : ''}
                         </div>
                       )
                     })}
@@ -588,10 +627,10 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
                     Triage levels for households within these radii are dynamically adjusted.
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ color: RING_COLORS.critical }}>• Critical: {activeHazard?.radii.critical}km</div>
-                    <div style={{ color: RING_COLORS.high     }}>• High: {activeHazard?.radii.high}km</div>
-                    <div style={{ color: RING_COLORS.elevated }}>• Elevated: {activeHazard?.radii.elevated}km</div>
-                    <div style={{ color: RING_COLORS.stable   }}>• Stable: {activeHazard?.radii.stable}km</div>
+                    <div style={{ color: RING_COLORS.critical }}>â€¢ Critical: {activeHazard?.radii.critical}km</div>
+                    <div style={{ color: RING_COLORS.high     }}>â€¢ High: {activeHazard?.radii.high}km</div>
+                    <div style={{ color: RING_COLORS.elevated }}>â€¢ Elevated: {activeHazard?.radii.elevated}km</div>
+                    <div style={{ color: RING_COLORS.stable   }}>â€¢ Stable: {activeHazard?.radii.stable}km</div>
                   </div>
                 </>
               )}
@@ -603,7 +642,7 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
   )
 }
 
-// ── Zone card ─────────────────────────────────────────────────────────────────
+// â”€â”€ Zone card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ZoneCard({ zone, onRemove }: { zone: FloodZone; onRemove: () => void }) {
   return (
@@ -641,9 +680,10 @@ function ZoneCard({ zone, onRemove }: { zone: FloodZone; onRemove: () => void })
         }}
         title="Remove zone"
       >
-        ×
+        Ã—
       </button>
     </div>
   )
 }
+
 

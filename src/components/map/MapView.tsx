@@ -1,6 +1,6 @@
-'use client'
+﻿'use client'
 // src/components/map/MapView.tsx
-// Imported via next/dynamic with ssr:false — must stay a pure client module.
+// Imported via next/dynamic with ssr:false â€” must stay a pure client module.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
@@ -23,6 +23,7 @@ import { Marker } from '@vis.gl/react-google-maps'
 import type { FloodSeverity, HazardEvent } from '@/types'
 
 const DEFAULT_CENTER = { lat: 10.6765, lng: 122.9509 }
+const BAROTAC_NUEVO_CENTER = { lat: 10.8947, lng: 122.7042 }
 
 const CLEAN_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'poi',                  stylers: [{ visibility: 'off' }] },
@@ -97,7 +98,7 @@ function HazardPanController() {
   const activeHazard = useHazardStore((s) => s.activeHazard)
 
   useEffect(() => {
-    // Flood hazards have no meaningful center (lat/lng = 0) — skip auto-pan
+    // Flood hazards have no meaningful center (lat/lng = 0) â€” skip auto-pan
     if (!map || !activeHazard?.isActive || activeHazard.type === 'Flood') return
     map.panTo(activeHazard.center)
     map.setZoom(12)
@@ -109,10 +110,6 @@ function HazardPanController() {
 function NoahFloodAutoFocusController() {
   const map = useMap()
   const showNoahFlood = useNoahFloodStore((s) => s.visible)
-  const noahAnalysisStatus = useNoahFloodStore((s) => s.analysisStatus)
-  const noahVar3Polygons = useNoahFloodStore((s) => s.var3Polygons)
-  const noahVar2Polygons = useNoahFloodStore((s) => s.var2Polygons)
-  const noahVar1Polygons = useNoahFloodStore((s) => s.var1Polygons)
   const hasAutoFocusedRef = useRef(false)
 
   useEffect(() => {
@@ -121,26 +118,12 @@ function NoahFloodAutoFocusController() {
       return
     }
 
-    if (!map || noahAnalysisStatus !== 'ready' || hasAutoFocusedRef.current) return
+    if (!map || hasAutoFocusedRef.current) return
 
-    const allPolygons = [...noahVar3Polygons, ...noahVar2Polygons, ...noahVar1Polygons]
-    if (allPolygons.length === 0) return
-
-    const bounds = new google.maps.LatLngBounds()
-    let hasPoint = false
-
-    allPolygons.forEach((polygon) => {
-      polygon.forEach((point) => {
-        bounds.extend(point)
-        hasPoint = true
-      })
-    })
-
-    if (!hasPoint || bounds.isEmpty()) return
-
-    map.fitBounds(bounds, 48)
+    map.panTo(BAROTAC_NUEVO_CENTER)
+    map.setZoom(14)
     hasAutoFocusedRef.current = true
-  }, [map, noahAnalysisStatus, noahVar1Polygons, noahVar2Polygons, noahVar3Polygons, showNoahFlood])
+  }, [map, showNoahFlood])
 
   return null
 }
@@ -158,10 +141,10 @@ const FLOOD_ZONE_STYLE: Record<FloodSeverity, { fill: string; fillOpacity: numbe
 }
 
 const SEVERITY_LABEL: Record<FloodSeverity, string> = {
-  critical: '🔴 Critical',
-  high:     '🟠 High',
-  elevated: '🟡 Elevated',
-  stable:   '🔵 Stable',
+  critical: 'ðŸ”´ Critical',
+  high:     'ðŸŸ  High',
+  elevated: 'ðŸŸ¡ Elevated',
+  stable:   'ðŸ”µ Stable',
 }
 
 const DEPTH_LABEL: Record<string, string> = {
@@ -177,7 +160,7 @@ function FloodZoneOverlays() {
   const floodZones      = useHazardStore((s) => s.floodZones)
   const updateFloodZone = useHazardStore((s) => s.updateFloodZone)
 
-  // Single persistent InfoWindow — avoids stacking popups
+  // Single persistent InfoWindow â€” avoids stacking popups
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
 
   useEffect(() => {
@@ -195,7 +178,7 @@ function FloodZoneOverlays() {
     const polygons:  google.maps.Polygon[]             = []
     const listeners: google.maps.MapsEventListener[]   = []
 
-    // Render stable → critical so higher severity sits on top
+    // Render stable â†’ critical so higher severity sits on top
     const sorted = [...floodZones].sort(
       (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
     )
@@ -218,7 +201,7 @@ function FloodZoneOverlays() {
         zIndex:        style.zIndex,
       })
 
-      // Click → update and reopen the single InfoWindow
+      // Click â†’ update and reopen the single InfoWindow
       listeners.push(poly.addListener('click', (e: google.maps.MapMouseEvent) => {
         if (!e.latLng) return
         iw.setContent(`
@@ -226,14 +209,14 @@ function FloodZoneOverlays() {
             <div style="font-size:0.82rem;font-weight:700;margin-bottom:4px">
               ${SEVERITY_LABEL[zone.severity]} Flood Zone
             </div>
-            ${zone.depth ? `<div style="font-size:0.75rem;color:#555">💧 ${DEPTH_LABEL[zone.depth] ?? zone.depth}</div>` : ''}
+            ${zone.depth ? `<div style="font-size:0.75rem;color:#555">ðŸ’§ ${DEPTH_LABEL[zone.depth] ?? zone.depth}</div>` : ''}
             ${zone.notes ? `<div style="font-size:0.73rem;color:#666;margin-top:3px">${zone.notes}</div>` : ''}
           </div>`)
         iw.setPosition(e.latLng)
         iw.open(map)
       }))
 
-      // Admin path edits → persist to store + DB
+      // Admin path edits â†’ persist to store + DB
       if (isAdmin) {
         const syncPath = () => {
           const path   = poly.getPath()
@@ -412,11 +395,18 @@ function MapInner() {
   const ensureAnalysisLoaded = useNoahFloodStore((s) => s.ensureAnalysisLoaded)
 
   const [openAssetId, setOpenAssetId] = useState<string | null>(null)
+  const [mapNotice, setMapNotice] = useState<string | null>(null)
 
   useEffect(() => {
     if (!showNoahFlood) return
     void ensureAnalysisLoaded()
   }, [ensureAnalysisLoaded, showNoahFlood])
+
+  useEffect(() => {
+    if (!mapNotice) return
+    const timeout = window.setTimeout(() => setMapNotice(null), 2600)
+    return () => window.clearTimeout(timeout)
+  }, [mapNotice])
 
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
@@ -451,7 +441,34 @@ function MapInner() {
           fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,.5)',
           pointerEvents: 'none', whiteSpace: 'nowrap',
         }}>
-          ⚠ Click on the map to set the hazard epicenter
+          âš  Click on the map to set the hazard epicenter
+        </div>
+      )}
+
+      {mapNotice && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 74,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 21,
+            background: 'rgba(9, 18, 30, 0.92)',
+            border: '1px solid rgba(63, 185, 80, 0.55)',
+            color: '#d9ffe6',
+            padding: '8px 14px',
+            borderRadius: 999,
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '0.74rem',
+            fontWeight: 600,
+            boxShadow: '0 10px 24px rgba(3, 15, 28, 0.28)',
+            backdropFilter: 'blur(10px)',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            maxWidth: 'calc(100vw - 32px)',
+          }}
+        >
+          {mapNotice}
         </div>
       )}
 
@@ -466,7 +483,7 @@ function MapInner() {
           fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,.5)',
           pointerEvents: 'none', whiteSpace: 'nowrap',
         }}>
-          📍 Click on the map to pin the household location
+          ðŸ“ Click on the map to pin the household location
         </div>
       )}
 
@@ -482,7 +499,7 @@ function MapInner() {
             fontWeight: 600, cursor: 'pointer',
           }}
         >
-          ✕ Cancel
+          âœ• Cancel
         </button>
       )}
 
@@ -499,7 +516,7 @@ function MapInner() {
         <PanController />
         <PanCoordsController />
         <PickCursorController />
-        <HazardPanController />   {/* ← add this */}
+        <HazardPanController />   {/* â† add this */}
         <NoahFloodAutoFocusController />
         <RouteOverlay />
         <NoahFloodLayer
@@ -543,29 +560,31 @@ function MapInner() {
               setShowNoahFlood(next)
               if (next) {
                 void ensureAnalysisLoaded()
+                setMapNotice('Flood mode enabled. Map focused to Barotac Nuevo.')
               }
             }}
             style={{
-              height: 38,
-              padding: '0 14px',
-              borderRadius: 6,
-              background: showNoahFlood ? '#102a19' : '#161b22',
-              border: `1.5px solid ${showNoahFlood ? '#238636' : '#58a6ff'}`,
-              color: showNoahFlood ? '#3fb950' : '#58a6ff',
+              minHeight: 42,
+              padding: '0 16px',
+              borderRadius: 10,
+              background: showNoahFlood ? 'rgba(35, 134, 54, 0.22)' : 'rgba(13, 23, 36, 0.92)',
+              border: `1.5px solid ${showNoahFlood ? '#3fb950' : '#31597c'}`,
+              color: showNoahFlood ? '#c8f7d3' : '#a9d3ff',
               fontSize: '0.75rem',
               fontWeight: 700,
-              letterSpacing: 0.5,
+              letterSpacing: 0.3,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
-              boxShadow: '0 2px 8px rgba(0,0,0,.5)',
+              justifyContent: 'center',
+              boxShadow: '0 6px 18px rgba(3, 15, 28, 0.24)',
               fontFamily: 'Inter, sans-serif',
               whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
-            title="Toggle the flood reference layer"
+            title="Show the flood overlay and switch hazard mode to Flood"
           >
-            {showNoahFlood ? 'Hide' : 'Show'} Flood Layer
+            Flood Mode
           </button>
         }
       />
@@ -575,5 +594,6 @@ function MapInner() {
 }
 
 export default MapInner
+
 
 
