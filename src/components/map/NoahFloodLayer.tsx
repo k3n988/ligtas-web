@@ -11,137 +11,132 @@ interface Props {
   onFeatureCountChange?: (count: number) => void
 }
 
+interface BandConfig {
+  path: string
+  fillColor: string
+  strokeColor: string
+  fillOpacity: number
+  strokeOpacity: number
+  zIndex: number
+  label: string
+}
+
+const BANDS: BandConfig[] = [
+  {
+    path:         '/data/flood_var3_analysis.geojson',
+    fillColor:    '#ff4d4d',
+    strokeColor:  '#c0392b',
+    fillOpacity:  0.34,
+    strokeOpacity: 0.5,
+    zIndex:       8,
+    label:        'High Flood Susceptibility',
+  },
+  {
+    path:         '/data/flood_var2_analysis.geojson',
+    fillColor:    '#f39c12',
+    strokeColor:  '#d68910',
+    fillOpacity:  0.26,
+    strokeOpacity: 0.42,
+    zIndex:       7,
+    label:        'Moderate Flood Susceptibility',
+  },
+  {
+    path:         '/data/flood_var1_analysis.geojson',
+    fillColor:    '#f1c40f',
+    strokeColor:  '#b7950b',
+    fillOpacity:  0.2,
+    strokeOpacity: 0.34,
+    zIndex:       6,
+    label:        'Low Flood Susceptibility',
+  },
+]
+
+async function fetchGeoJson(path: string) {
+  const res = await fetch(path)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const text = await res.text()
+  if (text.startsWith('version https://git-lfs')) {
+    throw new Error(`Git LFS pointer — run "git lfs pull" to download flood data`)
+  }
+
+  return JSON.parse(text) as object
+}
+
 export default function NoahFloodLayer({
   visible,
   onStatusChange,
   onFeatureCountChange,
 }: Props) {
   const map = useMap()
-  const var3LayerRef = useRef<google.maps.Data | null>(null)
-  const var2LayerRef = useRef<google.maps.Data | null>(null)
-  const var1LayerRef = useRef<google.maps.Data | null>(null)
-  const featureCountRef = useRef({ var3: 0, var2: 0, var1: 0 })
+
+  // One Data layer per band, created once
+  const layersRef   = useRef<google.maps.Data[]>([])
+  const loadedRef   = useRef(false)
+  const totalRef    = useRef(0)
 
   useEffect(() => {
     if (!map) return
 
-    if (!var3LayerRef.current) {
-      var3LayerRef.current = new google.maps.Data()
-      var3LayerRef.current.setStyle({
-        fillColor: '#ff4d4d',
-        fillOpacity: 0.34,
-        strokeColor: '#c0392b',
-        strokeOpacity: 0.5,
-        strokeWeight: 1,
-        clickable: false,
-        zIndex: 8,
+    // Create the three Data layers once
+    if (layersRef.current.length === 0) {
+      layersRef.current = BANDS.map((band) => {
+        const layer = new google.maps.Data()
+        layer.setStyle({
+          fillColor:    band.fillColor,
+          fillOpacity:  band.fillOpacity,
+          strokeColor:  band.strokeColor,
+          strokeOpacity: band.strokeOpacity,
+          strokeWeight:  1,
+          clickable:    false,
+          zIndex:       band.zIndex,
+        })
+        return layer
       })
     }
 
-    if (!var2LayerRef.current) {
-      var2LayerRef.current = new google.maps.Data()
-      var2LayerRef.current.setStyle({
-        fillColor: '#f39c12',
-        fillOpacity: 0.26,
-        strokeColor: '#d68910',
-        strokeOpacity: 0.42,
-        strokeWeight: 1,
-        clickable: false,
-        zIndex: 7,
-      })
-    }
-
-    if (!var1LayerRef.current) {
-      var1LayerRef.current = new google.maps.Data()
-      var1LayerRef.current.setStyle({
-        fillColor: '#f1c40f',
-        fillOpacity: 0.2,
-        strokeColor: '#b7950b',
-        strokeOpacity: 0.34,
-        strokeWeight: 1,
-        clickable: false,
-        zIndex: 6,
-      })
-    }
-
-    const var3Layer = var3LayerRef.current
-    const var2Layer = var2LayerRef.current
-    const var1Layer = var1LayerRef.current
+    const layers = layersRef.current
 
     if (visible) {
-      if (featureCountRef.current.var3 === 0 || featureCountRef.current.var2 === 0) {
+      if (!loadedRef.current) {
         onStatusChange?.('loading')
-        let requiredLoaded = 0
-        const finishRequiredLoad = () => {
-          requiredLoaded += 1
-          if (requiredLoaded < 2) return
-          onFeatureCountChange?.(featureCountRef.current.var3 + featureCountRef.current.var2 + featureCountRef.current.var1)
+
+        Promise.all(
+          BANDS.map((band, i) =>
+            fetchGeoJson(band.path)
+              .then((geojson) => {
+                const added = layers[i].addGeoJson(geojson)
+                totalRef.current += added.length
+                onFeatureCountChange?.(totalRef.current)
+              })
+              .catch((err) => {
+                console.warn(`[LIGTAS] NoahFloodLayer skipped ${band.path}:`, err.message)
+              }),
+          ),
+        ).then(() => {
+          loadedRef.current = true
           onStatusChange?.('ready')
-          if (featureCountRef.current.var1 > 0) {
-            var1Layer.setMap(map)
-          }
-          var2Layer.setMap(map)
-          var3Layer.setMap(map)
-        }
-
-        var1Layer.loadGeoJson('/data/flood_var1_analysis.geojson', null, (features) => {
-          featureCountRef.current.var1 = features.length
-          if (features.length > 0) {
-            onFeatureCountChange?.(featureCountRef.current.var3 + featureCountRef.current.var2 + featureCountRef.current.var1)
-            if (visible) {
-              var1Layer.setMap(map)
-            }
-          }
         })
-
-        var2Layer.loadGeoJson('/data/flood_var2_analysis.geojson', null, (features) => {
-          featureCountRef.current.var2 = features.length
-          finishRequiredLoad()
-        })
-
-        var3Layer.loadGeoJson('/data/flood_var3_analysis.geojson', null, (features) => {
-          featureCountRef.current.var3 = features.length
-          finishRequiredLoad()
-        })
-
-        return () => {
-          var1Layer.setMap(null)
-          var2Layer.setMap(null)
-          var3Layer.setMap(null)
-        }
+      } else {
+        onStatusChange?.('ready')
+        onFeatureCountChange?.(totalRef.current)
       }
 
-      if (featureCountRef.current.var1 > 0) {
-        var1Layer.setMap(map)
-      }
-      var2Layer.setMap(map)
-      var3Layer.setMap(map)
-      onFeatureCountChange?.(featureCountRef.current.var3 + featureCountRef.current.var2 + featureCountRef.current.var1)
-      onStatusChange?.('ready')
-      return () => {
-        var1Layer.setMap(null)
-        var2Layer.setMap(null)
-        var3Layer.setMap(null)
-      }
+      layers.forEach((l) => l.setMap(map))
+    } else {
+      layers.forEach((l) => l.setMap(null))
+      onStatusChange?.('idle')
     }
-
-    var1Layer.setMap(null)
-    var2Layer.setMap(null)
-    var3Layer.setMap(null)
-    onStatusChange?.('idle')
 
     return () => {
-      var1Layer.setMap(null)
-      var2Layer.setMap(null)
-      var3Layer.setMap(null)
+      layers.forEach((l) => l.setMap(null))
     }
-  }, [map, onFeatureCountChange, onStatusChange, visible])
+  }, [map, visible, onStatusChange, onFeatureCountChange])
 
+  // Full cleanup on unmount
   useEffect(() => {
     return () => {
-      var1LayerRef.current?.setMap(null)
-      var2LayerRef.current?.setMap(null)
-      var3LayerRef.current?.setMap(null)
+      layersRef.current.forEach((l) => l.setMap(null))
     }
   }, [])
 
