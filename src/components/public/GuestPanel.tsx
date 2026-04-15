@@ -536,11 +536,11 @@ export default function GuestPanel() {
           }}
         >
           <span style={{ color: 'var(--critical-red)', fontWeight: 800 }}>
-            ● {activeHazards.length} Active {activeHazards.length === 1 ? 'Hazard' : 'Hazards'}
+            {activeHazards.length} Active {activeHazards.length === 1 ? 'Hazard' : 'Hazards'}
           </span>
           {alertSummary.map((s, i) => (
             <span key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {i > 0 && <span style={{ color: 'var(--border-color)' }}>·</span>}
+              {i > 0 && <span style={{ color: 'var(--border-color)' }}>|</span>}
               <button
                 onClick={() => focusHazardCard(s.id, s.type)}
                 style={{
@@ -568,7 +568,7 @@ export default function GuestPanel() {
           : hazard.type.toLowerCase() === 'flood' ? '🌊'
           : hazard.type.toLowerCase() === 'earthquake' ? '🔔'
           : hazard.type.toLowerCase() === 'fire' ? '🔥'
-          : '⚠'
+          : '(!)'
         const isExpanded = expandedHazardId === hazard.id
 
         if (!isExpanded) {
@@ -594,7 +594,7 @@ export default function GuestPanel() {
                 {hazard.type} Alert
               </span>
               <span style={{ fontSize: '0.65rem', color: theme.eyebrowColor, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                Tap to expand ›
+                Tap to expand &rsaquo;
               </span>
             </button>
           )
@@ -655,7 +655,7 @@ export default function GuestPanel() {
                         lineHeight: 1,
                       }}
                     >
-                      ● Live {hazard.type} Alert
+                      Live {hazard.type} Alert
                     </span>
                   </div>
                   <div>
@@ -698,7 +698,7 @@ export default function GuestPanel() {
                         padding: 0,
                       }}
                     >
-                      Collapse ↑
+                      Collapse ^
                     </button>
                   )}
                 </div>
@@ -790,7 +790,7 @@ export default function GuestPanel() {
                 Hazard-Aware Advisory
               </p>
               <p style={{ margin: '0 0 8px', fontSize: '0.95rem', fontWeight: 700, color: 'var(--fg-default)' }}>
-                {activeHazard?.type} · {ZONE_LABEL[hazardInfo.zone]}
+                {activeHazard?.type} - {ZONE_LABEL[hazardInfo.zone]}
               </p>
               <p style={{ margin: '0 0 10px', fontSize: '0.75rem', color: 'var(--fg-muted)' }}>
                 Your area is approximately <strong style={{ color: 'var(--fg-default)' }}>{hazardInfo.distKm.toFixed(1)} km</strong> from the hazard center.
@@ -854,9 +854,9 @@ export default function GuestPanel() {
                   {alertCfg.icon} {effectiveAlertLevel}
                 </p>
                 <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--fg-muted)' }}>
-                  {barangay}, {city} · Updated {new Date(status.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
+                  {barangay}, {city} - Updated {new Date(status.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
                   {hazardInfo?.overrideLevel && (
-                    <> · <span style={{ color: 'var(--fg-warning)' }}>Auto-elevated by hazard proximity</span></>
+                    <> - <span style={{ color: 'var(--fg-warning)' }}>Auto-elevated by hazard proximity</span></>
                   )}
                 </p>
               </div>
@@ -879,7 +879,7 @@ export default function GuestPanel() {
       {city ? (
         <div style={cardStyle}>
           <p style={{ margin: '0 0 12px', fontSize: '0.65rem', color: 'var(--fg-muted)', letterSpacing: 2, textTransform: 'uppercase' }}>
-            Emergency Hotlines · {city}
+            Emergency Hotlines - {city}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {hotlines.map(({ label, number }) => (
