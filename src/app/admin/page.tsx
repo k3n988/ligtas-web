@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { useHazardStore } from '@/store/hazardStore'
@@ -12,6 +13,8 @@ import SummaryReportModal from '@/components/dashboard/SummaryReportModal'
 import type { TriageLevel } from '@/types'
 
 export default function AdminPage() {
+  const user = useAuthStore((s) => s.user)
+  const isRescuer = user?.role === 'rescuer'
   const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
   const households = useHouseholdStore((s) => s.households)
   const assets = useAssetStore((s) => s.assets)
@@ -36,6 +39,10 @@ export default function AdminPage() {
   }, [households, activeHazards, floodZones])
 
   const [activeTab, setActiveTab] = useState<'summary' | 'registry' | 'assets'>('summary')
+  const setTab = (tab: 'summary' | 'registry' | 'assets') => {
+    if (isRescuer && tab !== 'summary') return
+    setActiveTab(tab)
+  }
 
   useEffect(() => {
     void loadHouseholds()
@@ -159,15 +166,19 @@ export default function AdminPage() {
       </div>
 
       <div className="mobile-scroll-x hide-scrollbar" style={{ display: 'flex', gap: 10, borderBottom: '1px solid var(--border)', marginBottom: 14 }}>
-        <button style={getTabStyle(activeTab === 'summary')} onClick={() => setActiveTab('summary')}>
+        <button style={getTabStyle(activeTab === 'summary')} onClick={() => setTab('summary')}>
           Summary Report
         </button>
-        <button style={getTabStyle(activeTab === 'registry')} onClick={() => setActiveTab('registry')}>
-          Household Registry
-        </button>
-        <button style={getTabStyle(activeTab === 'assets')} onClick={() => setActiveTab('assets')}>
-          Asset Registry
-        </button>
+        {!isRescuer && (
+          <>
+            <button style={getTabStyle(activeTab === 'registry')} onClick={() => setTab('registry')}>
+              Household Registry
+            </button>
+            <button style={getTabStyle(activeTab === 'assets')} onClick={() => setTab('assets')}>
+              Asset Registry
+            </button>
+          </>
+        )}
       </div>
 
       <div style={{ minHeight: '500px' }}>
@@ -178,7 +189,7 @@ export default function AdminPage() {
             activeHazard={activeHazard}
             activeHazards={activeHazards}
             floodZones={floodZones}
-            onClose={() => setActiveTab('registry')}
+            onClose={() => isRescuer ? undefined : setActiveTab('registry')}
           />
         )}
         {activeTab === 'registry' && (

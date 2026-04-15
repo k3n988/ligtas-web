@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { Household } from '@/types'
+import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { useHazardStore } from '@/store/hazardStore'
@@ -30,6 +31,7 @@ const btnBase: React.CSSProperties = {
 }
 
 export default function HouseholdCard({ household: hh }: Props) {
+  const user = useAuthStore((s) => s.user)
   const markRescued = useHouseholdStore((s) => s.markRescued)
   const restorePending = useHouseholdStore((s) => s.restorePending)
   const setPanTo = useHouseholdStore((s) => s.setPanTo)
@@ -43,6 +45,10 @@ export default function HouseholdCard({ household: hh }: Props) {
   const [selectedAssetId, setSelectedAssetId] = useState('')
 
   const isRescued = hh.status === 'Rescued'
+  const isRescuer = user?.role === 'rescuer'
+  const currentRescuerAsset = user?.assetId ? assets.find((a) => a.id === user.assetId) ?? null : null
+  const isAssignedToCurrentRescuer = Boolean(user?.assetId && hh.assignedAssetId === user.assetId)
+  const isAssignedToAnotherAsset = Boolean(hh.assignedAssetId && !isAssignedToCurrentRescuer)
   const borderColor = isRescued ? 'var(--resolved-green)' : BORDER_COLOR[hh.triage.colorName]
   const assignedAsset = hh.assignedAssetId ? assets.find((a) => a.id === hh.assignedAssetId) : null
 
@@ -94,6 +100,12 @@ export default function HouseholdCard({ household: hh }: Props) {
   const handleReassign = () => {
     setSelectedAssetId(hh.assignedAssetId ?? '')
     setShowPicker(true)
+  }
+
+  const handleRescuerRespond = () => {
+    if (!user?.assetId || isAssignedToAnotherAsset) return
+    void dispatchRescue(hh.id, user.assetId)
+    void setAssetStatus(user.assetId, 'Dispatching')
   }
 
   return (
@@ -153,7 +165,7 @@ export default function HouseholdCard({ household: hh }: Props) {
         ))}
       </div>
 
-      {!isRescued && showPicker && (
+      {!isRescued && showPicker && !isRescuer && (
         <div
           style={{
             background: 'var(--bg-warning-subtle)',
@@ -225,23 +237,25 @@ export default function HouseholdCard({ household: hh }: Props) {
               <span style={{ color: 'var(--high-orange)', fontWeight: 600 }}>
                 {assignedAsset.icon} {assignedAsset.name} - dispatched
               </span>
-              <button
-                onClick={handleReassign}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--fg-muted)',
-                  cursor: 'pointer',
-                  fontSize: '0.7rem',
-                  padding: '2px 6px',
-                }}
-              >
-                Reassign
-              </button>
+              {!isRescuer && (
+                <button
+                  onClick={handleReassign}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--fg-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.7rem',
+                    padding: '2px 6px',
+                  }}
+                >
+                  Reassign
+                </button>
+              )}
             </div>
           )}
 
-          {showPicker && (
+          {showPicker && !isRescuer && (
             <div
               style={{
                 background: 'var(--bg-inset)',
@@ -326,18 +340,38 @@ export default function HouseholdCard({ household: hh }: Props) {
           )}
 
           <div className="mobile-stack" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {!assignedAsset && !showPicker && (
+            {isRescuer ? (
               <button
-                onClick={() => setShowPicker(true)}
+                onClick={handleRescuerRespond}
+                disabled={!currentRescuerAsset || isAssignedToAnotherAsset}
                 style={{
                   ...btnBase,
-                  background: 'var(--critical-red)',
-                  color: '#fff',
+                  background: !currentRescuerAsset || isAssignedToAnotherAsset
+                    ? 'var(--bg-elevated)'
+                    : isAssignedToCurrentRescuer
+                      ? 'var(--warning-strong)'
+                      : 'var(--critical-red)',
+                  color: !currentRescuerAsset || isAssignedToAnotherAsset ? 'var(--fg-subtle)' : '#fff',
                   border: 'none',
+                  cursor: !currentRescuerAsset || isAssignedToAnotherAsset ? 'default' : 'pointer',
                 }}
               >
-                Dispatch Rescue
+                {isAssignedToCurrentRescuer ? 'En Route' : isAssignedToAnotherAsset ? 'Assigned Elsewhere' : 'Respond'}
               </button>
+            ) : (
+              !assignedAsset && !showPicker && (
+                <button
+                  onClick={() => setShowPicker(true)}
+                  style={{
+                    ...btnBase,
+                    background: 'var(--critical-red)',
+                    color: '#fff',
+                    border: 'none',
+                  }}
+                >
+                  Dispatch Rescue
+                </button>
+              )
             )}
             <button
               onClick={() => setPanTo(hh.id)}
@@ -361,7 +395,7 @@ export default function HouseholdCard({ household: hh }: Props) {
                 flex: assignedAsset ? 1 : '0 1 auto',
               }}
             >
-              Mark Rescued
+              {isRescuer ? 'Complete Rescue' : 'Mark Rescued'}
             </button>
           </div>
         </>

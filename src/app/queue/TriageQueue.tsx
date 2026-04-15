@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useAuthStore } from '@/store/authStore'
+import { useAssetStore } from '@/store/assetStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useHazardStore } from '@/store/hazardStore'
 import { useNoahFloodStore } from '@/store/noahFloodStore'
@@ -8,6 +10,7 @@ import { TRIAGE_ORDER } from '@/lib/triage'
 import {
   getEffectiveHouseholdTriageFromHazards,
   getNearestHouseholdHazardDistanceKm,
+  haversineKm,
   isHouseholdInAnyHazardZone,
   isPointInAnyPolygon,
 } from '@/lib/geo'
@@ -40,6 +43,8 @@ interface QueueEntry {
   hazardDistanceKm: number | null
   hazardPriorityRank: number
   matchingHazardTypes: string[]
+  rescuerDistanceKm: number | null
+  assignedToCurrentRescuer: boolean
 }
 
 const HAZARD_LEVEL_PRIORITY: Record<TriageLevel, number> = {
@@ -116,6 +121,9 @@ function getHazardLevelForType(
 }
 
 export default function TriageQueue() {
+  const user = useAuthStore((s) => s.user)
+  const assets = useAssetStore((s) => s.assets)
+  const loadAssets = useAssetStore((s) => s.loadAssets)
   const households = useHouseholdStore((s) => s.households)
   const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
   const setSelectedId = useHouseholdStore((s) => s.setSelectedId)
@@ -133,10 +141,15 @@ export default function TriageQueue() {
   const [brgyFilter, setBrgyFilter] = useState('')
   const [vulnerabilityFilter, setVulnerabilityFilter] = useState('')
   const [hazardFilter, setHazardFilter] = useState('')
+  const [rescuerView, setRescuerView] = useState<'priority' | 'assigned' | 'nearest'>('priority')
 
   useEffect(() => {
     void loadHouseholds()
   }, [loadHouseholds])
+
+  useEffect(() => {
+    void loadAssets()
+  }, [loadAssets])
 
   useEffect(() => {
     void loadActiveHazard()
@@ -148,6 +161,8 @@ export default function TriageQueue() {
   }, [ensureAnalysisLoaded, showNoahFlood])
 
   const hasActiveHazards = activeHazards.length > 0
+  const isRescuer = user?.role === 'rescuer'
+  const rescuerAsset = user?.assetId ? assets.find((asset) => asset.id === user.assetId) ?? null : null
   const activeHazardTypes = useMemo(
     () => Array.from(new Set(activeHazards.map((hazard) => hazard.type))).sort((a, b) => a.localeCompare(b)),
     [activeHazards],
@@ -211,6 +226,10 @@ export default function TriageQueue() {
             isInsideNoahVar3 ? 'CRITICAL' : isInsideNoahVar2 ? 'HIGH' : isInsideNoahVar1 ? 'ELEVATED' : null,
           ))
           .map((hazard) => hazard.type)
+        const rescuerDistanceKm = rescuerAsset
+          ? haversineKm(household.lat, household.lng, rescuerAsset.lat, rescuerAsset.lng)
+          : null
+        const assignedToCurrentRescuer = Boolean(user?.assetId && household.assignedAssetId === user.assetId)
 
         return {
           household: {
@@ -222,14 +241,31 @@ export default function TriageQueue() {
           hazardDistanceKm: getNearestHouseholdHazardDistanceKm(household, activeHazards),
           hazardPriorityRank: effectiveHazardLevel ? HAZARD_LEVEL_PRIORITY[effectiveHazardLevel] : Number.MAX_SAFE_INTEGER,
           matchingHazardTypes,
+          rescuerDistanceKm,
+          assignedToCurrentRescuer,
         }
       })
-      .filter((entry) => !hazardFilter || entry.matchingHazardTypes.includes(hazardFilter))
+      .filter((entry) => isRescuer || !hazardFilter || entry.matchingHazardTypes.includes(hazardFilter))
       .filter((entry) => !vulnerabilityFilter || entry.effectiveLevel === vulnerabilityFilter)
+      .filter((entry) => {
+        if (!isRescuer) return true
+        if (rescuerView === 'assigned') return entry.assignedToCurrentRescuer
+        return true
+      })
 
     return filtered.sort((a, b) => {
       if (a.household.status === 'Rescued' && b.household.status !== 'Rescued') return 1
       if (a.household.status !== 'Rescued' && b.household.status === 'Rescued') return -1
+
+      if (isRescuer && rescuerView === 'assigned' && a.assignedToCurrentRescuer !== b.assignedToCurrentRescuer) {
+        return a.assignedToCurrentRescuer ? -1 : 1
+      }
+
+      if (isRescuer && rescuerView === 'nearest') {
+        const distanceA = a.rescuerDistanceKm ?? Number.MAX_SAFE_INTEGER
+        const distanceB = b.rescuerDistanceKm ?? Number.MAX_SAFE_INTEGER
+        if (distanceA !== distanceB) return distanceA - distanceB
+      }
 
       if (hasActiveHazards && a.isInHazardZone !== b.isInHazardZone) {
         return a.isInHazardZone ? -1 : 1
@@ -250,7 +286,7 @@ export default function TriageQueue() {
 
       return a.household.city.localeCompare(b.household.city) || a.household.barangay.localeCompare(b.household.barangay)
     })
-  }, [households, cityFilter, brgyFilter, vulnerabilityFilter, hazardFilter, activeHazards, floodZones, hasActiveHazards, showNoahFlood, noahAnalysisStatus, noahVar3Polygons, noahVar2Polygons, noahVar1Polygons])
+  }, [households, cityFilter, brgyFilter, vulnerabilityFilter, hazardFilter, rescuerView, user, activeHazards, floodZones, hasActiveHazards, isRescuer, rescuerAsset, showNoahFlood, noahAnalysisStatus, noahVar3Polygons, noahVar2Polygons, noahVar1Polygons])
 
   const pending = queueEntries.filter((entry) => entry.household.status === 'Pending')
   const rescued = queueEntries.filter((entry) => entry.household.status === 'Rescued')
@@ -259,6 +295,8 @@ export default function TriageQueue() {
   const isFiltered = Boolean(cityFilter || brgyFilter || vulnerabilityFilter || hazardFilter)
   const showHazardPriority = Boolean(hasActiveHazards && hazardPending.length > 0)
   const hazardPriorityLabel = hazardFilter || activeHazards.map((hazard) => hazard.type).join(', ')
+  const assignedCount = pending.filter((entry) => entry.assignedToCurrentRescuer).length
+  const nearestCount = pending.filter((entry) => entry.rescuerDistanceKm !== null).length
 
   const renderPriorityGroups = (entries: QueueEntry[]) =>
     Object.keys(TRIAGE_ORDER).map((level) => {
@@ -306,6 +344,36 @@ export default function TriageQueue() {
         >
           Filter
         </div>
+        {isRescuer && (
+          <div className="mobile-stack" style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            {([
+              { id: 'priority', label: 'Priority Missions' },
+              { id: 'assigned', label: 'Assigned To Me' },
+              { id: 'nearest', label: 'Nearest To Me' },
+            ] as const).map((option) => {
+              const active = rescuerView === option.id
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => setRescuerView(option.id)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    border: active ? '1px solid var(--accent-blue)' : '1px solid var(--border)',
+                    background: active ? 'var(--accent-blue)' : 'var(--bg-surface)',
+                    color: active ? '#fff' : 'var(--fg-default)',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
         <div className="mobile-stack" style={{ display: 'flex', gap: 8 }}>
           <select
             value={cityFilter}
@@ -339,21 +407,23 @@ export default function TriageQueue() {
             ))}
           </select>
 
-          <select
-            value={hazardFilter}
-            onChange={(e) => setHazardFilter(e.target.value)}
-            aria-label="Filter queue by active disaster"
-            style={{ ...selectStyle, color: hazardFilter ? 'var(--fg-default)' : 'var(--fg-muted)' }}
-          >
-            <option value="">
-              {activeHazardTypes.length > 1 ? 'All Active Disasters' : 'Active Disaster'}
-            </option>
-            {activeHazardTypes.map((hazardType) => (
-              <option key={hazardType} value={hazardType}>
-                {hazardType}
+          {!isRescuer && (
+            <select
+              value={hazardFilter}
+              onChange={(e) => setHazardFilter(e.target.value)}
+              aria-label="Filter queue by active disaster"
+              style={{ ...selectStyle, color: hazardFilter ? 'var(--fg-default)' : 'var(--fg-muted)' }}
+            >
+              <option value="">
+                {activeHazardTypes.length > 1 ? 'All Active Disasters' : 'Active Disaster'}
               </option>
-            ))}
-          </select>
+              {activeHazardTypes.map((hazardType) => (
+                <option key={hazardType} value={hazardType}>
+                  {hazardType}
+                </option>
+              ))}
+            </select>
+          )}
 
           <select
             value={vulnerabilityFilter}
@@ -378,6 +448,7 @@ export default function TriageQueue() {
                 setBrgyFilter('')
                 setHazardFilter('')
                 setVulnerabilityFilter('')
+                setRescuerView('priority')
               }}
               title="Clear filters"
               aria-label="Clear queue filters"
@@ -451,10 +522,12 @@ export default function TriageQueue() {
           }}
         >
           <div style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.1, color: 'var(--critical-red)' }}>
-            {hazardPriorityLabel} Hazard Priority Active
+            {isRescuer ? 'Priority Missions In Active Hazard Zones' : `${hazardPriorityLabel} Hazard Priority Active`}
           </div>
           <div style={{ marginTop: 4, fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
-            {hazardPending.length} household{hazardPending.length !== 1 ? 's' : ''} inside the active hazard layer are pinned to the top of the queue.
+            {isRescuer
+              ? `${hazardPending.length} priority mission${hazardPending.length !== 1 ? 's' : ''} are inside active hazard layers. Assigned: ${assignedCount}. Nearest available: ${nearestCount}.`
+              : `${hazardPending.length} household${hazardPending.length !== 1 ? 's' : ''} inside the active hazard layer are pinned to the top of the queue.`}
           </div>
         </div>
       )}
