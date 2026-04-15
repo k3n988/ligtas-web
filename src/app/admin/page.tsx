@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { useHazardStore } from '@/store/hazardStore'
-import { haversineKm, getDynamicTriage, getFloodTriage } from '@/lib/geo'
+import { getEffectiveHouseholdTriageFromHazards, isHouseholdInAnyHazardZone } from '@/lib/geo'
 import HouseholdTable from './HouseholdTable'
 import AssetTable from './AssetTable'
 import SummaryReportModal from '@/components/dashboard/SummaryReportModal'
@@ -16,29 +16,24 @@ export default function AdminPage() {
   const households = useHouseholdStore((s) => s.households)
   const assets = useAssetStore((s) => s.assets)
   const activeHazard = useHazardStore((s) => s.activeHazard)
+  const activeHazards = useHazardStore((s) => s.activeHazards)
   const floodZones = useHazardStore((s) => s.floodZones)
   const router = useRouter()
 
   const triageOverrides = useMemo<Map<string, TriageLevel>>(() => {
     const map = new Map<string, TriageLevel>()
-    if (!activeHazard?.isActive) return map
+    if (activeHazards.length === 0) return map
 
-    if (activeHazard.type === 'Flood') {
-      for (const hh of households) {
-        if (hh.status === 'Rescued') continue
-        const level = getFloodTriage({ lat: hh.lat, lng: hh.lng }, floodZones, hh.triage.level)
-        if (level !== hh.triage.level) map.set(hh.id, level)
-      }
-    } else {
-      for (const hh of households) {
-        const dist = haversineKm(hh.lat, hh.lng, activeHazard.center.lat, activeHazard.center.lng)
-        if (dist <= activeHazard.radii.stable) {
-          map.set(hh.id, getDynamicTriage(hh.lat, hh.lng, hh.triage.level, activeHazard))
-        }
-      }
+    for (const hh of households) {
+      if (hh.status === 'Rescued') continue
+      if (!isHouseholdInAnyHazardZone(hh, activeHazards, floodZones)) continue
+
+      const level = getEffectiveHouseholdTriageFromHazards(hh, activeHazards, floodZones)
+      if (level !== hh.triage.level) map.set(hh.id, level)
     }
+
     return map
-  }, [households, activeHazard, floodZones])
+  }, [households, activeHazards, floodZones])
 
   const [activeTab, setActiveTab] = useState<'summary' | 'registry' | 'assets'>('summary')
 
@@ -117,12 +112,12 @@ export default function AdminPage() {
   }
 
   return (
-    <div style={{ padding: '24px', color: 'var(--fg-default)' }}>
-      <div className="mobile-stack" style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 24 }}>
+    <div style={{ padding: '12px 16px 20px', color: 'var(--fg-default)' }}>
+      <div className="mobile-stack" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
         <button
           onClick={() => router.back()}
           style={{
-            marginTop: 2,
+            marginTop: 1,
             padding: '6px 14px',
             background: 'var(--bg-surface)',
             border: '1px solid var(--border)',
@@ -137,17 +132,17 @@ export default function AdminPage() {
           Back
         </button>
         <div style={{ flex: 1 }}>
-          <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--fg-default)' }}>
+          <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--fg-default)', lineHeight: 1.1 }}>
             Household & Asset Registry
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>
+          <p style={{ margin: '3px 0 0', fontSize: '0.82rem', color: 'var(--fg-muted)' }}>
             View, edit, or delete registered data.
           </p>
         </div>
         <button
           onClick={exportCSV}
           style={{
-            marginTop: 2,
+            marginTop: 1,
             padding: '6px 14px',
             background: 'var(--bg-surface)',
             border: '1px solid var(--accent-blue)',
@@ -163,7 +158,7 @@ export default function AdminPage() {
         </button>
       </div>
 
-      <div className="mobile-scroll-x hide-scrollbar" style={{ display: 'flex', gap: 10, borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
+      <div className="mobile-scroll-x hide-scrollbar" style={{ display: 'flex', gap: 10, borderBottom: '1px solid var(--border)', marginBottom: 14 }}>
         <button style={getTabStyle(activeTab === 'summary')} onClick={() => setActiveTab('summary')}>
           Summary Report
         </button>
@@ -181,13 +176,14 @@ export default function AdminPage() {
             households={households}
             assets={assets}
             activeHazard={activeHazard}
+            activeHazards={activeHazards}
             floodZones={floodZones}
             onClose={() => setActiveTab('registry')}
           />
         )}
         {activeTab === 'registry' && (
           <>
-            {activeHazard?.isActive && (
+            {activeHazards.length > 0 && (
               <div
                 style={{
                   background: 'var(--bg-danger-subtle)',
@@ -205,14 +201,18 @@ export default function AdminPage() {
                 }}
               >
                 <span>Hazard Layer Active</span>
-                <span style={{ color: 'var(--fg-warning)' }}>{activeHazard.type}</span>
+                <span style={{ color: 'var(--fg-warning)' }}>{activeHazards.map((hazard) => hazard.type).join(', ')}</span>
                 <span style={{ color: 'var(--fg-muted)', fontWeight: 400 }}>
-                  · {triageOverrides.size} households with overridden triage
-                  {activeHazard.type !== 'Flood' && (
-                    <> · Critical ≤{activeHazard.radii.critical}km / High ≤{activeHazard.radii.high}km / Elevated ≤{activeHazard.radii.elevated}km / Stable ≤{activeHazard.radii.stable}km</>
-                  )}
-                  {activeHazard.type === 'Flood' && (
-                    <> · {floodZones.length} polygon zone{floodZones.length !== 1 ? 's' : ''} active</>
+                  {` · ${triageOverrides.size} households with overridden triage`}
+                  {activeHazards
+                    .filter((hazard) => hazard.type !== 'Flood')
+                    .map((hazard) => (
+                      <span key={hazard.id}>
+                        {` · ${hazard.type}: Critical <=${hazard.radii.critical}km / High <=${hazard.radii.high}km / Elevated <=${hazard.radii.elevated}km / Stable <=${hazard.radii.stable}km`}
+                      </span>
+                    ))}
+                  {activeHazards.some((hazard) => hazard.type === 'Flood') && (
+                    <>{` · ${floodZones.length} polygon zone${floodZones.length !== 1 ? 's' : ''} active`}</>
                   )}
                 </span>
               </div>

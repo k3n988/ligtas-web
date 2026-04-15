@@ -43,7 +43,6 @@ export default function DashboardShell({ children }: Props) {
   const loadAssets      = useAssetStore((s) => s.loadAssets)
   const user            = useAuthStore((s) => s.user)
   const loadActiveHazard = useHazardStore((s) => s.loadActiveHazard)
-  const setActiveHazard  = useHazardStore((s) => s.setActiveHazard)
 
   useEffect(() => {
     void loadHouseholds()

@@ -48,6 +48,7 @@ const RING_COLORS = {
 export default function HazardControlPanel() {
   const {
     activeHazard,
+    activeHazards,
     setActiveHazard,
     clearHazard,
     isSelectingCenter,
@@ -81,13 +82,29 @@ export default function HazardControlPanel() {
   const [draftNotes,     setDraftNotes]     = useState('')
 
   // Early return AFTER all hooks
-  if (!activeHazard?.isActive && user?.role !== 'admin') return null
+  if (activeHazards.length === 0 && user?.role !== 'admin') return null
 
   // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+  function focusHazardOnMap(hazard: HazardEvent) {
+    if (!map) return
+
+    if (hazard.type === 'Flood') {
+      const polygons = floodZones.flatMap((zone) => zone.polygon)
+      if (polygons.length === 0) return
+
+      const bounds = new google.maps.LatLngBounds()
+      polygons.forEach((point) => bounds.extend(point))
+      map.fitBounds(bounds)
+      return
+    }
+
+    map.panTo(hazard.center)
+    map.setZoom(12)
+  }
+
   function handlePickCenter() {
     setIsSelectingCenter(true)
-    setOpen(false)
   }
 
   function handlePolygonComplete(coords: Array<{ lat: number; lng: number }>) {
@@ -109,6 +126,22 @@ export default function HazardControlPanel() {
     setDraftSeverity('stable')
     setDraftDepth('')
     setDraftNotes('')
+  }
+
+  function selectHazardType(nextType: string) {
+    setHazardType(nextType)
+    setPendingPolygon(null)
+    setIsDrawing(false)
+
+    const matchingActiveHazard = activeHazards.find((hazard) => hazard.type === nextType)
+    if (!matchingActiveHazard) return
+
+    if (matchingActiveHazard.type !== 'Flood') {
+      setCritical(String(matchingActiveHazard.radii.critical))
+      setHigh(String(matchingActiveHazard.radii.high))
+      setElevated(String(matchingActiveHazard.radii.elevated))
+      setStable(String(matchingActiveHazard.radii.stable))
+    }
   }
 
   async function handleActivate() {
@@ -142,7 +175,7 @@ export default function HazardControlPanel() {
   }
 
   async function handleClear() {
-    await clearHazard()
+    await clearHazard(hazardType)
     setPendingPolygon(null)
     setIsDrawing(false)
     setOpen(false)
@@ -150,6 +183,7 @@ export default function HazardControlPanel() {
 
   // â”€â”€ Derived â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const isFlood       = hazardType === 'Flood'
+  const selectedActiveHazard = activeHazards.find((hazard) => hazard.type === hazardType) ?? null
   const canActivate   = isFlood
     ? (draftFloodZones.length > 0 || floodZones.length > 0)
     : !!draftCenter
@@ -157,22 +191,41 @@ export default function HazardControlPanel() {
   const primaryControlStyle: React.CSSProperties = {
     minHeight: 42,
     padding: '0 16px',
-    borderRadius: 10,
-    background: activeHazard?.isActive ? '#1f3044' : '#102338',
-    border: `1.5px solid ${activeHazard?.isActive ? '#5db0ff' : '#3c78ad'}`,
+    borderRadius: 12,
+    background: activeHazards.length > 0 ? '#1f3044' : '#102338',
+    border: `1.5px solid ${activeHazards.length > 0 ? '#5db0ff' : '#3c78ad'}`,
     color: '#d7ebff',
     fontSize: '0.75rem',
     fontWeight: 800,
     letterSpacing: 0.5,
-    cursor: (activeHazard?.isActive || user?.role === 'admin') ? 'pointer' : 'default',
+    cursor: (activeHazards.length > 0 || user?.role === 'admin') ? 'pointer' : 'default',
     display: 'flex',
     alignItems: 'center',
     gap: 6,
     boxShadow: '0 6px 18px rgba(3, 15, 28, 0.34)',
     fontFamily: 'Inter, sans-serif',
     whiteSpace: 'nowrap',
-    pointerEvents: (!activeHazard?.isActive && user?.role !== 'admin') ? 'none' : 'auto',
-    opacity: (!activeHazard?.isActive && user?.role !== 'admin') ? 0 : 1,
+    pointerEvents: (activeHazards.length === 0 && user?.role !== 'admin') ? 'none' : 'auto',
+    opacity: (activeHazards.length === 0 && user?.role !== 'admin') ? 0 : 1,
+  }
+
+  const activeBadgeStyle: React.CSSProperties = {
+    minHeight: 42,
+    padding: '0 16px',
+    borderRadius: 12,
+    background: 'linear-gradient(180deg, #641a1a 0%, #421010 100%)',
+    border: '1.5px solid #d24b4b',
+    color: '#ffe3e3',
+    fontSize: '0.75rem',
+    fontWeight: 800,
+    letterSpacing: 0.4,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 7,
+    boxShadow: '0 8px 22px rgba(87, 16, 16, 0.34)',
+    fontFamily: 'Inter, sans-serif',
+    whiteSpace: 'nowrap',
   }
 
   return (
@@ -218,8 +271,24 @@ export default function HazardControlPanel() {
           title="Hazard Layer Control"
           style={primaryControlStyle}
         >
-            {activeHazard?.isActive ? `ACTIVE: ${activeHazard.type}` : `HAZARD LAYER · ${hazardType.toUpperCase()}`}
+             {activeHazards.length > 0 ? 'HAZARD LAYER' : `HAZARD LAYER · ${hazardType.toUpperCase()}`}
         </button>
+
+        {activeHazards.map((hazard) => (
+          <button
+            key={hazard.id}
+            onClick={() => {
+              selectHazardType(hazard.type)
+              setOpen(true)
+              focusHazardOnMap(hazard)
+            }}
+            title={`Active hazard: ${hazard.type}`}
+            style={activeBadgeStyle}
+          >
+            <span style={{ color: '#ff6b6b', fontSize: '0.82rem', lineHeight: 1 }}>▲</span>
+            {`ACTIVE: ${hazard.type}`}
+          </button>
+        ))}
       </div>
 
       {open && (
@@ -252,15 +321,15 @@ export default function HazardControlPanel() {
           </div>
 
           {/* Active hazard badge */}
-          {activeHazard?.isActive && (
+          {selectedActiveHazard && (
             <div style={{
               background: '#3d1a1a', border: '1px solid #da3633',
               borderRadius: 4, padding: '6px 10px', marginBottom: 12,
               fontSize: '0.72rem', color: '#ff4d4d', fontWeight: 600,
             }}>
-              {activeHazard.type === 'Flood'
+              {selectedActiveHazard.type === 'Flood'
                 ? `FLOOD â€” ${floodZones.length} zone${floodZones.length !== 1 ? 's' : ''} active`
-                : `HAZARD: ${activeHazard.type} â€” ${activeHazard.center.lat.toFixed(4)}, ${activeHazard.center.lng.toFixed(4)}`
+                : `HAZARD: ${selectedActiveHazard.type} â€” ${selectedActiveHazard.center.lat.toFixed(4)}, ${selectedActiveHazard.center.lng.toFixed(4)}`
               }
             </div>
           )}
@@ -274,9 +343,7 @@ export default function HazardControlPanel() {
                 <select
                   value={hazardType}
                   onChange={(e) => {
-                    setHazardType(e.target.value)
-                    setPendingPolygon(null)
-                    setIsDrawing(false)
+                    selectHazardType(e.target.value)
                   }}
                   style={inputStyle}
                 >
@@ -502,7 +569,7 @@ export default function HazardControlPanel() {
                   âœ… Activate Hazard Layer
                 </button>
 
-                {activeHazard && (
+                {selectedActiveHazard && (
                   <button
                     onClick={handleClear}
                     style={{

@@ -12,6 +12,7 @@ export default function MapStatsPanel() {
   const households = useHouseholdStore((s) => s.households)
   const assets = useAssetStore((s) => s.assets)
   const activeHazard = useHazardStore((s) => s.activeHazard)
+  const activeHazards = useHazardStore((s) => s.activeHazards)
   const floodZones = useHazardStore((s) => s.floodZones)
   useMap()
   const [showReport, setShowReport] = useState(false)
@@ -181,7 +182,7 @@ export default function MapStatsPanel() {
       </div>
 
       {showReport && (
-        <SummaryReportModal households={households} assets={assets} activeHazard={activeHazard} floodZones={floodZones} onClose={() => setShowReport(false)} />
+        <SummaryReportModal households={households} assets={assets} activeHazard={activeHazard} activeHazards={activeHazards} floodZones={floodZones} onClose={() => setShowReport(false)} />
       )}
     </>
   )

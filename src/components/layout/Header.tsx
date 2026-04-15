@@ -164,6 +164,7 @@ export default function Header() {
   }
 
   const tabs = getTabsForRole()
+  const showSearchBar = pathname !== '/admin'
 
   return (
     <div style={{ flexShrink: 0 }}>
@@ -250,6 +251,7 @@ export default function Header() {
         </div>
       </div>
 
+      {showSearchBar && (
       <div
         className="header-search-shell"
         style={{
@@ -414,6 +416,7 @@ export default function Header() {
           </div>
         )}
       </div>
+      )}
 
       {user && tabs.length > 0 && (
         <div

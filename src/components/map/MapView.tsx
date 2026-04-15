@@ -363,7 +363,7 @@ function MapInner() {
   const setPickingLocation = useHouseholdStore((s) => s.setPickingLocation)
   const setPendingCoords   = useHouseholdStore((s) => s.setPendingCoords)
 
-  const activeHazard         = useHazardStore((s) => s.activeHazard)
+  const activeHazards        = useHazardStore((s) => s.activeHazards)
   const isSelectingCenter    = useHazardStore((s) => s.isSelectingCenter)
   const setIsSelectingCenter = useHazardStore((s) => s.setIsSelectingCenter)
   const setDraftCenter       = useHazardStore((s) => s.setDraftCenter)
@@ -464,8 +464,12 @@ function MapInner() {
           visible={showNoahFlood}
         />
 
-        {activeHazard?.isActive && activeHazard.type !== 'Flood' && <HazardCircles hazard={activeHazard} />}
-        {activeHazard?.isActive && activeHazard.type === 'Flood' && <FloodZoneOverlays />}
+        {activeHazards
+          .filter((hazard) => hazard.isActive && hazard.type !== 'Flood')
+          .map((hazard) => (
+            <HazardCircles key={hazard.id} hazard={hazard} />
+          ))}
+        {activeHazards.some((hazard) => hazard.isActive && hazard.type === 'Flood') && <FloodZoneOverlays />}
 
         {households.filter((hh) => hh.approvalStatus === 'approved').map((hh) => (
           <HouseholdMarker key={hh.id} household={hh} />

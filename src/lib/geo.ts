@@ -1,6 +1,11 @@
 // src/lib/geo.ts
 import type { FloodZone, HazardEvent, Household, TriageLevel } from '@/types'
 
+function normalizeHazards(hazardOrHazards: HazardEvent | HazardEvent[] | null | undefined): HazardEvent[] {
+  if (!hazardOrHazards) return []
+  return Array.isArray(hazardOrHazards) ? hazardOrHazards.filter((hazard) => hazard?.isActive) : hazardOrHazards.isActive ? [hazardOrHazards] : []
+}
+
 // ─── EXISTING CODE (unchanged) ───────────────────────────────────────────────
 
 export function getDynamicTriage(
@@ -115,6 +120,18 @@ export function getHouseholdHazardDistanceKm(
   return haversineKm(household.lat, household.lng, hazard.center.lat, hazard.center.lng)
 }
 
+export function getNearestHouseholdHazardDistanceKm(
+  household: Pick<Household, 'lat' | 'lng'>,
+  hazards: HazardEvent[] | HazardEvent | null,
+): number | null {
+  const distances = normalizeHazards(hazards)
+    .filter((hazard) => hazard.type !== 'Flood')
+    .map((hazard) => haversineKm(household.lat, household.lng, hazard.center.lat, hazard.center.lng))
+
+  if (distances.length === 0) return null
+  return Math.min(...distances)
+}
+
 export function isHouseholdInHazardZone(
   household: Pick<Household, 'lat' | 'lng'>,
   hazard: HazardEvent | null,
@@ -130,6 +147,14 @@ export function isHouseholdInHazardZone(
 
   const distanceKm = getHouseholdHazardDistanceKm(household, hazard)
   return distanceKm !== null && distanceKm <= hazard.radii.stable
+}
+
+export function isHouseholdInAnyHazardZone(
+  household: Pick<Household, 'lat' | 'lng'>,
+  hazards: HazardEvent[] | HazardEvent | null,
+  floodZones: FloodZone[] = [],
+): boolean {
+  return normalizeHazards(hazards).some((hazard) => isHouseholdInHazardZone(household, hazard, floodZones))
 }
 
 export function getEffectiveHouseholdTriage(
@@ -148,6 +173,28 @@ export function getEffectiveHouseholdTriage(
   }
 
   return getDynamicTriage(household.lat, household.lng, household.triage.level, hazard)
+}
+
+export function getEffectiveHouseholdTriageFromHazards(
+  household: Pick<Household, 'lat' | 'lng' | 'triage'>,
+  hazards: HazardEvent[] | HazardEvent | null,
+  floodZones: FloodZone[] = [],
+): TriageLevel {
+  let bestLevel = household.triage.level
+
+  for (const hazard of normalizeHazards(hazards)) {
+    const candidate = getEffectiveHouseholdTriage(
+      { ...household, triage: { ...household.triage, level: bestLevel } },
+      hazard,
+      floodZones,
+    )
+
+    if (TRIAGE_PRIORITY[candidate] < TRIAGE_PRIORITY[bestLevel]) {
+      bestLevel = candidate
+    }
+  }
+
+  return bestLevel
 }
 
 // ─── NEW: Hazard zone filtering & queue prioritization ────────────────────────

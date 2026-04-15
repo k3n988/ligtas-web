@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { getEffectiveHouseholdTriage, isHouseholdInHazardZone } from '@/lib/geo'
+import { getEffectiveHouseholdTriageFromHazards, isHouseholdInAnyHazardZone } from '@/lib/geo'
 import { TRIAGE_ORDER } from '@/lib/triage'
 import type { Asset, FloodZone, HazardEvent, Household, TriageLevel, TriageResult } from '@/types'
 
@@ -9,6 +9,7 @@ interface Props {
   households: Household[]
   assets: Asset[]
   activeHazard: HazardEvent | null
+  activeHazards: HazardEvent[]
   floodZones: FloodZone[]
   onClose: () => void
 }
@@ -103,27 +104,25 @@ function assetStatusBadgeStyle(status: string): React.CSSProperties {
   }
 }
 
-export default function SummaryReportModal({ households, assets, activeHazard, floodZones }: Props) {
+export default function SummaryReportModal({ households, assets, activeHazard, activeHazards, floodZones }: Props) {
   const now = new Date().toISOString()
-  const incidentLabel = activeHazard?.isActive
-    ? activeHazard.type === 'Volcano'
-      ? 'Volcano Eruption'
-      : activeHazard.type
+  const incidentLabel = activeHazards.length > 0
+    ? activeHazards.map((hazard) => (hazard.type === 'Volcano' ? 'Volcano Eruption' : hazard.type)).join(', ')
     : null
 
   const reportHouseholds = useMemo(() => {
-    if (!activeHazard?.isActive) return households
+    if (activeHazards.length === 0) return households
 
     return households
-      .filter((household) => isHouseholdInHazardZone(household, activeHazard, floodZones))
+      .filter((household) => isHouseholdInAnyHazardZone(household, activeHazards, floodZones))
       .map((household) => {
-        const effectiveLevel = getEffectiveHouseholdTriage(household, activeHazard, floodZones)
+        const effectiveLevel = getEffectiveHouseholdTriageFromHazards(household, activeHazards, floodZones)
         return {
           ...household,
           triage: TRIAGE_DISPLAY[effectiveLevel],
         }
       })
-  }, [households, activeHazard, floodZones])
+  }, [households, activeHazards, floodZones])
 
   const pending = reportHouseholds.filter((h) => h.status === 'Pending')
   const rescued = reportHouseholds.filter((h) => h.status === 'Rescued')
