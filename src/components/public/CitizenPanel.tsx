@@ -13,7 +13,7 @@ export default function CitizenPanel() {
   const markRescued = useHouseholdStore((s) => s.markRescued)
   const restorePending = useHouseholdStore((s) => s.restorePending)
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
-  const activeHazard = useHazardStore((s) => s.activeHazard)
+  const activeHazards = useHazardStore((s) => s.activeHazards)
 
   const [confirming, setConfirming] = useState<'safe' | 'cancel' | null>(null)
   const [busy, setBusy] = useState(false)
@@ -31,15 +31,16 @@ export default function CitizenPanel() {
     setPanToCoords({ lat: household.lat, lng: household.lng, zoom: 17 })
   }, [household, setPanToCoords])
 
-  // Load AI advisory when hazard is active
+  // Load AI advisory for the most critical active hazard
   useEffect(() => {
-    if (!household || !activeHazard?.isActive) {
+    if (!household || activeHazards.length === 0) {
       setAiAdvisory(null)
       return
     }
 
     const controller = new AbortController()
     const hh = household
+    const hazard = activeHazards[0]
 
     async function loadAdvisory() {
       try {
@@ -50,7 +51,7 @@ export default function CitizenPanel() {
             city: hh.city,
             barangay: hh.barangay,
             coords: { lat: hh.lat, lng: hh.lng },
-            hazard: activeHazard,
+            hazard,
             vulnerabilities: hh.vulnArr,
           }),
           signal: controller.signal,
@@ -64,7 +65,7 @@ export default function CitizenPanel() {
 
     void loadAdvisory()
     return () => controller.abort()
-  }, [activeHazard, household])
+  }, [activeHazards, household])
 
   async function handleSafe() {
     if (!household) return
@@ -95,9 +96,10 @@ export default function CitizenPanel() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* Active Disaster Warning */}
-      {activeHazard?.isActive && (
+      {/* Active Disaster Warnings — one card per active hazard */}
+      {activeHazards.map((hazard) => (
         <div
+          key={hazard.id}
           style={{
             background: 'var(--bg-danger-subtle)',
             border: '1px solid var(--fg-danger)',
@@ -112,13 +114,13 @@ export default function CitizenPanel() {
             Active Disaster Warning
           </span>
           <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--fg-danger)', textTransform: 'uppercase', letterSpacing: 1 }}>
-            {activeHazard.type}
+            {hazard.type}
           </span>
           <span style={{ fontSize: '0.75rem', color: 'var(--fg-default)', lineHeight: 1.5, opacity: 0.85 }}>
-            A <b>{activeHazard.type.toLowerCase()}</b> hazard zone is currently active. Stay alert and follow local DRRMO advisories.
+            A <b>{hazard.type.toLowerCase()}</b> hazard zone is currently active. Stay alert and follow local DRRMO advisories.
           </span>
         </div>
-      )}
+      ))}
 
       {/* AI Safety Advisory */}
       {aiAdvisory && (
