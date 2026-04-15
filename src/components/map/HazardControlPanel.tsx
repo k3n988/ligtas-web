@@ -1,7 +1,7 @@
 ﻿'use client'
 // src/components/map/HazardControlPanel.tsx
 import { useMap } from '@vis.gl/react-google-maps'
-import { type ReactNode, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useHazardStore } from '@/store/hazardStore'
 import { useAuthStore } from '@/store/authStore'
 import type { FloodDepth, FloodSeverity, FloodZone, HazardEvent } from '@/types'
@@ -45,12 +45,7 @@ const RING_COLORS = {
   stable:   '#58a6ff',
 }
 
-interface HazardControlPanelProps {
-  topControls?: ReactNode
-  forceHazardType?: string | null
-}
-
-export default function HazardControlPanel({ topControls, forceHazardType }: HazardControlPanelProps) {
+export default function HazardControlPanel() {
   const {
     activeHazard,
     setActiveHazard,
@@ -84,13 +79,6 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
   const [draftSeverity,  setDraftSeverity]  = useState<FloodSeverity>('stable')
   const [draftDepth,     setDraftDepth]     = useState<FloodDepth | ''>('')
   const [draftNotes,     setDraftNotes]     = useState('')
-
-  useEffect(() => {
-    if (!forceHazardType || hazardType === forceHazardType) return
-    setHazardType(forceHazardType)
-    setPendingPolygon(null)
-    setIsDrawing(false)
-  }, [forceHazardType, hazardType])
 
   // Early return AFTER all hooks
   if (!activeHazard?.isActive && user?.role !== 'admin') return null
@@ -165,7 +153,6 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
   const canActivate   = isFlood
     ? (draftFloodZones.length > 0 || floodZones.length > 0)
     : !!draftCenter
-  const currentMode = forceHazardType ?? hazardType
 
   const primaryControlStyle: React.CSSProperties = {
     minHeight: 42,
@@ -186,40 +173,6 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
     whiteSpace: 'nowrap',
     pointerEvents: (!activeHazard?.isActive && user?.role !== 'admin') ? 'none' : 'auto',
     opacity: (!activeHazard?.isActive && user?.role !== 'admin') ? 0 : 1,
-  }
-
-  function modeChipStyle(active: boolean): React.CSSProperties {
-    return {
-      minHeight: 42,
-      padding: '0 16px',
-      borderRadius: 10,
-      background: active ? 'rgba(35, 134, 54, 0.22)' : 'rgba(13, 23, 36, 0.92)',
-      border: `1.5px solid ${active ? '#3fb950' : '#31597c'}`,
-      color: active ? '#c8f7d3' : '#a9d3ff',
-      fontSize: '0.75rem',
-      fontWeight: 700,
-      letterSpacing: 0.3,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      boxShadow: '0 6px 18px rgba(3, 15, 28, 0.24)',
-      fontFamily: 'Inter, sans-serif',
-      whiteSpace: 'nowrap',
-      flexShrink: 0,
-    }
-  }
-
-  function quickSelectHazard(nextType: string) {
-    setHazardType(nextType)
-    setPendingPolygon(null)
-    setIsDrawing(false)
-    setOpen(true)
-
-    if (activeHazard?.isActive && map && activeHazard.type === nextType && activeHazard.type !== 'Flood') {
-      map.panTo(activeHazard.center)
-      map.setZoom(12)
-    }
   }
 
   return (
@@ -265,44 +218,8 @@ export default function HazardControlPanel({ topControls, forceHazardType }: Haz
           title="Hazard Layer Control"
           style={primaryControlStyle}
         >
-            {activeHazard?.isActive ? `ACTIVE: ${activeHazard.type}` : `HAZARD LAYER · ${currentMode.toUpperCase()}`}
+            {activeHazard?.isActive ? `ACTIVE: ${activeHazard.type}` : `HAZARD LAYER · ${hazardType.toUpperCase()}`}
         </button>
-
-        <button
-          onClick={() => quickSelectHazard('Volcano')}
-          title="Configure volcano hazard"
-          style={modeChipStyle(currentMode === 'Volcano')}
-        >
-          Volcano
-        </button>
-
-        <button
-          onClick={() => quickSelectHazard('Earthquake')}
-          title="Configure earthquake hazard"
-          style={modeChipStyle(currentMode === 'Earthquake')}
-        >
-          Earthquake
-        </button>
-
-        {topControls}
-      </div>
-
-      <div
-        style={{
-          padding: '5px 12px',
-          borderRadius: 999,
-          background: 'rgba(9, 18, 30, 0.84)',
-          border: '1px solid rgba(88, 166, 255, 0.28)',
-          color: '#c5e0ff',
-          fontFamily: 'Inter, sans-serif',
-          fontSize: '0.7rem',
-          fontWeight: 600,
-          letterSpacing: 0.2,
-          boxShadow: '0 6px 18px rgba(3, 15, 28, 0.2)',
-          backdropFilter: 'blur(10px)',
-        }}
-      >
-        Current mode: {currentMode}
       </div>
 
       {open && (

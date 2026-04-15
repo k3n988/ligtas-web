@@ -19,7 +19,7 @@ interface NoahFloodStore {
 }
 
 export const useNoahFloodStore = create<NoahFloodStore>((set, get) => ({
-  visible:          false,
+  visible:          true,
   analysisStatus:   'idle',
   analysisError:    null,
   var3PolygonCount: 0,

@@ -23,8 +23,6 @@ import { Marker } from '@vis.gl/react-google-maps'
 import type { FloodSeverity, HazardEvent } from '@/types'
 
 const DEFAULT_CENTER = { lat: 10.6765, lng: 122.9509 }
-const BAROTAC_NUEVO_CENTER = { lat: 10.8947, lng: 122.7042 }
-
 const CLEAN_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'poi',                  stylers: [{ visibility: 'off' }] },
   { featureType: 'poi.attraction',       stylers: [{ visibility: 'off' }] },
@@ -103,27 +101,6 @@ function HazardPanController() {
     map.panTo(activeHazard.center)
     map.setZoom(12)
   }, [map, activeHazard?.id])
-
-  return null
-}
-
-function NoahFloodAutoFocusController() {
-  const map = useMap()
-  const showNoahFlood = useNoahFloodStore((s) => s.visible)
-  const hasAutoFocusedRef = useRef(false)
-
-  useEffect(() => {
-    if (!showNoahFlood) {
-      hasAutoFocusedRef.current = false
-      return
-    }
-
-    if (!map || hasAutoFocusedRef.current) return
-
-    map.panTo(BAROTAC_NUEVO_CENTER)
-    map.setZoom(14)
-    hasAutoFocusedRef.current = true
-  }, [map, showNoahFlood])
 
   return null
 }
@@ -391,22 +368,14 @@ function MapInner() {
   const setIsSelectingCenter = useHazardStore((s) => s.setIsSelectingCenter)
   const setDraftCenter       = useHazardStore((s) => s.setDraftCenter)
   const showNoahFlood        = useNoahFloodStore((s) => s.visible)
-  const setShowNoahFlood     = useNoahFloodStore((s) => s.setVisible)
   const ensureAnalysisLoaded = useNoahFloodStore((s) => s.ensureAnalysisLoaded)
 
   const [openAssetId, setOpenAssetId] = useState<string | null>(null)
-  const [mapNotice, setMapNotice] = useState<string | null>(null)
 
   useEffect(() => {
     if (!showNoahFlood) return
     void ensureAnalysisLoaded()
   }, [ensureAnalysisLoaded, showNoahFlood])
-
-  useEffect(() => {
-    if (!mapNotice) return
-    const timeout = window.setTimeout(() => setMapNotice(null), 2600)
-    return () => window.clearTimeout(timeout)
-  }, [mapNotice])
 
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
@@ -442,33 +411,6 @@ function MapInner() {
           pointerEvents: 'none', whiteSpace: 'nowrap',
         }}>
           âš  Click on the map to set the hazard epicenter
-        </div>
-      )}
-
-      {mapNotice && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 74,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 21,
-            background: 'rgba(9, 18, 30, 0.92)',
-            border: '1px solid rgba(63, 185, 80, 0.55)',
-            color: '#d9ffe6',
-            padding: '8px 14px',
-            borderRadius: 999,
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '0.74rem',
-            fontWeight: 600,
-            boxShadow: '0 10px 24px rgba(3, 15, 28, 0.28)',
-            backdropFilter: 'blur(10px)',
-            whiteSpace: 'nowrap',
-            pointerEvents: 'none',
-            maxWidth: 'calc(100vw - 32px)',
-          }}
-        >
-          {mapNotice}
         </div>
       )}
 
@@ -517,7 +459,6 @@ function MapInner() {
         <PanCoordsController />
         <PickCursorController />
         <HazardPanController />   {/* â† add this */}
-        <NoahFloodAutoFocusController />
         <RouteOverlay />
         <NoahFloodLayer
           visible={showNoahFlood}
@@ -551,43 +492,7 @@ function MapInner() {
 
         <MapLegend />
       </Map>
-      <HazardControlPanel
-        forceHazardType={showNoahFlood ? 'Flood' : null}
-        topControls={
-          <button
-            onClick={() => {
-              const next = !showNoahFlood
-              setShowNoahFlood(next)
-              if (next) {
-                void ensureAnalysisLoaded()
-                setMapNotice('Flood mode enabled. Map focused to Barotac Nuevo.')
-              }
-            }}
-            style={{
-              minHeight: 42,
-              padding: '0 16px',
-              borderRadius: 10,
-              background: showNoahFlood ? 'rgba(35, 134, 54, 0.22)' : 'rgba(13, 23, 36, 0.92)',
-              border: `1.5px solid ${showNoahFlood ? '#3fb950' : '#31597c'}`,
-              color: showNoahFlood ? '#c8f7d3' : '#a9d3ff',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              letterSpacing: 0.3,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 6px 18px rgba(3, 15, 28, 0.24)',
-              fontFamily: 'Inter, sans-serif',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
-            title="Show the flood overlay and switch hazard mode to Flood"
-          >
-            Flood Mode
-          </button>
-        }
-      />
+      <HazardControlPanel />
 
     </div>
   )
