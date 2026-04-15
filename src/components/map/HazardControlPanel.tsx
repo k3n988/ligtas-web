@@ -49,8 +49,10 @@ export default function HazardControlPanel() {
   const {
     activeHazard,
     activeHazards,
+    focusedHazardType,
     setActiveHazard,
     clearHazard,
+    setFocusedHazardType,
     isSelectingCenter,
     setIsSelectingCenter,
     draftCenter,
@@ -279,11 +281,18 @@ export default function HazardControlPanel() {
             key={hazard.id}
             onClick={() => {
               selectHazardType(hazard.type)
+              setFocusedHazardType(hazard.type)
               setOpen(true)
               focusHazardOnMap(hazard)
             }}
             title={`Active hazard: ${hazard.type}`}
-            style={activeBadgeStyle}
+            style={{
+              ...activeBadgeStyle,
+              boxShadow: focusedHazardType === hazard.type
+                ? '0 0 0 2px rgba(255, 245, 245, 0.9), 0 10px 26px rgba(87, 16, 16, 0.42)'
+                : activeBadgeStyle.boxShadow,
+              transform: focusedHazardType === hazard.type ? 'translateY(-1px)' : 'none',
+            }}
           >
             <span style={{ color: '#ff6b6b', fontSize: '0.82rem', lineHeight: 1 }}>▲</span>
             {`ACTIVE: ${hazard.type}`}

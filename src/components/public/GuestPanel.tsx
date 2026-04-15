@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { supabase } from '@/lib/supabase'
 import { useHouseholdStore } from '@/store/householdStore'
@@ -222,48 +222,96 @@ const selectStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
-const hazardCardTheme: Record<string, { bg: string; border: string; glow: string; badgeBg: string; badgeColor: string; titleColor: string; eyebrowColor: string; bodyColor: string; chipBg: string; chipColor: string; iconBg: string; iconBorder: string }> = {
+const hazardCardTheme: Record<string, { bg: string; border: string; glow: string; badgeBg: string; badgeColor: string; titleColor: string; eyebrowColor: string; bodyColor: string; chipBg: string; chipColor: string; iconBg: string; iconBorder: string; stripBg: string }> = {
+  earthquake: {
+    bg: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+    border: '#d97706',
+    glow: '0 12px 28px rgba(217,119,6,0.18)',
+    badgeBg: '#92400e',
+    badgeColor: '#fffbeb',
+    titleColor: '#78350f',
+    eyebrowColor: '#b45309',
+    bodyColor: '#1c1207',
+    chipBg: 'rgba(255,255,255,0.78)',
+    chipColor: '#92400e',
+    iconBg: 'rgba(255,255,255,0.6)',
+    iconBorder: 'rgba(217,119,6,0.3)',
+    stripBg: 'linear-gradient(90deg,#fffbeb,#fef3c7)',
+  },
   volcano: {
-    bg: 'linear-gradient(135deg, #ffebe9 0%, #fff8c5 100%)',
-    border: '#f97316',
-    glow: '0 18px 40px rgba(249, 115, 22, 0.18)',
-    badgeBg: '#dc2626',
-    badgeColor: '#fff7ed',
-    titleColor: '#7c2d12',
-    eyebrowColor: '#94a3b8',
-    bodyColor: '#111827',
-    chipBg: 'rgba(255,255,255,0.72)',
-    chipColor: '#9a3412',
-    iconBg: 'rgba(255,255,255,0.52)',
-    iconBorder: 'rgba(255,255,255,0.55)',
+    bg: 'linear-gradient(135deg, #fef2f2 0%, #fde8d0 100%)',
+    border: '#b91c1c',
+    glow: '0 12px 28px rgba(185,28,28,0.18)',
+    badgeBg: '#7f1d1d',
+    badgeColor: '#fef2f2',
+    titleColor: '#7f1d1d',
+    eyebrowColor: '#dc2626',
+    bodyColor: '#1a0a0a',
+    chipBg: 'rgba(255,255,255,0.76)',
+    chipColor: '#7f1d1d',
+    iconBg: 'rgba(255,255,255,0.56)',
+    iconBorder: 'rgba(185,28,28,0.3)',
+    stripBg: 'linear-gradient(90deg,#fef2f2,#fde8d0)',
   },
   flood: {
     bg: 'linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)',
     border: '#2563eb',
-    glow: '0 18px 40px rgba(37, 99, 235, 0.16)',
+    glow: '0 12px 28px rgba(37,99,235,0.16)',
     badgeBg: '#1d4ed8',
     badgeColor: '#eff6ff',
     titleColor: '#1e3a8a',
-    eyebrowColor: '#64748b',
+    eyebrowColor: '#2563eb',
     bodyColor: '#0f172a',
-    chipBg: 'rgba(255,255,255,0.7)',
+    chipBg: 'rgba(255,255,255,0.74)',
     chipColor: '#1d4ed8',
-    iconBg: 'rgba(255,255,255,0.52)',
-    iconBorder: 'rgba(255,255,255,0.55)',
+    iconBg: 'rgba(255,255,255,0.56)',
+    iconBorder: 'rgba(37,99,235,0.3)',
+    stripBg: 'linear-gradient(90deg,#dbeafe,#eff6ff)',
+  },
+  typhoon: {
+    bg: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+    border: '#059669',
+    glow: '0 12px 28px rgba(5,150,105,0.15)',
+    badgeBg: '#065f46',
+    badgeColor: '#ecfdf5',
+    titleColor: '#064e3b',
+    eyebrowColor: '#059669',
+    bodyColor: '#022c22',
+    chipBg: 'rgba(255,255,255,0.76)',
+    chipColor: '#065f46',
+    iconBg: 'rgba(255,255,255,0.56)',
+    iconBorder: 'rgba(5,150,105,0.3)',
+    stripBg: 'linear-gradient(90deg,#ecfdf5,#d1fae5)',
+  },
+  fire: {
+    bg: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
+    border: '#ea580c',
+    glow: '0 12px 28px rgba(234,88,12,0.18)',
+    badgeBg: '#9a3412',
+    badgeColor: '#fff7ed',
+    titleColor: '#7c2d12',
+    eyebrowColor: '#ea580c',
+    bodyColor: '#1c0a03',
+    chipBg: 'rgba(255,255,255,0.76)',
+    chipColor: '#9a3412',
+    iconBg: 'rgba(255,255,255,0.56)',
+    iconBorder: 'rgba(234,88,12,0.3)',
+    stripBg: 'linear-gradient(90deg,#fff7ed,#ffedd5)',
   },
   default: {
-    bg: 'linear-gradient(135deg, #ffebe9 0%, #fff8c5 100%)',
-    border: 'var(--critical-red)',
+    bg: 'linear-gradient(135deg, #fef2f2 0%, #fff8c5 100%)',
+    border: '#dc2626',
     glow: '0 8px 24px rgba(0,0,0,0.12)',
-    badgeBg: 'var(--critical-red)',
+    badgeBg: '#dc2626',
     badgeColor: '#fff',
     titleColor: '#111827',
     eyebrowColor: '#94a3b8',
     bodyColor: '#111827',
-    chipBg: 'rgba(255,255,255,0.68)',
+    chipBg: 'rgba(255,255,255,0.72)',
     chipColor: '#111827',
-    iconBg: 'rgba(255,255,255,0.52)',
-    iconBorder: 'rgba(255,255,255,0.55)',
+    iconBg: 'rgba(255,255,255,0.56)',
+    iconBorder: 'rgba(255,255,255,0.3)',
+    stripBg: 'linear-gradient(90deg,#fef2f2,#fff8c5)',
   },
 }
 
@@ -287,12 +335,28 @@ function getHazardActions(type: string | undefined) {
   }
 }
 
+function getHazardSummaryLabel(type: string) {
+  switch (type.toLowerCase()) {
+    case 'earthquake':
+      return 'Critical watch'
+    case 'volcano':
+      return 'Ashfall watch'
+    case 'flood':
+      return 'Flood watch'
+    default:
+      return 'Active'
+  }
+}
+
 export default function GuestPanel() {
   const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
   const activeHazards = useHazardStore((s) => s.activeHazards)
+  const focusedHazardType = useHazardStore((s) => s.focusedHazardType)
+  const setFocusedHazardType = useHazardStore((s) => s.setFocusedHazardType)
   const activeHazard = activeHazards[0] ?? null
   const geocodingLib = useMapsLibrary('geocoding')
   const geocoder = useRef<google.maps.Geocoder | null>(null)
+  const areaCheckerRef = useRef<HTMLDivElement | null>(null)
 
   const [city, setCity] = useState('')
   const [barangay, setBarangay] = useState('')
@@ -302,6 +366,7 @@ export default function GuestPanel() {
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [aiAdvisory, setAiAdvisory] = useState<PublicAdvisoryResult | null>(null)
   const [loadingAiAdvisory, setLoadingAiAdvisory] = useState(false)
+  const [expandedHazardId, setExpandedHazardId] = useState<string | null>(null)
 
   const barangays = city ? (BARANGAYS_BY_CITY[city] ?? []) : []
   const hotlines = city ? (HOTLINES[city] ?? [{ label: 'National Emergency', number: '911' }]) : []
@@ -311,6 +376,15 @@ export default function GuestPanel() {
       geocoder.current = new geocodingLib.Geocoder()
     }
   }, [geocodingLib])
+
+  useEffect(() => {
+    const focusedHazard = activeHazards.find((hazard) => hazard.type === focusedHazardType)
+    if (focusedHazard) {
+      setExpandedHazardId(focusedHazard.id)
+      return
+    }
+    setExpandedHazardId(activeHazards[0]?.id ?? null)
+  }, [activeHazards, focusedHazardType])
 
   useEffect(() => {
     if (!city || !barangay) return
@@ -428,8 +502,68 @@ export default function GuestPanel() {
     : status
       ? (ALERT_CONFIG[status.alert_level] ?? ALERT_CONFIG.Normal)
       : null
+
+  const alertSummary = useMemo(
+    () => activeHazards.map((hazard) => ({
+      id: hazard.id,
+      type: hazard.type,
+      level: getHazardSummaryLabel(hazard.type),
+    })),
+    [activeHazards],
+  )
+
+  function focusHazardCard(hazardId: string, hazardType: string) {
+    setExpandedHazardId(hazardId)
+    setFocusedHazardType(hazardType)
+  }
+
+  function scrollToAreaChecker() {
+    areaCheckerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {activeHazards.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexWrap: 'wrap',
+            padding: '9px 14px',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: 14,
+            fontSize: '0.7rem',
+            fontWeight: 700,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          <span style={{ color: 'var(--critical-red)', fontWeight: 800 }}>
+            ● {activeHazards.length} Active {activeHazards.length === 1 ? 'Hazard' : 'Hazards'}
+          </span>
+          {alertSummary.map((s, i) => (
+            <span key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {i > 0 && <span style={{ color: 'var(--border-color)' }}>·</span>}
+              <button
+                onClick={() => focusHazardCard(s.id, s.type)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  color: expandedHazardId === s.id ? 'var(--accent-blue)' : 'var(--fg-default)',
+                  padding: 0,
+                  textDecoration: expandedHazardId === s.id ? 'underline' : 'none',
+                }}
+              >
+                {s.type}: {s.level}
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       {activeHazards.map((hazard) => {
         const theme = getHazardTheme(hazard.type)
         const actions = getHazardActions(hazard.type)
@@ -438,6 +572,37 @@ export default function GuestPanel() {
           : hazard.type.toLowerCase() === 'earthquake' ? '🔔'
           : hazard.type.toLowerCase() === 'fire' ? '🔥'
           : '⚠'
+        const isExpanded = expandedHazardId === hazard.id
+
+        if (!isExpanded) {
+          return (
+            <button
+              key={hazard.id}
+              onClick={() => focusHazardCard(hazard.id, hazard.type)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                width: '100%',
+                padding: '10px 14px',
+                background: theme.stripBg,
+                border: `1px solid ${theme.border}`,
+                borderRadius: 14,
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+              <span style={{ flex: 1, fontSize: '0.78rem', fontWeight: 700, color: theme.titleColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {hazard.type} Alert
+              </span>
+              <span style={{ fontSize: '0.65rem', color: theme.eyebrowColor, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                Tap to expand ›
+              </span>
+            </button>
+          )
+        }
+
         return (
           <div
             key={hazard.id}
@@ -467,25 +632,30 @@ export default function GuestPanel() {
             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span
-                    className="guest-alert-badge"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      width: 'fit-content',
-                      padding: '5px 10px',
-                      borderRadius: 999,
-                      background: theme.badgeBg,
-                      color: theme.badgeColor,
-                      fontSize: '0.68rem',
-                      fontWeight: 800,
-                      letterSpacing: 1.1,
-                      textTransform: 'uppercase',
-                      boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
-                    }}
-                  >
-                    Live {hazard.type} Alert
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span
+                      className="guest-alert-badge"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        width: 'fit-content',
+                        padding: '5px 10px',
+                        borderRadius: 999,
+                        background: theme.badgeBg,
+                        color: theme.badgeColor,
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        letterSpacing: 1.1,
+                        textTransform: 'uppercase',
+                        boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
+                      }}
+                    >
+                      ● Live {hazard.type} Alert
+                    </span>
+                    <span style={{ fontSize: '0.62rem', color: theme.eyebrowColor, fontWeight: 600 }}>
+                      Last updated: Live
+                    </span>
+                  </div>
                   <div>
                     <p className="guest-alert-eyebrow" style={{ margin: '0 0 4px', fontSize: '0.72rem', color: theme.eyebrowColor, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700 }}>
                       Active Disaster Warning
@@ -495,21 +665,39 @@ export default function GuestPanel() {
                     </p>
                   </div>
                 </div>
-                <div
-                  className="guest-alert-icon"
-                  aria-hidden="true"
-                  style={{
-                    display: 'grid',
-                    placeItems: 'center',
-                    width: 54,
-                    height: 54,
-                    borderRadius: 18,
-                    background: theme.iconBg,
-                    border: `1px solid ${theme.iconBorder}`,
-                    fontSize: '1.55rem',
-                  }}
-                >
-                  {icon}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                  <div
+                    className="guest-alert-icon"
+                    aria-hidden="true"
+                    style={{
+                      display: 'grid',
+                      placeItems: 'center',
+                      width: 54,
+                      height: 54,
+                      borderRadius: 18,
+                      background: theme.iconBg,
+                      border: `1px solid ${theme.iconBorder}`,
+                      fontSize: '1.55rem',
+                    }}
+                  >
+                    {icon}
+                  </div>
+                  {activeHazards.length > 1 && (
+                    <button
+                      onClick={() => setExpandedHazardId(null)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '0.62rem',
+                        color: theme.eyebrowColor,
+                        fontWeight: 600,
+                        padding: 0,
+                      }}
+                    >
+                      Collapse ↑
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -535,12 +723,32 @@ export default function GuestPanel() {
                   </span>
                 ))}
               </div>
+
+              <button
+                onClick={scrollToAreaChecker}
+                style={{
+                  alignSelf: 'flex-start',
+                  marginTop: 2,
+                  padding: '9px 16px',
+                  background: theme.badgeBg,
+                  color: theme.badgeColor,
+                  border: 'none',
+                  borderRadius: 999,
+                  fontSize: '0.73rem',
+                  fontWeight: 800,
+                  letterSpacing: 0.5,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                }}
+              >
+                Check if your barangay is affected →
+              </button>
             </div>
           </div>
         )
       })}
 
-      <div style={cardStyle}>
+      <div ref={areaCheckerRef} style={cardStyle}>
         <p style={{ margin: '0 0 4px', fontSize: '0.65rem', color: 'var(--accent-blue)', letterSpacing: 2, textTransform: 'uppercase' }}>
           Check Your Area
         </p>

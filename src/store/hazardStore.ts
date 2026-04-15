@@ -52,6 +52,7 @@ function rowToFloodZone(row: any): FloodZone {
 interface HazardStore {
   activeHazard:         HazardEvent | null
   activeHazards:        HazardEvent[]
+  focusedHazardType:    string | null
   isSelectingCenter:    boolean
   draftCenter:          { lat: number; lng: number } | null
 
@@ -63,6 +64,7 @@ interface HazardStore {
   loadActiveHazard:     () => Promise<void>
   setActiveHazard:      (hazard: HazardEvent) => Promise<void>
   clearHazard:          (hazardType?: string) => Promise<void>
+  setFocusedHazardType: (hazardType: string | null) => void
   setIsSelectingCenter: (v: boolean) => void
   setDraftCenter:       (c: { lat: number; lng: number } | null) => void
 
@@ -80,6 +82,7 @@ interface HazardStore {
 export const useHazardStore = create<HazardStore>((set, get) => ({
   activeHazard:      null,
   activeHazards:     [],
+  focusedHazardType: null,
   isSelectingCenter: false,
   draftCenter:       null,
   floodZones:        [],
@@ -97,7 +100,13 @@ export const useHazardStore = create<HazardStore>((set, get) => ({
     const hazards = (data ?? []).map(rowToHazard)
     const primaryHazard = hazards[0] ?? null
     const activeFloodHazard = hazards.find((hazard) => hazard.type === 'Flood') ?? null
-    set({ activeHazard: primaryHazard, activeHazards: hazards })
+    set((state) => ({
+      activeHazard: primaryHazard,
+      activeHazards: hazards,
+      focusedHazardType: hazards.some((hazard) => hazard.type === state.focusedHazardType)
+        ? state.focusedHazardType
+        : primaryHazard?.type ?? null,
+    }))
 
     if (activeFloodHazard) {
       await get().loadFloodZones(activeFloodHazard.id)
@@ -132,6 +141,7 @@ export const useHazardStore = create<HazardStore>((set, get) => ({
     set({
       activeHazard: hazard,
       activeHazards: [hazard, ...previousHazards.filter((item) => item.type !== hazard.type)],
+      focusedHazardType: hazard.type,
     })
 
     await supabase
@@ -182,6 +192,7 @@ export const useHazardStore = create<HazardStore>((set, get) => ({
     set({
       activeHazard: remainingHazards[0] ?? null,
       activeHazards: remainingHazards,
+      focusedHazardType: remainingHazards[0]?.type ?? null,
       draftCenter: null,
       floodZones: typeToClear === 'Flood' ? [] : get().floodZones,
       draftFloodZones: typeToClear === 'Flood' ? [] : get().draftFloodZones,
@@ -197,6 +208,7 @@ export const useHazardStore = create<HazardStore>((set, get) => ({
     await get().loadActiveHazard()
   },
 
+  setFocusedHazardType: (hazardType) => set({ focusedHazardType: hazardType }),
   setIsSelectingCenter: (v) => set({ isSelectingCenter: v }),
   setDraftCenter:       (c) => set({ draftCenter: c }),
 
