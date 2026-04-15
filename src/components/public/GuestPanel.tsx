@@ -224,19 +224,19 @@ const selectStyle: React.CSSProperties = {
 
 const hazardCardTheme: Record<string, { bg: string; border: string; glow: string; badgeBg: string; badgeColor: string; titleColor: string; eyebrowColor: string; bodyColor: string; chipBg: string; chipColor: string; iconBg: string; iconBorder: string; stripBg: string }> = {
   earthquake: {
-    bg: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
-    border: '#d97706',
-    glow: '0 12px 28px rgba(217,119,6,0.18)',
-    badgeBg: '#92400e',
-    badgeColor: '#fffbeb',
-    titleColor: '#78350f',
-    eyebrowColor: '#b45309',
-    bodyColor: '#1c1207',
-    chipBg: 'rgba(255,255,255,0.78)',
-    chipColor: '#92400e',
-    iconBg: 'rgba(255,255,255,0.6)',
-    iconBorder: 'rgba(217,119,6,0.3)',
-    stripBg: 'linear-gradient(90deg,#fffbeb,#fef3c7)',
+    bg: 'linear-gradient(90deg, #fff2e6 0%, #fff6cb 100%)',
+    border: '#f26b5f',
+    glow: '0 10px 24px rgba(242,107,95,0.12)',
+    badgeBg: '#df3d45',
+    badgeColor: '#fff7f6',
+    titleColor: '#0f1f46',
+    eyebrowColor: '#8f9ab4',
+    bodyColor: '#303548',
+    chipBg: '#fffaf7',
+    chipColor: '#2c3244',
+    iconBg: 'rgba(255,255,255,0.74)',
+    iconBorder: 'rgba(255,255,255,0.82)',
+    stripBg: 'linear-gradient(90deg, #fff2e6 0%, #fff6cb 100%)',
   },
   volcano: {
     bg: 'linear-gradient(135deg, #fef2f2 0%, #fde8d0 100%)',
@@ -299,19 +299,19 @@ const hazardCardTheme: Record<string, { bg: string; border: string; glow: string
     stripBg: 'linear-gradient(90deg,#fff7ed,#ffedd5)',
   },
   default: {
-    bg: 'linear-gradient(135deg, #fef2f2 0%, #fff8c5 100%)',
-    border: '#dc2626',
-    glow: '0 8px 24px rgba(0,0,0,0.12)',
-    badgeBg: '#dc2626',
-    badgeColor: '#fff',
-    titleColor: '#111827',
-    eyebrowColor: '#94a3b8',
-    bodyColor: '#111827',
-    chipBg: 'rgba(255,255,255,0.72)',
-    chipColor: '#111827',
-    iconBg: 'rgba(255,255,255,0.56)',
-    iconBorder: 'rgba(255,255,255,0.3)',
-    stripBg: 'linear-gradient(90deg,#fef2f2,#fff8c5)',
+    bg: 'linear-gradient(90deg, #fff2e6 0%, #fff6cb 100%)',
+    border: '#f26b5f',
+    glow: '0 10px 24px rgba(242,107,95,0.12)',
+    badgeBg: '#df3d45',
+    badgeColor: '#fff7f6',
+    titleColor: '#0f1f46',
+    eyebrowColor: '#8f9ab4',
+    bodyColor: '#303548',
+    chipBg: '#fffaf7',
+    chipColor: '#2c3244',
+    iconBg: 'rgba(255,255,255,0.74)',
+    iconBorder: 'rgba(255,255,255,0.82)',
+    stripBg: 'linear-gradient(90deg, #fff2e6 0%, #fff6cb 100%)',
   },
 }
 
@@ -517,9 +517,6 @@ export default function GuestPanel() {
     setFocusedHazardType(hazardType)
   }
 
-  function scrollToAreaChecker() {
-    areaCheckerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {activeHazards.length > 0 && (
@@ -611,7 +608,7 @@ export default function GuestPanel() {
               background: theme.bg,
               border: `1px solid ${theme.border}`,
               borderRadius: 22,
-              padding: 18,
+              padding: '16px 14px 14px',
               boxShadow: theme.glow,
               overflow: 'hidden',
               position: 'relative',
@@ -620,69 +617,75 @@ export default function GuestPanel() {
             <div
               style={{
                 position: 'absolute',
-                top: -22,
-                right: -10,
-                width: 96,
-                height: 96,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.22)',
-                filter: 'blur(2px)',
+                inset: 0,
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0) 48%)',
+                pointerEvents: 'none',
               }}
             />
-            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div
+              style={{
+                position: 'absolute',
+                top: 10,
+                right: 10,
+                width: 92,
+                height: 92,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.08) 72%, rgba(255,255,255,0) 100%)',
+                pointerEvents: 'none',
+              }}
+            />
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'nowrap' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span
                       className="guest-alert-badge"
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         width: 'fit-content',
-                        padding: '5px 10px',
+                        padding: '7px 12px',
                         borderRadius: 999,
                         background: theme.badgeBg,
                         color: theme.badgeColor,
                         fontSize: '0.68rem',
                         fontWeight: 800,
-                        letterSpacing: 1.1,
+                        letterSpacing: 0.45,
                         textTransform: 'uppercase',
-                        boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
+                        lineHeight: 1,
                       }}
                     >
                       ● Live {hazard.type} Alert
                     </span>
-                    <span style={{ fontSize: '0.62rem', color: theme.eyebrowColor, fontWeight: 600 }}>
-                      Last updated: Live
-                    </span>
                   </div>
                   <div>
-                    <p className="guest-alert-eyebrow" style={{ margin: '0 0 4px', fontSize: '0.72rem', color: theme.eyebrowColor, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700 }}>
+                    <p className="guest-alert-eyebrow" style={{ margin: '0 0 6px', fontSize: '0.72rem', color: theme.eyebrowColor, letterSpacing: 1.9, textTransform: 'uppercase', fontWeight: 800 }}>
                       Active Disaster Warning
                     </p>
-                    <p className="guest-alert-title" style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: theme.titleColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <p className="guest-alert-title" style={{ margin: 0, fontSize: '1.95rem', lineHeight: 0.95, fontWeight: 900, color: theme.titleColor, textTransform: 'uppercase', letterSpacing: 0.2 }}>
                       {hazard.type}
                     </p>
                   </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
                   <div
                     className="guest-alert-icon"
                     aria-hidden="true"
                     style={{
                       display: 'grid',
                       placeItems: 'center',
-                      width: 54,
-                      height: 54,
-                      borderRadius: 18,
+                      width: 48,
+                      height: 48,
+                      borderRadius: 16,
                       background: theme.iconBg,
                       border: `1px solid ${theme.iconBorder}`,
-                      fontSize: '1.55rem',
+                      boxShadow: '0 8px 18px rgba(255,255,255,0.28)',
+                      fontSize: '1.25rem',
                     }}
                   >
                     {icon}
                   </div>
-                  {activeHazards.length > 1 && (
+                  {false && (
                     <button
                       onClick={() => setExpandedHazardId(null)}
                       style={{
@@ -701,22 +704,23 @@ export default function GuestPanel() {
                 </div>
               </div>
 
-              <p className="guest-alert-copy" style={{ margin: 0, fontSize: '0.82rem', color: theme.bodyColor, lineHeight: 1.6, maxWidth: 460 }}>
+              <p className="guest-alert-copy" style={{ margin: '2px 0 0', fontSize: '0.92rem', color: theme.bodyColor, lineHeight: 1.52, maxWidth: 470, fontWeight: 600 }}>
                 A <strong>{hazard.type.toLowerCase()}</strong> hazard zone is currently being monitored on the map. Review the actions below before continuing.
               </p>
 
-              <div className="guest-alert-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div className="guest-alert-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 2 }}>
                 {actions.map((action) => (
                   <span
                     key={action}
                     style={{
-                      padding: '7px 11px',
+                      padding: '9px 12px',
                       borderRadius: 999,
                       background: theme.chipBg,
                       color: theme.chipColor,
-                      border: '1px solid rgba(255,255,255,0.45)',
-                      fontSize: '0.73rem',
-                      fontWeight: 700,
+                      border: '1px solid rgba(255,255,255,0.98)',
+                      boxShadow: '0 3px 10px rgba(227, 179, 114, 0.14)',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
                     }}
                   >
                     {action}
@@ -724,25 +728,6 @@ export default function GuestPanel() {
                 ))}
               </div>
 
-              <button
-                onClick={scrollToAreaChecker}
-                style={{
-                  alignSelf: 'flex-start',
-                  marginTop: 2,
-                  padding: '9px 16px',
-                  background: theme.badgeBg,
-                  color: theme.badgeColor,
-                  border: 'none',
-                  borderRadius: 999,
-                  fontSize: '0.73rem',
-                  fontWeight: 800,
-                  letterSpacing: 0.5,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                }}
-              >
-                Check if your barangay is affected →
-              </button>
             </div>
           </div>
         )
