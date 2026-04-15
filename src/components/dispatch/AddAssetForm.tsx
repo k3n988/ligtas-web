@@ -69,6 +69,7 @@ export default function AddAssetForm({ onClose }: { onClose: () => void }) {
   const [locating, setLocating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
   const [credModal, setCredModal] = useState<{ contact: string; password: string } | null>(null)
 
   useEffect(() => {
@@ -100,8 +101,34 @@ export default function AddAssetForm({ onClose }: { onClose: () => void }) {
     )
   }
 
+  const sendCredentialSms = async (assetContact: string, password: string) => {
+    try {
+      const response = await fetch('/api/sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: assetContact,
+          message: `LIGTAS: Asset registration successful. Contact: ${assetContact}. Temporary password: ${password}. Account type: rescuer`,
+        }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as { warning?: string; error?: string } | null
+
+      if (!response.ok) {
+        console.error('[LIGTAS] Asset SMS failed:', payload?.error ?? payload?.warning ?? response.statusText)
+        setWarning(payload?.warning ?? 'Asset saved, but SMS delivery failed.')
+      }
+    } catch (smsError) {
+      console.error('[LIGTAS] Asset SMS request failed:', smsError)
+      setWarning('Asset saved, but SMS delivery failed.')
+    }
+  }
+
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setWarning(null)
     if (!coords || coords === 'Locating...') {
       setError('Location is required.')
       return
@@ -135,6 +162,7 @@ export default function AddAssetForm({ onClose }: { onClose: () => void }) {
         lat,
         lng,
       })
+      await sendCredentialSms(contact.trim(), plainPassword)
       setPendingCoords(null)
       setCredModal({ contact: contact.trim(), password: plainPassword })
     } catch {
@@ -200,6 +228,23 @@ export default function AddAssetForm({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
+        {warning && (
+          <div
+            style={{
+              background: 'rgba(240, 136, 62, 0.12)',
+              border: '1px solid var(--fg-warning)',
+              color: 'var(--fg-warning)',
+              borderRadius: 10,
+              padding: '8px 12px',
+              marginBottom: 12,
+              fontSize: '0.78rem',
+              fontWeight: 600,
+            }}
+          >
+            {warning}
+          </div>
+        )}
+
         <div style={{ marginBottom: 12 }}>
           <label style={labelStyle}>Asset Icon</label>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -253,10 +298,15 @@ export default function AddAssetForm({ onClose }: { onClose: () => void }) {
           </label>
           <input
             value={contact}
-            onChange={(e) => setContact(e.target.value)}
+            onChange={(e) => {
+              const raw = e.target.value
+              const normalized = raw.replace(/(?!^\+)[^\d]/g, '')
+              setContact(normalized.startsWith('+') ? `+${normalized.slice(1).replace(/[^\d]/g, '')}` : normalized)
+            }}
             placeholder="09xxxxxxxxx"
             required
-            pattern="^(09|\\+639)\\d{9}$"
+            inputMode="numeric"
+            pattern="^(09[0-9]{9}|\\+639[0-9]{9})$"
             title="Enter a valid PH mobile number (e.g. 09171234567)"
             style={inputStyle}
           />

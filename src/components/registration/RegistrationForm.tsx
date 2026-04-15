@@ -166,6 +166,7 @@ export default function RegistrationForm() {
   const [sourceVal, setSourceVal] = useState<RegistrySource | ''>('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveWarning, setSaveWarning] = useState<string | null>(null)
   const [credModal, setCredModal] = useState<{ contact: string; password: string } | null>(null)
 
   useEffect(() => {
@@ -244,6 +245,31 @@ export default function RegistrationForm() {
     setSaveError(null)
   }
 
+  const sendCredentialSms = async (contact: string, password: string) => {
+    try {
+      const response = await fetch('/api/sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: contact,
+          message: `LIGTAS: Registration successful. Contact: ${contact}. Temporary password: ${password}. Account type: citizen`,
+        }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as { warning?: string; error?: string } | null
+
+      if (!response.ok) {
+        console.error('[LIGTAS] Household SMS failed:', payload?.error ?? payload?.warning ?? response.statusText)
+        setSaveWarning(payload?.warning ?? 'Registration saved, but SMS delivery failed.')
+      }
+    } catch (error) {
+      console.error('[LIGTAS] Household SMS request failed:', error)
+      setSaveWarning('Registration saved, but SMS delivery failed.')
+    }
+  }
+
   const detectDuplicate = (contact: string, pLat: number, pLng: number) => {
     for (const hh of households) {
       if (hh.contact === contact) {
@@ -259,6 +285,7 @@ export default function RegistrationForm() {
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     setSaveError(null)
+    setSaveWarning(null)
 
     if (!pinSource) {
       setSaveError('Please pin a location using GPS or the map before submitting.')
@@ -330,6 +357,7 @@ export default function RegistrationForm() {
         pinSource: pinSource ?? undefined,
       })
 
+      await sendCredentialSms(contactVal, plainPassword)
       resetForm()
       setCredModal({ contact: contactVal, password: plainPassword })
     } catch (err) {
@@ -526,7 +554,21 @@ export default function RegistrationForm() {
             </div>
             <div>
               <label style={labelStyle}>Contact Number</label>
-              <input name="contact" type="tel" placeholder="09xxxxxxxxx" required pattern="^(09|\\+639)\\d{9}$" title="Enter a valid PH mobile number (e.g. 09171234567)" style={inputStyle} />
+              <input
+                name="contact"
+                type="tel"
+                inputMode="numeric"
+                placeholder="09xxxxxxxxx"
+                required
+                pattern="^(09[0-9]{9}|\\+639[0-9]{9})$"
+                title="Enter a valid PH mobile number (e.g. 09171234567)"
+                style={inputStyle}
+                onInput={(e) => {
+                  const input = e.currentTarget
+                  const normalized = input.value.replace(/(?!^\+)[^\d]/g, '')
+                  input.value = normalized.startsWith('+') ? `+${normalized.slice(1).replace(/[^\d]/g, '')}` : normalized
+                }}
+              />
             </div>
             <div>
               <label style={labelStyle}>Total Occupants</label>
@@ -555,6 +597,12 @@ export default function RegistrationForm() {
         {saveError && (
           <div style={{ background: 'var(--bg-danger-subtle)', border: '1px solid var(--fg-danger)', color: 'var(--fg-danger)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontWeight: 600, fontSize: '0.82rem', lineHeight: 1.5 }}>
             {saveError}
+          </div>
+        )}
+
+        {saveWarning && (
+          <div style={{ background: 'rgba(240, 136, 62, 0.12)', border: '1px solid var(--fg-warning)', color: 'var(--fg-warning)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontWeight: 600, fontSize: '0.82rem', lineHeight: 1.5 }}>
+            {saveWarning}
           </div>
         )}
 
