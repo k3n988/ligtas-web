@@ -1,47 +1,37 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useHazardStore } from '@/store/hazardStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHouseholdStore } from '@/store/householdStore'
 import type { PublicAdvisoryResult } from '@/lib/ai/advisories'
 import type { Household } from '@/types'
 
-const STATUS_CONFIG = {
-  Pending: {
-    color: '#d29922', bg: '#1f1a0e', border: '#9e6a03',
-    icon: <ClockIcon />, label: 'Queued - Awaiting Rescue',
-    message: 'Your request has been received. Rescuers have been notified.',
-  },
-  Rescued: {
-    color: '#3fb950', bg: '#0d2016', border: '#238636',
-    icon: <CheckCircleIcon />, label: 'Marked as Rescued',
-    message: 'You have been marked as rescued. Stay safe!',
-  },
-}
-
 export default function CitizenPanel() {
   const user = useAuthStore((s) => s.user)
   const households = useHouseholdStore((s) => s.households)
   const markRescued = useHouseholdStore((s) => s.markRescued)
   const restorePending = useHouseholdStore((s) => s.restorePending)
+  const setPanToCoords = useHouseholdStore((s) => s.setPanToCoords)
   const activeHazard = useHazardStore((s) => s.activeHazard)
 
   const [confirming, setConfirming] = useState<'safe' | 'cancel' | null>(null)
   const [busy, setBusy] = useState(false)
   const [aiAdvisory, setAiAdvisory] = useState<PublicAdvisoryResult | null>(null)
+  const pannedRef = useRef(false)
 
   const household: Household | undefined = households.find(
     (hh) => hh.contact === user?.contact,
   )
 
-  const effectiveConfirming =
-    household?.status === 'Pending'
-      ? (confirming === 'cancel' ? null : confirming)
-      : household?.status === 'Rescued'
-        ? (confirming === 'safe' ? null : confirming)
-        : null
+  // Auto-focus map to citizen's household location on first load
+  useEffect(() => {
+    if (!household || pannedRef.current) return
+    pannedRef.current = true
+    setPanToCoords({ lat: household.lat, lng: household.lng, zoom: 17 })
+  }, [household, setPanToCoords])
 
+  // Load AI advisory when hazard is active
   useEffect(() => {
     if (!household || !activeHazard?.isActive) {
       setAiAdvisory(null)
@@ -65,8 +55,7 @@ export default function CitizenPanel() {
           }),
           signal: controller.signal,
         })
-
-        if (!response.ok) throw new Error('Failed to load advisory')
+        if (!response.ok) throw new Error('Failed')
         setAiAdvisory((await response.json()) as PublicAdvisoryResult)
       } catch {
         if (!controller.signal.aborted) setAiAdvisory(null)
@@ -93,118 +82,124 @@ export default function CitizenPanel() {
     setConfirming(null)
   }
 
-  const statusCfg = household ? STATUS_CONFIG[household.status] : null
+  const effectiveConfirming =
+    household?.status === 'Pending'
+      ? (confirming === 'cancel' ? null : confirming)
+      : household?.status === 'Rescued'
+        ? (confirming === 'safe' ? null : confirming)
+        : null
+
+  const isPending = household?.status === 'Pending'
+  const isRescued = household?.status === 'Rescued'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+      {/* Active Disaster Warning */}
       {activeHazard?.isActive && (
         <div
           style={{
-            background: '#3d1a1a',
-            border: '1px solid #da3633',
-            borderRadius: 6,
+            background: 'var(--bg-danger-subtle)',
+            border: '1px solid var(--fg-danger)',
+            borderRadius: 8,
             padding: '12px 14px',
             display: 'flex',
             flexDirection: 'column',
             gap: 4,
           }}
         >
-          <span
-            style={{
-              fontSize: '0.6rem',
-              color: '#ff4d4d',
-              letterSpacing: 2,
-              textTransform: 'uppercase',
-              fontWeight: 800,
-            }}
-          >
+          <span style={{ fontSize: '0.6rem', color: 'var(--fg-danger)', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 800 }}>
             Active Disaster Warning
           </span>
-          <span
-            style={{
-              fontSize: '1.1rem',
-              fontWeight: 900,
-              color: '#ffffff',
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-            }}
-          >
+          <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--fg-danger)', textTransform: 'uppercase', letterSpacing: 1 }}>
             {activeHazard.type}
           </span>
-          <span style={{ fontSize: '0.75rem', color: '#c9d1d9', lineHeight: 1.5 }}>
-            A <b>{activeHazard.type.toLowerCase()}</b> hazard zone is currently being monitored on the map. Please stay alert and follow local advisories.
+          <span style={{ fontSize: '0.75rem', color: 'var(--fg-default)', lineHeight: 1.5, opacity: 0.85 }}>
+            A <b>{activeHazard.type.toLowerCase()}</b> hazard zone is currently active. Stay alert and follow local DRRMO advisories.
           </span>
         </div>
       )}
 
+      {/* AI Safety Advisory */}
       {aiAdvisory && (
         <div
           style={{
-            background: '#101826',
-            border: '1px solid #1f6feb',
-            borderRadius: 6,
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--accent-blue)',
+            borderRadius: 8,
             padding: '12px 14px',
           }}
         >
-          <span
-            style={{
-              display: 'block',
-              fontSize: '0.6rem',
-              color: '#58a6ff',
-              letterSpacing: 2,
-              textTransform: 'uppercase',
-              fontWeight: 800,
-              marginBottom: 6,
-            }}
-          >
-            AI Safety Advisory
-          </span>
-          <p style={{ margin: '0 0 6px', fontSize: '0.9rem', fontWeight: 700, color: '#e6edf3' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <span style={{ fontSize: '0.6rem', color: 'var(--accent-blue)', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 800 }}>
+              AI Safety Advisory
+            </span>
+            <span style={{
+              fontSize: '0.58rem', padding: '1px 5px', borderRadius: 999, fontWeight: 700,
+              background: aiAdvisory.source === 'gemini' ? 'var(--accent-blue)' : 'var(--bg-elevated)',
+              color: aiAdvisory.source === 'gemini' ? '#fff' : 'var(--fg-muted)',
+            }}>
+              {aiAdvisory.source === 'gemini' ? 'AI' : 'Rule-based'}
+            </span>
+          </div>
+          <p style={{ margin: '0 0 5px', fontSize: '0.88rem', fontWeight: 700, color: 'var(--fg-default)' }}>
             {aiAdvisory.title}
           </p>
-          <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: '#c9d1d9', lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: 'var(--fg-muted)', lineHeight: 1.5 }}>
             {aiAdvisory.summary}
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {aiAdvisory.actions.map((action) => (
               <div
                 key={action}
                 style={{
-                  padding: '7px 9px',
-                  borderRadius: 4,
-                  background: '#0d1117',
-                  border: '1px solid #30363d',
+                  padding: '7px 10px',
+                  borderRadius: 6,
+                  background: 'var(--bg-inset)',
+                  border: '1px solid var(--border)',
                   fontSize: '0.74rem',
-                  color: '#e6edf3',
+                  color: 'var(--fg-default)',
+                  lineHeight: 1.4,
                 }}
               >
-                {action}
+                · {action}
               </div>
             ))}
           </div>
         </div>
       )}
 
+      {/* Rescue Status Card */}
       {household && (
-        <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, overflow: 'hidden' }}>
-          <div style={{ padding: 16, background: statusCfg?.bg, borderBottom: '1px solid #30363d' }}>
-            <p style={{ margin: '0 0 4px', fontSize: '0.65rem', color: '#8b949e', letterSpacing: 2, textTransform: 'uppercase' }}>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+
+          {/* Status Header */}
+          <div style={{
+            padding: '14px 16px',
+            background: isPending ? 'var(--bg-warning-subtle)' : 'var(--bg-success-subtle)',
+            borderBottom: '1px solid var(--border)',
+          }}>
+            <p style={{ margin: '0 0 3px', fontSize: '0.6rem', color: 'var(--fg-muted)', letterSpacing: 2, textTransform: 'uppercase' }}>
               Rescue Status
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 4px' }}>
-              <span style={{ color: statusCfg?.color, display: 'flex' }}>{statusCfg?.icon}</span>
-              <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: statusCfg?.color }}>
-                {statusCfg?.label}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 3px' }}>
+              <span style={{ color: isPending ? 'var(--fg-warning)' : 'var(--fg-success)', display: 'flex' }}>
+                {isPending ? <ClockIcon /> : <CheckCircleIcon />}
+              </span>
+              <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: isPending ? 'var(--fg-warning)' : 'var(--fg-success)' }}>
+                {isPending ? 'Queued — Awaiting Rescue' : 'Marked as Rescued'}
               </p>
             </div>
-            <p style={{ margin: 0, fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
-              {statusCfg?.message}
+            <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--fg-muted)', lineHeight: 1.5 }}>
+              {isPending
+                ? 'Your request has been received. Rescuers have been notified.'
+                : 'You have been marked as rescued. Stay safe!'}
             </p>
 
-            {household.status === 'Pending' && (
+            {isPending && (
               <div
                 style={{
-                  marginTop: 12,
+                  marginTop: 10,
                   display: 'inline-block',
                   padding: '3px 10px',
                   borderRadius: 20,
@@ -221,46 +216,26 @@ export default function CitizenPanel() {
             )}
           </div>
 
-          {household.status === 'Pending' && (
-            <div style={{ padding: 16 }}>
-              {effectiveConfirming === 'safe' ? (
+          {/* Actions */}
+          <div style={{ padding: 14 }}>
+            {isPending && (
+              effectiveConfirming === 'safe' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#3fb950', fontWeight: 600 }}>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--fg-success)', fontWeight: 600 }}>
                     Confirm you are safe?
                   </p>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       onClick={handleSafe}
                       disabled={busy}
-                      style={{
-                        flex: 1,
-                        padding: '10px',
-                        background: '#238636',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 4,
-                        fontWeight: 700,
-                        fontSize: '0.8rem',
-                        cursor: busy ? 'not-allowed' : 'pointer',
-                        opacity: busy ? 0.7 : 1,
-                      }}
+                      style={{ flex: 1, padding: '10px', background: 'var(--resolved-green)', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, fontSize: '0.8rem', cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1 }}
                     >
                       {busy ? 'Saving...' : 'Yes, I am Safe'}
                     </button>
                     <button
                       onClick={() => setConfirming(null)}
                       disabled={busy}
-                      style={{
-                        flex: 1,
-                        padding: '10px',
-                        background: 'transparent',
-                        color: '#8b949e',
-                        border: '1px solid #30363d',
-                        borderRadius: 4,
-                        fontWeight: 600,
-                        fontSize: '0.8rem',
-                        cursor: 'pointer',
-                      }}
+                      style={{ flex: 1, padding: '10px', background: 'transparent', color: 'var(--fg-muted)', border: '1px solid var(--border)', borderRadius: 6, fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
                     >
                       Go Back
                     </button>
@@ -269,69 +244,31 @@ export default function CitizenPanel() {
               ) : (
                 <button
                   onClick={() => setConfirming('safe')}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    background: '#0d2016',
-                    color: '#3fb950',
-                    border: '1px solid #238636',
-                    borderRadius: 4,
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    letterSpacing: 1,
-                  }}
+                  style={{ width: '100%', padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--bg-success-subtle)', color: 'var(--fg-success)', border: '1px solid var(--fg-success)', borderRadius: 6, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', letterSpacing: 1 }}
                 >
                   <CheckCircleIcon size={18} /> I AM SAFE
                 </button>
-              )}
-            </div>
-          )}
+              )
+            )}
 
-          {household.status === 'Rescued' && (
-            <div style={{ padding: 16 }}>
-              {effectiveConfirming === 'cancel' ? (
+            {isRescued && (
+              effectiveConfirming === 'cancel' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#f85149', fontWeight: 600 }}>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--fg-danger)', fontWeight: 600 }}>
                     Re-submit your rescue request?
                   </p>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       onClick={handleCancel}
                       disabled={busy}
-                      style={{
-                        flex: 1,
-                        padding: '10px',
-                        background: '#da3633',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 4,
-                        fontWeight: 700,
-                        fontSize: '0.8rem',
-                        cursor: busy ? 'not-allowed' : 'pointer',
-                        opacity: busy ? 0.7 : 1,
-                      }}
+                      style={{ flex: 1, padding: '10px', background: 'var(--critical-red)', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, fontSize: '0.8rem', cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1 }}
                     >
                       {busy ? 'Saving...' : 'Yes, I Need Help'}
                     </button>
                     <button
                       onClick={() => setConfirming(null)}
                       disabled={busy}
-                      style={{
-                        flex: 1,
-                        padding: '10px',
-                        background: 'transparent',
-                        color: '#8b949e',
-                        border: '1px solid #30363d',
-                        borderRadius: 4,
-                        fontWeight: 600,
-                        fontSize: '0.8rem',
-                        cursor: 'pointer',
-                      }}
+                      style={{ flex: 1, padding: '10px', background: 'transparent', color: 'var(--fg-muted)', border: '1px solid var(--border)', borderRadius: 6, fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
                     >
                       Go Back
                     </button>
@@ -339,43 +276,29 @@ export default function CitizenPanel() {
                 </div>
               ) : (
                 <>
-                  <p style={{ margin: '0 0 12px', fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
+                  <p style={{ margin: '0 0 10px', fontSize: '0.74rem', color: 'var(--fg-muted)', lineHeight: 1.5 }}>
                     If your situation has changed and you still need rescue, tap below to re-submit your request.
                   </p>
                   <button
                     onClick={() => setConfirming('cancel')}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      background: 'transparent',
-                      color: '#a3b408',
-                      border: '1px solid #a3b408',
-                      borderRadius: 4,
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      letterSpacing: 1,
-                    }}
+                    style={{ width: '100%', padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', color: 'var(--fg-warning)', border: '1px solid var(--fg-warning)', borderRadius: 6, fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', letterSpacing: 1 }}
                   >
                     <AlertTriangleIcon size={18} /> RE-SUBMIT REQUEST
                   </button>
                 </>
-              )}
-            </div>
-          )}
+              )
+            )}
+          </div>
         </div>
       )}
 
+      {/* Registration Details */}
       {household && (
-        <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 6, padding: 16 }}>
-          <p style={{ margin: '0 0 12px', fontSize: '0.65rem', color: '#8b949e', letterSpacing: 2, textTransform: 'uppercase' }}>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 14 }}>
+          <p style={{ margin: '0 0 10px', fontSize: '0.6rem', color: 'var(--fg-muted)', letterSpacing: 2, textTransform: 'uppercase' }}>
             Your Registration
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {[
               { label: 'ID', value: household.id },
               { label: 'Head', value: household.head },
@@ -384,11 +307,42 @@ export default function CitizenPanel() {
               { label: 'Registered', value: household.created_at ? new Date(household.created_at).toLocaleDateString('en-PH', { dateStyle: 'medium' }) : '-' },
             ].map(({ label, value }) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', gap: 8 }}>
-                <span style={{ color: '#8b949e', flexShrink: 0 }}>{label}</span>
-                <span style={{ color: '#e6edf3', textAlign: 'right' }}>{value}</span>
+                <span style={{ color: 'var(--fg-muted)', flexShrink: 0 }}>{label}</span>
+                <span style={{ color: 'var(--fg-default)', textAlign: 'right' }}>{value}</span>
               </div>
             ))}
           </div>
+
+          {/* Locate on Map button */}
+          <button
+            onClick={() => setPanToCoords({ lat: household.lat, lng: household.lng, zoom: 17 })}
+            style={{
+              marginTop: 12,
+              width: '100%',
+              padding: '9px',
+              background: 'var(--bg-inset)',
+              border: '1px solid var(--accent-blue)',
+              color: 'var(--accent-blue)',
+              borderRadius: 6,
+              fontWeight: 600,
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+            }}
+          >
+            Locate My Home on Map
+          </button>
+        </div>
+      )}
+
+      {/* Not registered message */}
+      {!household && (
+        <div style={{ background: 'var(--bg-surface)', border: '1px dashed var(--border)', borderRadius: 8, padding: '24px 16px', textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--fg-muted)', fontWeight: 500 }}>
+            No registration found for your account.
+          </p>
+          <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>
+            Contact your local DRRMO to register your household.
+          </p>
         </div>
       )}
     </div>

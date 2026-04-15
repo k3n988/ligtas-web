@@ -20,7 +20,6 @@ const ADMIN_TABS = [
 
 const RESCUER_TABS = [
   { href: '/queue', label: 'QUEUE' },
-  { href: '/assets', label: 'ASSETS' },
   { href: '/admin', label: 'DASHBOARD' },
 ]
 

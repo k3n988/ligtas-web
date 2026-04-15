@@ -135,6 +135,16 @@
   --border-color:    var(--border);
   --text-main:       var(--fg-default);
   --text-muted:      var(--fg-muted);
+
+  /* Semantic shorthand aliases used by HouseholdCard / HouseholdTable */
+  --warning-soft:    var(--bg-warning-subtle);
+  --warning-border:  var(--fg-warning);
+  --warning-strong:  var(--fg-warning);
+  --success-soft:    var(--bg-success-subtle);
+  --success-border:  var(--fg-success);
+  --success-strong:  var(--fg-success);
+  --accent-strong:   var(--accent-blue);
+  --fg-strong:       var(--fg-default);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
