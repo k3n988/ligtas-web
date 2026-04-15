@@ -38,12 +38,89 @@ interface QueueEntry {
   effectiveLevel: TriageLevel
   isInHazardZone: boolean
   hazardDistanceKm: number | null
+  hazardPriorityRank: number
+  matchingHazardTypes: string[]
+}
+
+const HAZARD_LEVEL_PRIORITY: Record<TriageLevel, number> = {
+  CRITICAL: 0,
+  HIGH: 1,
+  ELEVATED: 2,
+  STABLE: 3,
+}
+
+function getHazardLevelForHousehold(
+  household: Household,
+  activeHazards: ReturnType<typeof useHazardStore.getState>['activeHazards'],
+  floodZones: ReturnType<typeof useHazardStore.getState>['floodZones'],
+): TriageLevel | null {
+  let bestLevel: TriageLevel | null = null
+
+  for (const hazard of activeHazards) {
+    if (!hazard.isActive) continue
+
+    if (hazard.type === 'Flood') {
+      for (const zone of floodZones) {
+        if (!isPointInAnyPolygon({ lat: household.lat, lng: household.lng }, [zone.polygon])) continue
+        const zoneLevel = zone.severity.toUpperCase() as TriageLevel
+        if (!bestLevel || HAZARD_LEVEL_PRIORITY[zoneLevel] < HAZARD_LEVEL_PRIORITY[bestLevel]) {
+          bestLevel = zoneLevel
+        }
+      }
+      continue
+    }
+
+    const distanceKm = getNearestHouseholdHazardDistanceKm(household, [hazard])
+    if (distanceKm === null) continue
+
+    const level =
+      distanceKm <= hazard.radii.critical ? 'CRITICAL'
+        : distanceKm <= hazard.radii.high ? 'HIGH'
+          : distanceKm <= hazard.radii.elevated ? 'ELEVATED'
+            : distanceKm <= hazard.radii.stable ? 'STABLE'
+              : null
+
+    if (level && (!bestLevel || HAZARD_LEVEL_PRIORITY[level] < HAZARD_LEVEL_PRIORITY[bestLevel])) {
+      bestLevel = level
+    }
+  }
+
+  return bestLevel
+}
+
+function getHazardLevelForType(
+  household: Household,
+  hazard: ReturnType<typeof useHazardStore.getState>['activeHazards'][number],
+  floodZones: ReturnType<typeof useHazardStore.getState>['floodZones'],
+  floodOverrideLevel: TriageLevel | null,
+): TriageLevel | null {
+  if (!hazard.isActive) return null
+
+  if (hazard.type === 'Flood') {
+    if (floodOverrideLevel) return floodOverrideLevel
+    for (const zone of floodZones) {
+      if (isPointInAnyPolygon({ lat: household.lat, lng: household.lng }, [zone.polygon])) {
+        return zone.severity.toUpperCase() as TriageLevel
+      }
+    }
+    return null
+  }
+
+  const distanceKm = getNearestHouseholdHazardDistanceKm(household, [hazard])
+  if (distanceKm === null) return null
+  if (distanceKm <= hazard.radii.critical) return 'CRITICAL'
+  if (distanceKm <= hazard.radii.high) return 'HIGH'
+  if (distanceKm <= hazard.radii.elevated) return 'ELEVATED'
+  if (distanceKm <= hazard.radii.stable) return 'STABLE'
+  return null
 }
 
 export default function TriageQueue() {
   const households = useHouseholdStore((s) => s.households)
+  const loadHouseholds = useHouseholdStore((s) => s.loadHouseholds)
   const setSelectedId = useHouseholdStore((s) => s.setSelectedId)
   const activeHazards = useHazardStore((s) => s.activeHazards)
+  const loadActiveHazard = useHazardStore((s) => s.loadActiveHazard)
   const floodZones = useHazardStore((s) => s.floodZones)
   const showNoahFlood = useNoahFloodStore((s) => s.visible)
   const noahAnalysisStatus = useNoahFloodStore((s) => s.analysisStatus)
@@ -55,25 +132,39 @@ export default function TriageQueue() {
   const [cityFilter, setCityFilter] = useState('')
   const [brgyFilter, setBrgyFilter] = useState('')
   const [vulnerabilityFilter, setVulnerabilityFilter] = useState('')
+  const [hazardFilter, setHazardFilter] = useState('')
+
+  useEffect(() => {
+    void loadHouseholds()
+  }, [loadHouseholds])
+
+  useEffect(() => {
+    void loadActiveHazard()
+  }, [loadActiveHazard])
 
   useEffect(() => {
     if (!showNoahFlood) return
     void ensureAnalysisLoaded()
   }, [ensureAnalysisLoaded, showNoahFlood])
 
+  const hasActiveHazards = activeHazards.length > 0
+  const activeHazardTypes = useMemo(
+    () => Array.from(new Set(activeHazards.map((hazard) => hazard.type))).sort((a, b) => a.localeCompare(b)),
+    [activeHazards],
+  )
+
   const cities = useMemo(
     () =>
-      Array.from(new Set(households.map((h) => h.city)))
-        .filter((c) => c.toLowerCase().endsWith('city'))
+      Array.from(new Set(households.map((h) => h.city.trim()).filter(Boolean)))
         .sort((a, b) => a.localeCompare(b)),
     [households],
   )
 
   const barangays = useMemo(() => {
     const source = cityFilter
-      ? households.filter((h) => h.city === cityFilter && h.city.toLowerCase().includes('city'))
-      : households.filter((h) => h.city.toLowerCase().includes('city'))
-    return Array.from(new Set(source.map((h) => h.barangay))).sort((a, b) => a.localeCompare(b))
+      ? households.filter((h) => h.city === cityFilter)
+      : households
+    return Array.from(new Set(source.map((h) => h.barangay.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b))
   }, [households, cityFilter])
 
   const handleCityChange = (v: string) => {
@@ -84,18 +175,25 @@ export default function TriageQueue() {
   const queueEntries = useMemo<QueueEntry[]>(() => {
     const filtered = households
       .filter((h) => h.approvalStatus === 'approved')
-      .filter((h) => (!cityFilter || h.city === cityFilter) && h.city.toLowerCase().endsWith('city'))
+      .filter((h) => !cityFilter || h.city === cityFilter)
       .filter((h) => !brgyFilter || h.barangay === brgyFilter)
       .map((household) => {
         const point = { lat: household.lat, lng: household.lng }
-        const isInsideNoahVar3 = showNoahFlood
+        const hazardLayerLevel = getHazardLevelForHousehold(household, activeHazards, floodZones)
+        const isInsideNoahVar3 = hasActiveHazards
+          && activeHazards.some((hazard) => hazard.type === 'Flood')
+          && showNoahFlood
           && noahAnalysisStatus === 'ready'
           && isPointInAnyPolygon(point, noahVar3Polygons)
-        const isInsideNoahVar2 = showNoahFlood
+        const isInsideNoahVar2 = hasActiveHazards
+          && activeHazards.some((hazard) => hazard.type === 'Flood')
+          && showNoahFlood
           && noahAnalysisStatus === 'ready'
           && !isInsideNoahVar3
           && isPointInAnyPolygon(point, noahVar2Polygons)
-        const isInsideNoahVar1 = showNoahFlood
+        const isInsideNoahVar1 = hasActiveHazards
+          && activeHazards.some((hazard) => hazard.type === 'Flood')
+          && showNoahFlood
           && noahAnalysisStatus === 'ready'
           && !isInsideNoahVar3
           && !isInsideNoahVar2
@@ -103,7 +201,17 @@ export default function TriageQueue() {
 
         const baseEffectiveLevel = getEffectiveHouseholdTriageFromHazards(household, activeHazards, floodZones)
         const effectiveLevel = isInsideNoahVar3 ? 'CRITICAL' : isInsideNoahVar2 ? 'HIGH' : isInsideNoahVar1 ? 'ELEVATED' : baseEffectiveLevel
-        const isInHazardZone = isInsideNoahVar3 || isInsideNoahVar2 || isInsideNoahVar1 || isHouseholdInAnyHazardZone(household, activeHazards, floodZones)
+        const effectiveHazardLevel = isInsideNoahVar3 ? 'CRITICAL' : isInsideNoahVar2 ? 'HIGH' : isInsideNoahVar1 ? 'ELEVATED' : hazardLayerLevel
+        const isInHazardZone = Boolean(effectiveHazardLevel) || isHouseholdInAnyHazardZone(household, activeHazards, floodZones)
+        const matchingHazardTypes = activeHazards
+          .filter((hazard) => getHazardLevelForType(
+            household,
+            hazard,
+            floodZones,
+            isInsideNoahVar3 ? 'CRITICAL' : isInsideNoahVar2 ? 'HIGH' : isInsideNoahVar1 ? 'ELEVATED' : null,
+          ))
+          .map((hazard) => hazard.type)
+
         return {
           household: {
             ...household,
@@ -112,16 +220,23 @@ export default function TriageQueue() {
           effectiveLevel,
           isInHazardZone,
           hazardDistanceKm: getNearestHouseholdHazardDistanceKm(household, activeHazards),
+          hazardPriorityRank: effectiveHazardLevel ? HAZARD_LEVEL_PRIORITY[effectiveHazardLevel] : Number.MAX_SAFE_INTEGER,
+          matchingHazardTypes,
         }
       })
+      .filter((entry) => !hazardFilter || entry.matchingHazardTypes.includes(hazardFilter))
       .filter((entry) => !vulnerabilityFilter || entry.effectiveLevel === vulnerabilityFilter)
 
     return filtered.sort((a, b) => {
       if (a.household.status === 'Rescued' && b.household.status !== 'Rescued') return 1
       if (a.household.status !== 'Rescued' && b.household.status === 'Rescued') return -1
 
-      if (activeHazards.length > 0 && a.isInHazardZone !== b.isInHazardZone) {
+      if (hasActiveHazards && a.isInHazardZone !== b.isInHazardZone) {
         return a.isInHazardZone ? -1 : 1
+      }
+
+      if (a.isInHazardZone && b.isInHazardZone && a.hazardPriorityRank !== b.hazardPriorityRank) {
+        return a.hazardPriorityRank - b.hazardPriorityRank
       }
 
       const triageDiff = TRIAGE_ORDER[a.effectiveLevel] - TRIAGE_ORDER[b.effectiveLevel]
@@ -135,15 +250,15 @@ export default function TriageQueue() {
 
       return a.household.city.localeCompare(b.household.city) || a.household.barangay.localeCompare(b.household.barangay)
     })
-  }, [households, cityFilter, brgyFilter, vulnerabilityFilter, activeHazards, floodZones, showNoahFlood, noahAnalysisStatus, noahVar3Polygons, noahVar2Polygons, noahVar1Polygons])
+  }, [households, cityFilter, brgyFilter, vulnerabilityFilter, hazardFilter, activeHazards, floodZones, hasActiveHazards, showNoahFlood, noahAnalysisStatus, noahVar3Polygons, noahVar2Polygons, noahVar1Polygons])
 
   const pending = queueEntries.filter((entry) => entry.household.status === 'Pending')
   const rescued = queueEntries.filter((entry) => entry.household.status === 'Rescued')
   const hazardPending = pending.filter((entry) => entry.isInHazardZone)
   const regularPending = pending.filter((entry) => !entry.isInHazardZone)
-  const isFiltered = Boolean(cityFilter || brgyFilter || vulnerabilityFilter)
-  const showHazardPriority = Boolean((activeHazards.length > 0 || showNoahFlood) && hazardPending.length > 0)
-  const hazardPriorityLabel = showNoahFlood ? 'Flood' : activeHazards.map((hazard) => hazard.type).join(', ')
+  const isFiltered = Boolean(cityFilter || brgyFilter || vulnerabilityFilter || hazardFilter)
+  const showHazardPriority = Boolean(hasActiveHazards && hazardPending.length > 0)
+  const hazardPriorityLabel = hazardFilter || activeHazards.map((hazard) => hazard.type).join(', ')
 
   const renderPriorityGroups = (entries: QueueEntry[]) =>
     Object.keys(TRIAGE_ORDER).map((level) => {
@@ -198,8 +313,8 @@ export default function TriageQueue() {
             aria-label="Filter queue by city"
             style={{ ...selectStyle, color: cityFilter ? 'var(--fg-default)' : 'var(--fg-muted)' }}
           >
-            <option value="" disabled hidden>
-              Select City
+            <option value="">
+              All Cities / Municipalities
             </option>
             {cities.map((c) => (
               <option key={c} value={c}>
@@ -214,12 +329,28 @@ export default function TriageQueue() {
             aria-label="Filter queue by barangay"
             style={{ ...selectStyle, color: brgyFilter ? 'var(--fg-default)' : 'var(--fg-muted)' }}
           >
-            <option value="" disabled hidden>
-              Select Barangay
+            <option value="">
+              All Barangays
             </option>
             {barangays.map((b) => (
               <option key={b} value={b}>
                 {b}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={hazardFilter}
+            onChange={(e) => setHazardFilter(e.target.value)}
+            aria-label="Filter queue by active disaster"
+            style={{ ...selectStyle, color: hazardFilter ? 'var(--fg-default)' : 'var(--fg-muted)' }}
+          >
+            <option value="">
+              {activeHazardTypes.length > 1 ? 'All Active Disasters' : 'Active Disaster'}
+            </option>
+            {activeHazardTypes.map((hazardType) => (
+              <option key={hazardType} value={hazardType}>
+                {hazardType}
               </option>
             ))}
           </select>
@@ -230,8 +361,8 @@ export default function TriageQueue() {
             aria-label="Filter queue by priority"
             style={{ ...selectStyle, color: vulnerabilityFilter ? 'var(--fg-default)' : 'var(--fg-muted)' }}
           >
-            <option value="" disabled hidden>
-              Select Priority
+            <option value="">
+              All Priorities
             </option>
             {Object.keys(TRIAGE_ORDER).map((level) => (
               <option key={level} value={level}>
@@ -245,6 +376,7 @@ export default function TriageQueue() {
               onClick={() => {
                 setCityFilter('')
                 setBrgyFilter('')
+                setHazardFilter('')
                 setVulnerabilityFilter('')
               }}
               title="Clear filters"
