@@ -449,10 +449,9 @@ function MapInner() {
         defaultCenter={DEFAULT_CENTER}
         defaultZoom={14}
         styles={CLEAN_STYLES}
-        disableDefaultUI={false}
+        disableDefaultUI={true}
         gestureHandling="greedy"
         style={{ width: '100%', height: '100%' }}
-        mapTypeControlOptions={{ mapTypeIds: ['roadmap', 'satellite', 'hybrid'] }}
         onClick={handleMapClick}
       >
         <PanController />
@@ -495,9 +494,68 @@ function MapInner() {
         )}
 
         <MapLegend />
+        <MapControls />
       </Map>
       <HazardControlPanel />
 
+    </div>
+  )
+}
+
+function MapControls() {
+  const map = useMap()
+
+  const btnStyle: React.CSSProperties = {
+    width: 36,
+    height: 36,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'var(--map-panel-bg)',
+    border: 'none',
+    borderBottom: '1px solid var(--map-panel-border)',
+    cursor: 'pointer',
+    color: 'var(--fg-default)',
+    fontSize: '1.1rem',
+    transition: 'background 0.15s',
+  }
+
+  const zoomIn = () => { if (map) map.setZoom((map.getZoom() ?? 14) + 1) }
+  const zoomOut = () => { if (map) map.setZoom((map.getZoom() ?? 14) - 1) }
+  const resetTilt = () => { if (map) { map.setTilt(0); map.setHeading(0) } }
+  const locateCenter = () => {
+    if (!map) return
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition((pos) => {
+      map.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      map.setZoom(16)
+    })
+  }
+  const toggleMapType = () => {
+    if (!map) return
+    map.setMapTypeId(map.getMapTypeId() === 'roadmap' ? 'satellite' : 'roadmap')
+  }
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        right: 10,
+        top: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: 10,
+        overflow: 'hidden',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.22)',
+        border: '1px solid var(--map-panel-border)',
+        zIndex: 10,
+      }}
+    >
+      <button title="Zoom in" onClick={zoomIn} style={btnStyle}>＋</button>
+      <button title="Zoom out" onClick={zoomOut} style={{ ...btnStyle }}>－</button>
+      <button title="Reset compass" onClick={resetTilt} style={{ ...btnStyle, fontSize: '1rem' }}>◈</button>
+      <button title="My location" onClick={locateCenter} style={{ ...btnStyle, borderBottom: 'none', fontSize: '1rem' }}>◎</button>
+      <button title="Toggle satellite" onClick={toggleMapType} style={{ ...btnStyle, borderBottom: 'none', fontSize: '0.9rem', marginTop: 1 }}>🗺</button>
     </div>
   )
 }
