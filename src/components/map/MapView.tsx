@@ -118,10 +118,10 @@ const FLOOD_ZONE_STYLE: Record<FloodSeverity, { fill: string; fillOpacity: numbe
 }
 
 const SEVERITY_LABEL: Record<FloodSeverity, string> = {
-  critical: 'ðŸ”´ Critical',
-  high:     'ðŸŸ  High',
-  elevated: 'ðŸŸ¡ Elevated',
-  stable:   'ðŸ”µ Stable',
+  critical: 'Critical',
+  high:     'High',
+  elevated: 'Elevated',
+  stable:   'Stable',
 }
 
 const DEPTH_LABEL: Record<string, string> = {
@@ -182,12 +182,14 @@ function FloodZoneOverlays() {
       listeners.push(poly.addListener('click', (e: google.maps.MapMouseEvent) => {
         if (!e.latLng) return
         iw.setContent(`
-          <div style="font-family:Inter,sans-serif;padding:4px 2px;min-width:130px">
-            <div style="font-size:0.82rem;font-weight:700;margin-bottom:4px">
-              ${SEVERITY_LABEL[zone.severity]} Flood Zone
+          <div style="font-family:Inter,sans-serif;padding:10px 8px;min-width:190px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${FLOOD_ZONE_STYLE[zone.severity].fill};flex-shrink:0"></span>
+              <span style="font-size:0.8rem;font-weight:800;color:${FLOOD_ZONE_STYLE[zone.severity].fill};text-transform:uppercase;letter-spacing:0.5px">${SEVERITY_LABEL[zone.severity]} Flood Zone</span>
             </div>
-            ${zone.depth ? `<div style="font-size:0.75rem;color:#555">ðŸ’§ ${DEPTH_LABEL[zone.depth] ?? zone.depth}</div>` : ''}
-            ${zone.notes ? `<div style="font-size:0.73rem;color:#666;margin-top:3px">${zone.notes}</div>` : ''}
+            <div style="font-size:0.72rem;color:#666;padding-left:20px;margin-bottom:2px">Hazard area &mdash; avoid if possible</div>
+            ${zone.depth ? '<div style="font-size:0.72rem;color:#555;padding-left:20px;margin-top:3px">Water depth: <b>' + (DEPTH_LABEL[zone.depth] ?? zone.depth) + '</b></div>' : ''}
+            ${zone.notes ? '<div style="font-size:0.71rem;color:#777;padding-left:20px;margin-top:4px;font-style:italic">' + zone.notes + '</div>' : ''}
           </div>`)
         iw.setPosition(e.latLng)
         iw.open(map)
@@ -425,7 +427,7 @@ function MapInner() {
           fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,.5)',
           pointerEvents: 'none', whiteSpace: 'nowrap',
         }}>
-          ðŸ“ Click on the map to pin the household location
+          Click on the map to pin the household location
         </div>
       )}
 

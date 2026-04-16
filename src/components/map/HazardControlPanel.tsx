@@ -79,6 +79,10 @@ export default function HazardControlPanel() {
   // -- Flood drawing state -----------------------------------------------
   const [isDrawing, setIsDrawing] = useState(false)
 
+  // -- Zone list collapse (auto-collapses when >= 5 zones) ---------------
+  const [savedZonesOpen,   setSavedZonesOpen]   = useState(() => floodZones.length < 5)
+  const [pendingZonesOpen, setPendingZonesOpen] = useState(() => draftFloodZones.length < 5)
+
   // Early return AFTER all hooks
   if (activeHazards.length === 0 && user?.role !== 'admin') return null
 
@@ -342,32 +346,72 @@ export default function HazardControlPanel() {
                   {/* Persisted zones (already saved) */}
                   {floodZones.length > 0 && (
                     <div style={{ marginBottom: 10 }}>
-                      <label style={labelStyle}>Saved Zones ({floodZones.length})</label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        {floodZones.map((z) => (
-                          <ZoneCard
-                            key={z.id}
-                            zone={z}
-                            onRemove={() => deleteFloodZone(z.id)}
-                          />
-                        ))}
-                      </div>
+                      {floodZones.length >= 5 ? (
+                        /* Collapsible header when 5+ zones */
+                        <button
+                          onClick={() => setSavedZonesOpen((o) => !o)}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            width: '100%', background: 'transparent', border: 'none',
+                            padding: '2px 0', marginBottom: savedZonesOpen ? 5 : 0,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <span style={labelStyle}>Saved Zones ({floodZones.length})</span>
+                          <span style={{ fontSize: '0.65rem', color: '#8b949e', lineHeight: 1 }}>
+                            {savedZonesOpen ? '▲ collapse' : '▼ expand'}
+                          </span>
+                        </button>
+                      ) : (
+                        <label style={labelStyle}>Saved Zones ({floodZones.length})</label>
+                      )}
+                      {savedZonesOpen && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          {floodZones.map((z) => (
+                            <ZoneCard
+                              key={z.id}
+                              zone={z}
+                              onRemove={() => deleteFloodZone(z.id)}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {/* Draft zones (not yet saved) */}
                   {draftFloodZones.length > 0 && (
                     <div style={{ marginBottom: 10 }}>
-                      <label style={labelStyle}>Pending Zones ({draftFloodZones.length})</label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        {draftFloodZones.map((z) => (
-                          <ZoneCard
-                            key={z.id}
-                            zone={z}
-                            onRemove={() => removeDraftFloodZone(z.id)}
-                          />
-                        ))}
-                      </div>
+                      {draftFloodZones.length >= 5 ? (
+                        /* Collapsible header when 5+ zones */
+                        <button
+                          onClick={() => setPendingZonesOpen((o) => !o)}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            width: '100%', background: 'transparent', border: 'none',
+                            padding: '2px 0', marginBottom: pendingZonesOpen ? 5 : 0,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <span style={labelStyle}>Pending Zones ({draftFloodZones.length})</span>
+                          <span style={{ fontSize: '0.65rem', color: '#8b949e', lineHeight: 1 }}>
+                            {pendingZonesOpen ? '▲ collapse' : '▼ expand'}
+                          </span>
+                        </button>
+                      ) : (
+                        <label style={labelStyle}>Pending Zones ({draftFloodZones.length})</label>
+                      )}
+                      {pendingZonesOpen && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          {draftFloodZones.map((z) => (
+                            <ZoneCard
+                              key={z.id}
+                              zone={z}
+                              onRemove={() => removeDraftFloodZone(z.id)}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 

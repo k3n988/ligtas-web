@@ -107,20 +107,33 @@ function assetStatusBadgeStyle(status: string): React.CSSProperties {
 export default function SummaryReportModal({ households, assets, activeHazard, activeHazards, floodZones }: Props) {
   const now = new Date().toISOString()
 
-  // 1. Base Affected Households Logic
+  // 0. Disaster selector (only relevant when 2+ active hazards)
+  const [selectedHazardId, setSelectedHazardId] = useState<string>('ALL')
+
+  // 1a. Narrow hazards/zones to the selected disaster
+  const viewHazards = useMemo(() => {
+    if (selectedHazardId === 'ALL' || activeHazards.length <= 1) return activeHazards
+    return activeHazards.filter((h) => h.id === selectedHazardId)
+  }, [activeHazards, selectedHazardId])
+
+  const viewFloodZones = useMemo(() => {
+    return viewHazards.some((h) => h.type === 'Flood') ? floodZones : []
+  }, [viewHazards, floodZones])
+
+  // 1b. Base Affected Households Logic
   const reportHouseholds = useMemo(() => {
-    if (activeHazards.length === 0) return households
+    if (viewHazards.length === 0) return households
 
     return households
-      .filter((household) => isHouseholdInAnyHazardZone(household, activeHazards, floodZones))
+      .filter((household) => isHouseholdInAnyHazardZone(household, viewHazards, viewFloodZones))
       .map((household) => {
-        const effectiveLevel = getEffectiveHouseholdTriageFromHazards(household, activeHazards, floodZones)
+        const effectiveLevel = getEffectiveHouseholdTriageFromHazards(household, viewHazards, viewFloodZones)
         return {
           ...household,
           triage: TRIAGE_DISPLAY[effectiveLevel],
         }
       })
-  }, [households, activeHazards, floodZones])
+  }, [households, viewHazards, viewFloodZones])
 
   const [filter, setFilter] = useState<FilterLevel>('TOTAL')
 
@@ -134,8 +147,8 @@ export default function SummaryReportModal({ households, assets, activeHazard, a
     STABLE:   pending.filter((h) => h.triage.level === 'STABLE').length,
   }
 
-  const incidentLabel = activeHazards.length > 0
-    ? activeHazards.map((h) => (h.type === 'Volcano' ? 'Volcano Eruption' : h.type)).join(', ')
+  const incidentLabel = viewHazards.length > 0
+    ? viewHazards.map((h) => (h.type === 'Volcano' ? 'Volcano Eruption' : h.type)).join(', ')
     : null
 
   // 3. Filtered table rows (driven by stat card clicks)
@@ -177,6 +190,13 @@ export default function SummaryReportModal({ households, assets, activeHazard, a
 
   return (
     <div style={{ fontFamily: 'Inter, sans-serif', color: 'var(--fg-default)' }}>
+      <style>{`
+        @keyframes pulse-red {
+          0%   { box-shadow: 0 0 0 0 rgba(255,77,77,0.6); }
+          70%  { box-shadow: 0 0 0 5px rgba(255,77,77,0); }
+          100% { box-shadow: 0 0 0 0 rgba(255,77,77,0); }
+        }
+      `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
@@ -231,6 +251,78 @@ export default function SummaryReportModal({ households, assets, activeHazard, a
           </button>
         </div>
       </div>
+
+      {/* Disaster selector — only shown when 2+ disasters are active */}
+      {activeHazards.length > 1 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--fg-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+            Filter by Disaster
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {/* "All" pill */}
+            <button
+              onClick={() => { setSelectedHazardId('ALL'); setFilter('TOTAL') }}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 999,
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'Inter, sans-serif',
+                border: selectedHazardId === 'ALL'
+                  ? '2px solid var(--accent-blue)'
+                  : '1px solid var(--border)',
+                background: selectedHazardId === 'ALL'
+                  ? 'var(--accent-blue)'
+                  : 'var(--bg-elevated)',
+                color: selectedHazardId === 'ALL'
+                  ? '#fff'
+                  : 'var(--fg-default)',
+              }}
+            >
+              All Disasters
+            </button>
+            {/* One pill per active disaster */}
+            {activeHazards.map((hazard) => {
+              const label = hazard.type === 'Volcano' ? 'Volcano Eruption' : hazard.type
+              const isSelected = selectedHazardId === hazard.id
+              const dotColor = '#ff4d4d'
+              return (
+                <button
+                  key={hazard.id}
+                  onClick={() => { setSelectedHazardId(hazard.id); setFilter('TOTAL') }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 14px',
+                    borderRadius: 999,
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'Inter, sans-serif',
+                    border: isSelected
+                      ? `2px solid ${dotColor}`
+                      : '1px solid var(--border)',
+                    background: isSelected
+                      ? 'color-mix(in srgb, #ff4d4d 12%, var(--bg-surface))'
+                      : 'var(--bg-elevated)',
+                    color: isSelected ? dotColor : 'var(--fg-default)',
+                  }}
+                >
+                  <span style={{
+                    width: 7, height: 7, borderRadius: '50%',
+                    background: dotColor,
+                    display: 'inline-block', flexShrink: 0,
+                    animation: 'pulse-red 2s infinite',
+                  }} />
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Stat cards — click to filter the table below */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 10, marginBottom: 28 }}>
