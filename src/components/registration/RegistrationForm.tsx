@@ -167,6 +167,7 @@ export default function RegistrationForm() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveWarning, setSaveWarning] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
   const [credModal, setCredModal] = useState<{ contact: string; password: string } | null>(null)
 
   useEffect(() => {
@@ -282,10 +283,17 @@ export default function RegistrationForm() {
     return { isDuplicate: false, reason: '' }
   }
 
+  useEffect(() => {
+    if (!saveSuccess) return
+    const t = setTimeout(() => setSaveSuccess(null), 5000)
+    return () => clearTimeout(t)
+  }, [saveSuccess])
+
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     setSaveError(null)
     setSaveWarning(null)
+    setSaveSuccess(null)
 
     if (!pinSource) {
       setSaveError('Please pin a location using GPS or the map before submitting.')
@@ -357,8 +365,10 @@ export default function RegistrationForm() {
         pinSource: pinSource ?? undefined,
       })
 
+      const headName = fd.get('head') as string
       await sendCredentialSms(contactVal, plainPassword)
       resetForm()
+      setSaveSuccess(`"${headName}" has been registered and pinned to the vulnerability map.`)
     } catch (err) {
       console.error('[LIGTAS] handleSubmit:', err)
       setSaveError('Failed to save. Check your connection and try again.')
@@ -602,6 +612,26 @@ export default function RegistrationForm() {
         {saveWarning && (
           <div style={{ background: 'rgba(240, 136, 62, 0.12)', border: '1px solid var(--fg-warning)', color: 'var(--fg-warning)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontWeight: 600, fontSize: '0.82rem', lineHeight: 1.5 }}>
             {saveWarning}
+          </div>
+        )}
+
+        {saveSuccess && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10,
+            background: 'var(--bg-success-subtle)',
+            border: '1px solid var(--success-border)',
+            color: 'var(--success-strong)',
+            borderRadius: 10,
+            padding: '12px 14px',
+            marginBottom: 16,
+            fontSize: '0.82rem',
+            lineHeight: 1.5,
+          }}>
+            <span style={{ fontSize: '1rem', flexShrink: 0 }}>✓</span>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 2 }}>Registration Successful</div>
+              <div style={{ fontWeight: 400, opacity: 0.85 }}>{saveSuccess}</div>
+            </div>
           </div>
         )}
 

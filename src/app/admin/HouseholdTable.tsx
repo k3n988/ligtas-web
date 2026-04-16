@@ -306,7 +306,7 @@ function EditModal({ hh, onClose }: { hh: Household; onClose: () => void }) {
                   background: aiNote.source === 'gemini' ? 'var(--accent-blue)' : 'var(--bg-elevated)',
                   color: aiNote.source === 'gemini' ? '#fff' : 'var(--fg-muted)',
                 }}>
-                  {aiNoteLoading ? 'loading…' : aiNote.source === 'gemini' ? 'Gemini AI' : 'Rule-based'}
+                  {aiNoteLoading ? 'loading…' : aiNote.source === 'gemini' ? 'AI' : 'Rule-based'}
                 </span>
               </div>
               <div style={{ fontSize: '0.76rem', color: 'var(--fg-default)', lineHeight: 1.5, opacity: aiNoteLoading ? 0.5 : 1 }}>

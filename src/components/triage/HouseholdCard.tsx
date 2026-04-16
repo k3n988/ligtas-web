@@ -183,7 +183,7 @@ export default function HouseholdCard({ household: hh }: Props) {
               background: recommendation.source === 'gemini' ? 'var(--accent-blue)' : 'var(--bg-elevated)',
               color: recommendation.source === 'gemini' ? '#fff' : 'var(--fg-muted)',
             }}>
-              {recommendation.source === 'gemini' ? 'Gemini AI' : 'Rule-based'}
+              {recommendation.source === 'gemini' ? 'AI' : 'Rule-based'}
             </span>
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--fg-default)', fontWeight: 700, marginBottom: 4 }}>
@@ -268,51 +268,36 @@ export default function HouseholdCard({ household: hh }: Props) {
               <div style={{ fontSize: '0.72rem', color: 'var(--fg-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
                 Select Rescue Asset
               </div>
-              <div className="mobile-stack" style={{ display: 'flex', gap: 6 }}>
-                <select
-                  value={selectedAssetId}
-                  onChange={(e) => setSelectedAssetId(e.target.value)}
-                  style={{
-                    flex: 1,
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--fg-default)',
-                    borderRadius: 4,
-                    padding: '6px 8px',
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="" disabled>
-                    Choose asset...
-                  </option>
-                  {assets.map((a) => {
-                    const isRecommended = recommendedIds.has(a.id)
-                    const isBlocked = blockedIds.has(a.id)
-                    const badge = isBlocked ? ' [LOCKED]' : isRecommended ? ' [RECOMMENDED]' : ''
-                    return (
-                      <option key={a.id} value={a.id} disabled={isBlocked}>
-                        {a.icon} {a.name} ({a.status}){badge}
-                      </option>
-                    )
-                  })}
-                </select>
-                <button
-                  onClick={handleConfirmDispatch}
-                  disabled={!selectedAssetId || blockedIds.has(selectedAssetId)}
-                  style={{
-                    background: selectedAssetId && !blockedIds.has(selectedAssetId) ? 'var(--resolved-green)' : 'var(--bg-elevated)',
-                    color: selectedAssetId && !blockedIds.has(selectedAssetId) ? '#fff' : 'var(--fg-subtle)',
-                    border: 'none',
-                    borderRadius: 4,
-                    padding: '6px 12px',
-                    cursor: selectedAssetId && !blockedIds.has(selectedAssetId) ? 'pointer' : 'default',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  Confirm
-                </button>
+              <select
+                value={selectedAssetId}
+                onChange={(e) => setSelectedAssetId(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--fg-default)',
+                  borderRadius: 4,
+                  padding: '6px 8px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  marginBottom: 8,
+                }}
+              >
+                <option value="" disabled>
+                  Choose asset...
+                </option>
+                {assets.map((a) => {
+                  const isRecommended = recommendedIds.has(a.id)
+                  const isBlocked = blockedIds.has(a.id)
+                  const badge = isBlocked ? ' [LOCKED]' : isRecommended ? ' [RECOMMENDED]' : ''
+                  return (
+                    <option key={a.id} value={a.id} disabled={isBlocked}>
+                      {a.icon} {a.name} ({a.status}){badge}
+                    </option>
+                  )
+                })}
+              </select>
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => {
                     setShowPicker(false)
@@ -323,12 +308,28 @@ export default function HouseholdCard({ household: hh }: Props) {
                     border: '1px solid var(--border)',
                     color: 'var(--fg-muted)',
                     borderRadius: 4,
-                    padding: '6px 10px',
+                    padding: '6px 14px',
                     cursor: 'pointer',
                     fontSize: '0.75rem',
                   }}
                 >
-                  Close
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDispatch}
+                  disabled={!selectedAssetId || blockedIds.has(selectedAssetId)}
+                  style={{
+                    background: selectedAssetId && !blockedIds.has(selectedAssetId) ? 'var(--resolved-green)' : 'var(--bg-elevated)',
+                    color: selectedAssetId && !blockedIds.has(selectedAssetId) ? '#fff' : 'var(--fg-subtle)',
+                    border: 'none',
+                    borderRadius: 4,
+                    padding: '6px 16px',
+                    cursor: selectedAssetId && !blockedIds.has(selectedAssetId) ? 'pointer' : 'default',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  Confirm
                 </button>
               </div>
               {recommendation.recommendedAssetIds.length > 0 && (
