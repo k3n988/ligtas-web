@@ -2,15 +2,23 @@
 // src/components/map/HouseholdMarker.tsx
 
 import { Marker, InfoWindow } from '@vis.gl/react-google-maps'
-import type { Household } from '@/types'
+import type { Household, TriageLevel } from '@/types'
 import { useHouseholdStore } from '@/store/householdStore'
 import { useAssetStore } from '@/store/assetStore'
 import { useAuthStore } from '@/store/authStore'
-import { haversineKm } from '@/lib/geo'
+import { useHazardStore } from '@/store/hazardStore'
+import { haversineKm, getEffectiveHouseholdTriageFromHazards } from '@/lib/geo'
 import { useMemo } from 'react'
 
 interface Props {
   household: Household
+}
+
+const TRIAGE_HEX: Record<TriageLevel, string> = {
+  CRITICAL: '#ff4d4d',
+  HIGH:     '#f39c12',
+  ELEVATED: '#f1c40f',
+  STABLE:   '#58a6ff',
 }
 
 /** Renders a filled circle as an SVG data-URI icon — no mapId required. */
@@ -28,8 +36,14 @@ export default function HouseholdMarker({ household: hh }: Props) {
   const selectedId = useHouseholdStore((s) => s.selectedId)
   const assets = useAssetStore((s) => s.assets)
   const user = useAuthStore((s) => s.user) // <-- CHECK IF ADMIN IS LOGGED IN
+  const activeHazards = useHazardStore((s) => s.activeHazards)
+  const floodZones    = useHazardStore((s) => s.floodZones)
 
-  const color = hh.status === 'Rescued' ? '#238636' : hh.triage.hex
+  const effectiveLevel: TriageLevel = activeHazards.length > 0
+    ? getEffectiveHouseholdTriageFromHazards(hh, activeHazards, floodZones)
+    : hh.triage.level
+
+  const color = hh.status === 'Rescued' ? '#238636' : TRIAGE_HEX[effectiveLevel]
   const pos = { lat: hh.lat, lng: hh.lng }
   const isOpen = selectedId === hh.id
 
@@ -130,7 +144,7 @@ export default function HouseholdMarker({ household: hh }: Props) {
                 <>
                   <b>Brgy:</b> {hh.barangay}
                   <br />
-                  <b>Triage Level:</b> <span style={{color: hh.triage.hex, fontWeight: 'bold'}}>{hh.triage.level}</span>
+                  <b>Triage Level:</b> <span style={{color: TRIAGE_HEX[effectiveLevel], fontWeight: 'bold'}}>{effectiveLevel}</span>
                   <br />
                   <em style={{ color: '#8b949e', fontSize: '0.7rem' }}>Personally Identifiable Information (PII) is hidden.</em>
                 </>

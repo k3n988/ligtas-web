@@ -359,7 +359,6 @@ export default function RegistrationForm() {
 
       await sendCredentialSms(contactVal, plainPassword)
       resetForm()
-      setCredModal({ contact: contactVal, password: plainPassword })
     } catch (err) {
       console.error('[LIGTAS] handleSubmit:', err)
       setSaveError('Failed to save. Check your connection and try again.')
@@ -626,10 +625,6 @@ export default function RegistrationForm() {
           {saving ? 'Saving...' : geocoding ? 'Detecting city...' : 'Register & Pin to Vulnerability Map'}
         </button>
       </form>
-
-      {credModal && (
-        <PasswordModal contact={credModal.contact} password={credModal.password} role="citizen" onClose={() => setCredModal(null)} />
-      )}
 
       <style>{`
         @keyframes spin {
