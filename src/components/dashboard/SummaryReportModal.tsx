@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { getEffectiveHouseholdTriageFromHazards, isHouseholdInAnyHazardZone } from '@/lib/geo'
 import { TRIAGE_ORDER } from '@/lib/triage'
 import type { Asset, FloodZone, HazardEvent, Household, TriageLevel, TriageResult } from '@/types'
@@ -104,21 +104,9 @@ function assetStatusBadgeStyle(status: string): React.CSSProperties {
   }
 }
 
-const filterSelectStyle: React.CSSProperties = {
-  background: 'var(--bg-elevated)',
-  border: '1px solid var(--border)',
-  color: 'var(--fg-default)',
-  borderRadius: 8,
-  padding: '6px 10px',
-  fontSize: '0.75rem',
-  outline: 'none',
-  cursor: 'pointer',
-  minWidth: 140,
-}
-
 export default function SummaryReportModal({ households, assets, activeHazard, activeHazards, floodZones }: Props) {
   const now = new Date().toISOString()
- 
+
   // 1. Base Affected Households Logic
   const reportHouseholds = useMemo(() => {
     if (activeHazards.length === 0) return households
@@ -134,35 +122,7 @@ export default function SummaryReportModal({ households, assets, activeHazard, a
       })
   }, [households, activeHazards, floodZones])
 
-  // 2. Filter States
-  const [filterTriage, setFilterTriage] = useState<string>('All')
-  const [filterCity, setFilterCity] = useState<string>('All')
-  const [filterStatus, setFilterStatus] = useState<string>('All')
-  const [filterSource, setFilterSource] = useState<string>('All')
-
-  const cities = useMemo(() =>
-    ['All', ...Array.from(new Set(reportHouseholds.map(h => h.city)))].sort(),
-    [reportHouseholds]
-  )
-  const sources = useMemo(() =>
-    ['All', ...Array.from(new Set(reportHouseholds.map(h => h.source).filter(Boolean) as string[]))].sort(),
-    [reportHouseholds]
-  )
-
-  const isFiltering = filterTriage !== 'All' || filterCity !== 'All' || filterStatus !== 'All' || filterSource !== 'All'
-
-  // 3. Filter Logic
-  const filteredHouseholds = useMemo(() => {
-    return reportHouseholds.filter((hh) => {
-      const matchTriage = filterTriage === 'All' || hh.triage.level === filterTriage || (filterTriage === 'RESCUED' && hh.status === 'Rescued')
-      const matchCity = filterCity === 'All' || hh.city === filterCity
-      const matchStatus = filterStatus === 'All' || hh.status === filterStatus
-      const matchSource = filterSource === 'All' || hh.source === filterSource
-      return matchTriage && matchCity && matchStatus && matchSource
-    })
-  }, [reportHouseholds, filterTriage, filterCity, filterStatus, filterSource])
-
-  // 4. Summary Metrics (Always based on full affected set)
+  // 2. Summary Metrics
   const pending = reportHouseholds.filter((h) => h.status === 'Pending')
   const rescuedCount = reportHouseholds.filter((h) => h.status === 'Rescued').length
   const counts = {
@@ -176,18 +136,7 @@ export default function SummaryReportModal({ households, assets, activeHazard, a
     ? activeHazards.map((hazard) => (hazard.type === 'Volcano' ? 'Volcano Eruption' : hazard.type)).join(', ')
     : null
 
-  const handleClearFilters = () => {
-    setFilterTriage('All')
-    setFilterCity('All')
-    setFilterStatus('All')
-    setFilterSource('All')
-  }
-
-  const getActiveBorder = (val: string) => ({
-    borderColor: val !== 'All' ? 'var(--accent-blue)' : 'var(--border)'
-  })
-
-  const allSorted = [...filteredHouseholds].sort(
+  const allSorted = [...reportHouseholds].sort(
     (a, b) => TRIAGE_ORDER[a.triage.level] - TRIAGE_ORDER[b.triage.level],
   )
 
@@ -296,79 +245,6 @@ export default function SummaryReportModal({ households, assets, activeHazard, a
             <div style={{ fontSize: '0.6rem', color: 'var(--fg-muted)', marginTop: 5, letterSpacing: 0.5 }}>{label}</div>
           </div>
         ))}
-      </div>
-
-      {/* --- FILTER BAR --- */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '12px 16px',
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border)',
-        borderRadius: 12,
-        marginBottom: 20,
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: '0.6rem', color: 'var(--fg-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Triage</label>
-          <select
-            value={filterTriage}
-            onChange={(e) => setFilterTriage(e.target.value)}
-            style={{ ...filterSelectStyle, ...getActiveBorder(filterTriage) }}
-          >
-            <option value="All">All Levels</option>
-            <option value="CRITICAL">🔴 Critical</option>
-            <option value="HIGH">🟠 High</option>
-            <option value="ELEVATED">🟡 Elevated</option>
-            <option value="STABLE">🔵 Stable</option>
-            <option value="RESCUED">🟢 Rescued</option>
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: '0.6rem', color: 'var(--fg-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Location</label>
-          <select
-            value={filterCity}
-            onChange={(e) => setFilterCity(e.target.value)}
-            style={{ ...filterSelectStyle, ...getActiveBorder(filterCity) }}
-          >
-            {cities.map(c => <option key={c} value={c}>{c === 'All' ? 'All Cities' : c}</option>)}
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: '0.6rem', color: 'var(--fg-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Status</label>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            style={{ ...filterSelectStyle, ...getActiveBorder(filterStatus) }}
-          >
-            <option value="All">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Rescued">Rescued</option>
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: '0.6rem', color: 'var(--fg-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Source</label>
-          <select
-            value={filterSource}
-            onChange={(e) => setFilterSource(e.target.value)}
-            style={{ ...filterSelectStyle, ...getActiveBorder(filterSource) }}
-          >
-            {sources.map(s => <option key={s} value={s}>{s === 'All' ? 'All Sources' : s}</option>)}
-          </select>
-        </div>
-
-        {isFiltering && (
-          <button
-            onClick={handleClearFilters}
-            style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', padding: '4px 8px' }}
-          >
-            ✕ Clear Filters
-          </button>
-        )}
       </div>
 
       <div style={{ marginBottom: 32 }}>
