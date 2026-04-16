@@ -105,9 +105,9 @@ function assetStatusBadgeStyle(status: string): React.CSSProperties {
 }
 
 const filterSelectStyle: React.CSSProperties = {
-  background: '#111827',
-  border: '1px solid #1f2937',
-  color: '#f0f6fc',
+  background: 'var(--bg-elevated)',
+  border: '1px solid var(--border)',
+  color: 'var(--fg-default)',
   borderRadius: 8,
   padding: '6px 10px',
   fontSize: '0.75rem',
@@ -184,7 +184,7 @@ export default function SummaryReportModal({ households, assets, activeHazard, a
   }
 
   const getActiveBorder = (val: string) => ({
-    borderColor: val !== 'All' ? 'var(--accent-blue)' : '#1f2937'
+    borderColor: val !== 'All' ? 'var(--accent-blue)' : 'var(--border)'
   })
 
   const allSorted = [...filteredHouseholds].sort(
@@ -304,8 +304,8 @@ export default function SummaryReportModal({ households, assets, activeHazard, a
         alignItems: 'center',
         gap: 12,
         padding: '12px 16px',
-        background: '#111827',
-        border: '1px solid #1f2937',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
         borderRadius: 12,
         marginBottom: 20,
         flexWrap: 'wrap'
