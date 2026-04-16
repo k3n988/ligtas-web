@@ -16,7 +16,7 @@ interface Props {
 
 const LEVEL_COLOR: Record<string, string> = {
   CRITICAL: '#ff4d4d',
-  HIGH: '#f39c12',
+  HIGH: '#ff8000',
   ELEVATED: '#f1c40f',
   STABLE: '#58a6ff',
 }
@@ -51,7 +51,7 @@ const sectionShell: React.CSSProperties = {
 
 const TRIAGE_DISPLAY: Record<TriageLevel, TriageResult> = {
   CRITICAL: { level: 'CRITICAL', hex: '#ff4d4d', colorName: 'red' },
-  HIGH: { level: 'HIGH', hex: '#f39c12', colorName: 'orange' },
+  HIGH: { level: 'HIGH', hex: '#ff8000', colorName: 'orange' },
   ELEVATED: { level: 'ELEVATED', hex: '#f1c40f', colorName: 'yellow' },
   STABLE: { level: 'STABLE', hex: '#58a6ff', colorName: 'blue' },
 }

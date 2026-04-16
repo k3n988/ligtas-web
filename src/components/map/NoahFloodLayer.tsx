@@ -81,9 +81,9 @@ export default function NoahFloodLayer({
     if (!var2LayerRef.current) {
       var2LayerRef.current = new google.maps.Data()
       var2LayerRef.current.setStyle({
-        fillColor: '#f39c12',
+        fillColor: '#ff8000',
         fillOpacity: 0.26,
-        strokeColor: '#d68910',
+        strokeColor: '#cc6600',
         strokeOpacity: 0.42,
         strokeWeight: 1,
         clickable: false,

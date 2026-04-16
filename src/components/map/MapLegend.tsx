@@ -38,7 +38,7 @@ export default function MapLegend() {
 
         {[
           { color: '#ff4d4d', label: 'Critical (Immobile)' },
-          { color: '#f39c12', label: 'High (Limited Mob.)' },
+          { color: '#ff8000', label: 'High (Limited Mob.)' },
           { color: '#f1c40f', label: 'Elevated (Vuln.)' },
           { color: '#58a6ff', label: 'Stable' },
           { color: '#238636', label: 'Rescued' },

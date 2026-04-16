@@ -9,7 +9,7 @@ export function assessTriage(vulnArr: Vulnerability[]): TriageResult {
     return { level: 'CRITICAL', hex: '#ff4d4d', colorName: 'red' }
   }
   if (has('Wheelchair') || has('Senior')) {
-    return { level: 'HIGH', hex: '#f39c12', colorName: 'orange' }
+    return { level: 'HIGH', hex: '#ff8000', colorName: 'orange' }
   }
   if (has('Pregnant') || has('Infant') || has('PWD')) {
     return { level: 'ELEVATED', hex: '#f1c40f', colorName: 'yellow' }

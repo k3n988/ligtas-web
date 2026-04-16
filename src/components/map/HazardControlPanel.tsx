@@ -11,7 +11,7 @@ const HAZARD_TYPES = ['Flood', 'Volcano', 'Earthquake', 'Typhoon', 'Landslide', 
 
 const SEVERITY_COLOR: Record<FloodSeverity, string> = {
   critical: '#ff4d4d',
-  high:     '#f39c12',
+  high:     '#ff8000',
   elevated: '#f1c40f',
   stable:   '#58a6ff',
 }
@@ -40,7 +40,7 @@ const labelStyle: React.CSSProperties = {
 
 const RING_COLORS = {
   critical: '#ff4d4d',
-  high:     '#f39c12',
+  high:     '#ff8000',
   elevated: '#f1c40f',
   stable:   '#58a6ff',
 }

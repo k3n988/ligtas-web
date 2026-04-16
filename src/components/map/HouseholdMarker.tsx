@@ -16,7 +16,7 @@ interface Props {
 
 const TRIAGE_HEX: Record<TriageLevel, string> = {
   CRITICAL: '#ff4d4d',
-  HIGH:     '#f39c12',
+  HIGH:     '#ff8000',
   ELEVATED: '#f1c40f',
   STABLE:   '#58a6ff',
 }

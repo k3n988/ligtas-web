@@ -9,7 +9,7 @@ import type { Household, RegistrySource, TriageLevel, Vulnerability } from '@/ty
 
 const TRIAGE_COLOR: Record<string, string> = {
   CRITICAL: '#ff4d4d',
-  HIGH: '#f39c12',
+  HIGH: '#ff8000',
   ELEVATED: '#f1c40f',
   STABLE: '#58a6ff',
 }

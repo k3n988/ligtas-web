@@ -112,7 +112,7 @@ const SEVERITY_ORDER: Record<FloodSeverity, number> = {
 
 const FLOOD_ZONE_STYLE: Record<FloodSeverity, { fill: string; fillOpacity: number; stroke: string; zIndex: number }> = {
   critical: { fill: '#ff4d4d', fillOpacity: 0.38, stroke: '#c0392b', zIndex: 14 },
-  high:     { fill: '#f39c12', fillOpacity: 0.30, stroke: '#d68910', zIndex: 13 },
+  high:     { fill: '#ff8000', fillOpacity: 0.30, stroke: '#cc6600', zIndex: 13 },
   elevated: { fill: '#f1c40f', fillOpacity: 0.25, stroke: '#b7950b', zIndex: 12 },
   stable:   { fill: '#58a6ff', fillOpacity: 0.18, stroke: '#2980b9', zIndex: 11 },
 }
@@ -230,7 +230,7 @@ function FloodZoneOverlays() {
 
 const HAZARD_RING_STYLE: Record<string, { stroke: string; fill: string }> = {
   critical: { stroke: '#ff4d4d', fill: '#ff4d4d' },
-  high:     { stroke: '#f39c12', fill: '#f39c12' },
+  high:     { stroke: '#ff8000', fill: '#ff8000' },
   elevated: { stroke: '#f1c40f', fill: '#f1c40f' },
   stable:   { stroke: '#58a6ff', fill: '#58a6ff' },
 }
