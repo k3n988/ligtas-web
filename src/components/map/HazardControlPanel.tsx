@@ -4,7 +4,7 @@ import { useMap } from '@vis.gl/react-google-maps'
 import { useState } from 'react'
 import { useHazardStore } from '@/store/hazardStore'
 import { useAuthStore } from '@/store/authStore'
-import type { FloodDepth, FloodSeverity, FloodZone, HazardEvent } from '@/types'
+import type { FloodSeverity, FloodZone, HazardEvent } from '@/types'
 import FloodDrawingManager from './FloodDrawingManager'
 
 const HAZARD_TYPES = ['Flood', 'Volcano', 'Earthquake', 'Typhoon', 'Landslide', 'Storm Surge']
@@ -77,11 +77,7 @@ export default function HazardControlPanel() {
   const [stable,     setStable]     = useState(() => String(activeHazard?.radii.stable   ?? 10))
 
   // -- Flood drawing state -----------------------------------------------
-  const [isDrawing,      setIsDrawing]      = useState(false)
-  const [pendingPolygon, setPendingPolygon] = useState<Array<{ lat: number; lng: number }> | null>(null)
-  const [draftSeverity,  setDraftSeverity]  = useState<FloodSeverity>('stable')
-  const [draftDepth,     setDraftDepth]     = useState<FloodDepth | ''>('')
-  const [draftNotes,     setDraftNotes]     = useState('')
+  const [isDrawing, setIsDrawing] = useState(false)
 
   // Early return AFTER all hooks
   if (activeHazards.length === 0 && user?.role !== 'admin') return null
@@ -110,29 +106,18 @@ export default function HazardControlPanel() {
   }
 
   function handlePolygonComplete(coords: Array<{ lat: number; lng: number }>) {
-    setPendingPolygon(coords)
-    setIsDrawing(false)
-  }
-
-  function handleAddZone() {
-    if (!pendingPolygon || pendingPolygon.length < 3) return
+    if (coords.length < 3) return
     const zone: FloodZone = {
       id:       'FZ-' + Date.now(),
-      severity: draftSeverity,
-      depth:    draftDepth || undefined,
-      notes:    draftNotes.trim() || undefined,
-      polygon:  pendingPolygon,
+      severity: 'critical',
+      polygon:  coords,
     }
     addDraftFloodZone(zone)
-    setPendingPolygon(null)
-    setDraftSeverity('stable')
-    setDraftDepth('')
-    setDraftNotes('')
+    setIsDrawing(false)
   }
 
   function selectHazardType(nextType: string) {
     setHazardType(nextType)
-    setPendingPolygon(null)
     setIsDrawing(false)
 
     const matchingActiveHazard = activeHazards.find((hazard) => hazard.type === nextType)
@@ -178,7 +163,6 @@ export default function HazardControlPanel() {
 
   async function handleClear() {
     await clearHazard(hazardType)
-    setPendingPolygon(null)
     setIsDrawing(false)
     setOpen(false)
   }
@@ -388,106 +372,22 @@ export default function HazardControlPanel() {
                   )}
 
                   {/* Draw trigger */}
-                  {!pendingPolygon && (
-                    <button
-                      onClick={() => setIsDrawing(true)}
-                      disabled={isDrawing}
-                      style={{
-                        width: '100%', padding: '8px',
-                        background: isDrawing ? '#21262d' : '#1f6feb',
-                        color: isDrawing ? '#8b949e' : '#fff',
-                        border: 'none', borderRadius: 4,
-                        fontWeight: 700, fontSize: '0.78rem',
-                        cursor: isDrawing ? 'not-allowed' : 'pointer',
-                        fontFamily: 'Inter, sans-serif',
-                        marginBottom: 10,
-                      }}
-                    >
-                      {isDrawing ? 'Drawing... click map to place points' : 'Draw Flood Area'}
-                    </button>
-                  )}
-
-                  {/* Inline zone form â€” appears after polygon drawn */}
-                  {pendingPolygon && (
-                    <div style={{
-                      background: '#0d1117',
-                      border: '1px solid #238636',
-                      borderRadius: 6,
-                      padding: 10,
+                  <button
+                    onClick={() => setIsDrawing(true)}
+                    disabled={isDrawing}
+                    style={{
+                      width: '100%', padding: '8px',
+                      background: isDrawing ? '#21262d' : '#1f6feb',
+                      color: isDrawing ? '#8b949e' : '#fff',
+                      border: 'none', borderRadius: 4,
+                      fontWeight: 700, fontSize: '0.78rem',
+                      cursor: isDrawing ? 'not-allowed' : 'pointer',
+                      fontFamily: 'Inter, sans-serif',
                       marginBottom: 10,
-                    }}>
-                      <p style={{ margin: '0 0 8px', fontSize: '0.68rem', color: '#3fb950', fontWeight: 600 }}>
-                        Polygon drawn ({pendingPolygon.length} pts) - fill in details
-                      </p>
-
-                      <div style={{ marginBottom: 6 }}>
-                        <label style={labelStyle}>Severity</label>
-                        <select
-                          value={draftSeverity}
-                          onChange={(e) => setDraftSeverity(e.target.value as FloodSeverity)}
-                          style={inputStyle}
-                        >
-                          <option value="critical">Critical</option>
-                          <option value="high">High</option>
-                          <option value="elevated">Elevated</option>
-                          <option value="stable">Stable</option>
-                        </select>
-                      </div>
-
-                      <div style={{ marginBottom: 6 }}>
-                        <label style={labelStyle}>Water Depth (optional)</label>
-                        <select
-                          value={draftDepth}
-                          onChange={(e) => setDraftDepth(e.target.value as FloodDepth | '')}
-                          style={inputStyle}
-                        >
-                          <option value="">- None -</option>
-                          <option value="ankle">Ankle-deep</option>
-                          <option value="knee">Knee-deep</option>
-                          <option value="waist">Waist-deep</option>
-                          <option value="chest">Chest-deep</option>
-                        </select>
-                      </div>
-
-                      <div style={{ marginBottom: 8 }}>
-                        <label style={labelStyle}>Notes (optional)</label>
-                        <input
-                          type="text"
-                          value={draftNotes}
-                          onChange={(e) => setDraftNotes(e.target.value)}
-                          placeholder="e.g. Near riverbank, fast current"
-                          style={inputStyle}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          onClick={handleAddZone}
-                          style={{
-                            flex: 1, padding: '7px',
-                            background: '#238636', color: '#fff',
-                            border: 'none', borderRadius: 4,
-                            fontWeight: 700, fontSize: '0.75rem',
-                            cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-                          }}
-                        >
-                          + Add Zone
-                        </button>
-                        <button
-                          onClick={() => setPendingPolygon(null)}
-                          style={{
-                            padding: '7px 10px',
-                            background: 'transparent', color: '#8b949e',
-                            border: '1px solid #30363d', borderRadius: 4,
-                            fontSize: '0.75rem', cursor: 'pointer',
-                            fontFamily: 'Inter, sans-serif',
-                          }}
-                        >
-                          Discard
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    }}
+                  >
+                    {isDrawing ? 'Drawing... click map to place points' : 'Draw Flood Area'}
+                  </button>
                 </>
               ) : (
                 /* -- VOLCANO / OTHER BRANCH ---------------------------------- */
