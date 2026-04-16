@@ -16,10 +16,12 @@ const STATUS_COLOR: Record<Asset['status'], string> = {
 
 export default function AssetCard({ asset }: Props) {
   const setPanTo = useHouseholdStore((s) => s.setPanTo)
+  const setSelectedId = useHouseholdStore((s) => s.setSelectedId)
   const setAssetStatus = useAssetStore((s) => s.setAssetStatus)
 
   const handleTrack = () => {
     void setPanTo(null)
+    void setSelectedId(null)
     window.dispatchEvent(
       new CustomEvent('ligtas:panToAsset', {
         detail: { lat: asset.lat, lng: asset.lng },
@@ -31,7 +33,7 @@ export default function AssetCard({ asset }: Props) {
     <div
       style={{
         background: 'var(--bg-surface)',
-        border: '1px solid var(--border-color)',
+        border: '1px solid var(--border)',
         borderLeft: '4px solid var(--accent-blue)',
         borderRadius: 12,
         padding: 15,

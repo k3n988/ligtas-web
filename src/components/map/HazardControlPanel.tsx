@@ -66,17 +66,17 @@ export default function HazardControlPanel() {
   const user = useAuthStore((s) => s.user)
   const map  = useMap()
 
-  // â”€â”€ Panel open/close â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -- Panel open/close --------------------------------------------------
   const [open, setOpen] = useState(false)
 
-  // â”€â”€ Volcano state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -- Volcano state -----------------------------------------------------
   const [hazardType, setHazardType] = useState(() => activeHazard?.type ?? 'Flood')
   const [critical,   setCritical]   = useState(() => String(activeHazard?.radii.critical ?? 1))
   const [high,       setHigh]       = useState(() => String(activeHazard?.radii.high     ?? 3))
   const [elevated,   setElevated]   = useState(() => String(activeHazard?.radii.elevated ?? 5))
   const [stable,     setStable]     = useState(() => String(activeHazard?.radii.stable   ?? 10))
 
-  // â”€â”€ Flood drawing state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -- Flood drawing state -----------------------------------------------
   const [isDrawing,      setIsDrawing]      = useState(false)
   const [pendingPolygon, setPendingPolygon] = useState<Array<{ lat: number; lng: number }> | null>(null)
   const [draftSeverity,  setDraftSeverity]  = useState<FloodSeverity>('stable')
@@ -86,7 +86,7 @@ export default function HazardControlPanel() {
   // Early return AFTER all hooks
   if (activeHazards.length === 0 && user?.role !== 'admin') return null
 
-  // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -- Handlers ----------------------------------------------------------
 
   function focusHazardOnMap(hazard: HazardEvent) {
     if (!map) return
@@ -191,91 +191,85 @@ export default function HazardControlPanel() {
     : !!draftCenter
 
   const primaryControlStyle: React.CSSProperties = {
-    minHeight: 42,
+    height: 40,
     padding: '0 16px',
-    borderRadius: 12,
-    background: activeHazards.length > 0 ? '#1f3044' : '#102338',
-    border: `1.5px solid ${activeHazards.length > 0 ? '#5db0ff' : '#3c78ad'}`,
-    color: '#d7ebff',
-    fontSize: '0.75rem',
+    borderRadius: 8,
+    background: '#161b22',
+    border: '1px solid #30363d',
+    color: '#f0f6fc',
+    fontSize: '0.7rem',
     fontWeight: 800,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
     cursor: (activeHazards.length > 0 || user?.role === 'admin') ? 'pointer' : 'default',
     display: 'flex',
     alignItems: 'center',
     gap: 6,
-    boxShadow: '0 6px 18px rgba(3, 15, 28, 0.34)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
     fontFamily: 'Inter, sans-serif',
     whiteSpace: 'nowrap',
-    pointerEvents: (activeHazards.length === 0 && user?.role !== 'admin') ? 'none' : 'auto',
-    opacity: (activeHazards.length === 0 && user?.role !== 'admin') ? 0 : 1,
   }
 
   const activeBadgeStyle: React.CSSProperties = {
-    minHeight: 42,
+    height: 40,
     padding: '0 16px',
-    borderRadius: 12,
-    background: 'linear-gradient(180deg, #641a1a 0%, #421010 100%)',
-    border: '1.5px solid #d24b4b',
-    color: '#ffe3e3',
-    fontSize: '0.75rem',
+    borderRadius: 8,
+    background: 'linear-gradient(180deg, rgba(255, 3, 3, 0.8) 0%, rgba(139, 0, 0, 0.9) 100%)',
+    border: '1.5px solid #ff4d4d',
+    color: '#ffffff',
+    fontSize: '0.7rem',
     fontWeight: 800,
-    letterSpacing: 0.4,
+    letterSpacing: 0.8,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     gap: 7,
-    boxShadow: '0 8px 22px rgba(87, 16, 16, 0.34)',
+    boxShadow: '0 0 10px rgba(255, 77, 77, 0.4)',
     fontFamily: 'Inter, sans-serif',
     whiteSpace: 'nowrap',
+    animation: 'pulse-red 2s infinite',
   }
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 12,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 20,
-        width: 'min(calc(100vw - 24px), 920px)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 8,
-      }}
-    >
+    <>
+      <style>{`
+        @keyframes pulse-red {
+          0% { border-color: #ff4d4d; box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7); }
+          70% { border-color: #ff4d4d; box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); }
+          100% { border-color: #ff4d4d; box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
+        }
+      `}</style>
 
-      {/* â”€â”€ Drawing manager (mounts only when drawing) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <FloodDrawingManager active={isDrawing} onPolygonComplete={handlePolygonComplete} />
+      {/* Anchor 1: Top Left Action */}
+      {(user?.role === 'admin' || activeHazards.length > 0) && (
+        <div style={{ position: 'absolute', top: 20, left: 20, zIndex: 30 }}>
+          <button
+            onClick={() => {
+              setOpen((o) => !o)
+              if (activeHazard?.isActive && map && activeHazard.type !== 'Flood') {
+                map.panTo(activeHazard.center)
+                map.setZoom(12)
+              }
+            }}
+            style={primaryControlStyle}
+          >
+            HAZARD LAYER
+          </button>
+        </div>
+      )}
 
-      {/* â”€â”€ Toggle button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Anchor 2: Top Middle Status */}
       <div
         style={{
-          width: '100%',
+          position: 'absolute',
+          top: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 20,
           display: 'flex',
+          gap: 12,
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          flexWrap: 'wrap',
-          overflowX: 'auto',
-          paddingBottom: 2,
         }}
       >
-        <button
-          onClick={() => {
-            setOpen((o) => !o)
-            if (activeHazard?.isActive && map && activeHazard.type !== 'Flood') {
-              map.panTo(activeHazard.center)
-              map.setZoom(12)
-            }
-          }}
-          title="Hazard Layer Control"
-          style={primaryControlStyle}
-        >
-             {activeHazards.length > 0 ? 'HAZARD LAYER' : `HAZARD LAYER · ${hazardType.toUpperCase()}`}
-        </button>
-
         {activeHazards.map((hazard) => (
           <button
             key={hazard.id}
@@ -285,25 +279,22 @@ export default function HazardControlPanel() {
               setOpen(true)
               focusHazardOnMap(hazard)
             }}
-            title={`Active hazard: ${hazard.type}`}
-            style={{
-              ...activeBadgeStyle,
-              boxShadow: focusedHazardType === hazard.type
-                ? '0 0 0 2px rgba(255, 245, 245, 0.9), 0 10px 26px rgba(87, 16, 16, 0.42)'
-                : activeBadgeStyle.boxShadow,
-              transform: focusedHazardType === hazard.type ? 'translateY(-1px)' : 'none',
-            }}
+            style={activeBadgeStyle}
           >
-            <span style={{ color: '#ff6b6b', fontSize: '0.82rem', lineHeight: 1 }}>▲</span>
-            {`ACTIVE: ${hazard.type}`}
+            <span style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center' }}>▲</span>
+            {`ACTIVE: ${hazard.type.toUpperCase()}`}
           </button>
         ))}
       </div>
 
+      {/* -- Drawing manager (mounts only when drawing) ------------------- */}
+      <FloodDrawingManager active={isDrawing} onPolygonComplete={handlePolygonComplete} />
+
       {open && (
         <div style={{
           position: 'absolute',
-          top: 84, left: '50%', transform: 'translateX(-50%)',
+          top: 70,
+          left: 20,
           width: 290,
           background: '#161b22',
           border: '1px solid #30363d',
@@ -313,6 +304,7 @@ export default function HazardControlPanel() {
           fontFamily: 'Inter, sans-serif',
           maxHeight: '80vh',
           overflowY: 'auto',
+          pointerEvents: 'auto',
         }}>
 
           {/* Header */}
@@ -321,7 +313,7 @@ export default function HazardControlPanel() {
             textTransform: 'uppercase', letterSpacing: 1,
             borderLeft: '3px solid #ff4d4d', paddingLeft: 8, marginBottom: 12,
           }}>
-            âš  Hazard Layer
+            Hazard Layer
             {user?.role !== 'admin' && (
               <span style={{ float: 'right', fontSize: '0.6rem', color: '#8b949e', fontWeight: 400, textTransform: 'none' }}>
                 Read-only
@@ -337,13 +329,13 @@ export default function HazardControlPanel() {
               fontSize: '0.72rem', color: '#ff4d4d', fontWeight: 600,
             }}>
               {selectedActiveHazard.type === 'Flood'
-                ? `FLOOD â€” ${floodZones.length} zone${floodZones.length !== 1 ? 's' : ''} active`
-                : `HAZARD: ${selectedActiveHazard.type} â€” ${selectedActiveHazard.center.lat.toFixed(4)}, ${selectedActiveHazard.center.lng.toFixed(4)}`
+                ? `FLOOD - ${floodZones.length} zone${floodZones.length !== 1 ? 's' : ''} active`
+                : `HAZARD: ${selectedActiveHazard.type} - ${selectedActiveHazard.center.lat.toFixed(4)}, ${selectedActiveHazard.center.lng.toFixed(4)}`
               }
             </div>
           )}
 
-          {/* â”€â”€ ADMIN CONTROLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* -- ADMIN CONTROLS ---------------------------------------------- */}
           {user?.role === 'admin' ? (
             <>
               {/* Disaster type selector */}
@@ -360,7 +352,7 @@ export default function HazardControlPanel() {
                 </select>
               </div>
 
-              {/* â”€â”€ FLOOD BRANCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              {/* -- FLOOD BRANCH ---------------------------------------------- */}
               {isFlood ? (
                 <>
                   {/* Persisted zones (already saved) */}
@@ -411,7 +403,7 @@ export default function HazardControlPanel() {
                         marginBottom: 10,
                       }}
                     >
-                      {isDrawing ? 'ðŸ–Š Drawingâ€¦ click map to place points' : 'ðŸ–Š Draw Flood Area'}
+                      {isDrawing ? 'Drawing... click map to place points' : 'Draw Flood Area'}
                     </button>
                   )}
 
@@ -425,7 +417,7 @@ export default function HazardControlPanel() {
                       marginBottom: 10,
                     }}>
                       <p style={{ margin: '0 0 8px', fontSize: '0.68rem', color: '#3fb950', fontWeight: 600 }}>
-                        âœ… Polygon drawn ({pendingPolygon.length} pts) â€” fill in details
+                        Polygon drawn ({pendingPolygon.length} pts) - fill in details
                       </p>
 
                       <div style={{ marginBottom: 6 }}>
@@ -449,7 +441,7 @@ export default function HazardControlPanel() {
                           onChange={(e) => setDraftDepth(e.target.value as FloodDepth | '')}
                           style={inputStyle}
                         >
-                          <option value="">â€” None â€”</option>
+                          <option value="">- None -</option>
                           <option value="ankle">Ankle-deep</option>
                           <option value="knee">Knee-deep</option>
                           <option value="waist">Waist-deep</option>
@@ -498,7 +490,7 @@ export default function HazardControlPanel() {
                   )}
                 </>
               ) : (
-                /* â”€â”€ VOLCANO / OTHER BRANCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+                /* -- VOLCANO / OTHER BRANCH ---------------------------------- */
                 <>
                   {/* Radii grid */}
                   <div style={{ marginBottom: 10 }}>
@@ -535,7 +527,7 @@ export default function HazardControlPanel() {
                         border: '1px solid #238636', borderRadius: 4,
                         fontSize: '0.72rem', color: '#3fb950', fontWeight: 600,
                       }}>
-                        ðŸ“ {draftCenter.lat.toFixed(5)}, {draftCenter.lng.toFixed(5)}
+                        {draftCenter.lat.toFixed(5)}, {draftCenter.lng.toFixed(5)}
                       </div>
                     ) : (
                       <div style={{ fontSize: '0.72rem', color: '#8b949e' }}>No center picked yet</div>
@@ -555,12 +547,12 @@ export default function HazardControlPanel() {
                       marginBottom: 6,
                     }}
                   >
-                    ðŸ“ Pick Center on Map
+                    Pick Center on Map
                   </button>
                 </>
               )}
 
-              {/* â”€â”€ Shared action buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              {/* -- Shared action buttons ------------------------------------ */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
                 <button
                   onClick={handleActivate}
@@ -575,7 +567,7 @@ export default function HazardControlPanel() {
                     fontFamily: 'Inter, sans-serif',
                   }}
                 >
-                  âœ… Activate Hazard Layer
+                  Activate Hazard Layer
                 </button>
 
                 {selectedActiveHazard && (
@@ -588,13 +580,13 @@ export default function HazardControlPanel() {
                       cursor: 'pointer', fontFamily: 'Inter, sans-serif',
                     }}
                   >
-                    ðŸ—‘ Clear Hazard Layer
+                    Clear Hazard Layer
                   </button>
                 )}
               </div>
             </>
           ) : (
-            /* â”€â”€ READ-ONLY VIEW (guests / citizens) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+            /* -- READ-ONLY VIEW (guests / citizens) ---------------------- */
             <div style={{ fontSize: '0.75rem', color: '#8b949e', lineHeight: 1.5 }}>
               {activeHazard?.type === 'Flood' ? (
                 <>
@@ -607,7 +599,7 @@ export default function HazardControlPanel() {
                       if (!count) return null
                       return (
                         <div key={sev} style={{ color: SEVERITY_COLOR[sev] }}>
-                          â€¢ {sev.charAt(0).toUpperCase() + sev.slice(1)}: {count} area{count !== 1 ? 's' : ''}
+                          - {sev.charAt(0).toUpperCase() + sev.slice(1)}: {count} area{count !== 1 ? 's' : ''}
                         </div>
                       )
                     })}
@@ -620,10 +612,10 @@ export default function HazardControlPanel() {
                     Triage levels for households within these radii are dynamically adjusted.
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ color: RING_COLORS.critical }}>â€¢ Critical: {activeHazard?.radii.critical}km</div>
-                    <div style={{ color: RING_COLORS.high     }}>â€¢ High: {activeHazard?.radii.high}km</div>
-                    <div style={{ color: RING_COLORS.elevated }}>â€¢ Elevated: {activeHazard?.radii.elevated}km</div>
-                    <div style={{ color: RING_COLORS.stable   }}>â€¢ Stable: {activeHazard?.radii.stable}km</div>
+                    <div style={{ color: RING_COLORS.critical }}>- Critical: {activeHazard?.radii.critical}km</div>
+                    <div style={{ color: RING_COLORS.high     }}>- High: {activeHazard?.radii.high}km</div>
+                    <div style={{ color: RING_COLORS.elevated }}>- Elevated: {activeHazard?.radii.elevated}km</div>
+                    <div style={{ color: RING_COLORS.stable   }}>- Stable: {activeHazard?.radii.stable}km</div>
                   </div>
                 </>
               )}
@@ -631,11 +623,11 @@ export default function HazardControlPanel() {
           )}
         </div>
       )}
-    </div>
+    </>
   )
 }
 
-// â”€â”€ Zone card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -- Zone card -----------------------------------------------------------
 
 function ZoneCard({ zone, onRemove }: { zone: FloodZone; onRemove: () => void }) {
   return (
@@ -673,10 +665,8 @@ function ZoneCard({ zone, onRemove }: { zone: FloodZone; onRemove: () => void })
         }}
         title="Remove zone"
       >
-        Ã—
+        x
       </button>
     </div>
   )
 }
-
-
