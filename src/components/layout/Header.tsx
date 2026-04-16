@@ -14,8 +14,9 @@ import ThemeToggle from './ThemeToggle'
 const ADMIN_TABS = [
   { href: '/queue', label: 'QUEUE' },
   { href: '/assets', label: 'ASSETS' },
-  { href: '/admin', label: 'DASHBOARD' },
   { href: '/register', label: 'REGISTRATION' },
+  { href: '/admin', label: 'DASHBOARD' },
+  
 ]
 
 const RESCUER_TABS = [
