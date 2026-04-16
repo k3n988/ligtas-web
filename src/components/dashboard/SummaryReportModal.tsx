@@ -65,7 +65,7 @@ function fmt(iso: string) {
     minute: '2-digit',
   })
 }
-
+//ff
 function statusBadgeStyle(status: 'Pending' | 'Rescued'): React.CSSProperties {
   const isRescued = status === 'Rescued'
   return {
